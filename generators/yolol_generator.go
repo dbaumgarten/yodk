@@ -3,12 +3,30 @@ package generators
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/dbaumgarten/yodk/ast"
 )
 
 type YololGenerator struct {
 	programm string
+}
+
+var operatorPriority = map[string]int{
+	"or":  0,
+	"and": 0,
+	"==":  1,
+	">=":  1,
+	"<=":  1,
+	">":   1,
+	"<":   1,
+	"+":   2,
+	"-":   2,
+	"*":   3,
+	"/":   3,
+	"^":   3,
+	"%":   3,
+	"not": 4,
 }
 
 func (y *YololGenerator) Visit(node ast.Node, visitType int) error {
@@ -42,21 +60,10 @@ func (y *YololGenerator) Visit(node ast.Node, visitType int) error {
 		y.programm += fmt.Sprintf(n.Value)
 		break
 	case *ast.BinaryOperation:
-		if visitType == ast.PreVisit {
-			y.programm += "("
-		}
-		if visitType == ast.PostVisit {
-			y.programm += ")"
-		}
-		if visitType == ast.InterVisit1 {
-			op := n.Operator
-			if op == "and" || op == "or" {
-				op = " " + op + " "
-			}
-			y.programm += op
-		}
+		y.generateBinaryOperation(n, visitType)
 		break
 	case *ast.UnaryOperation:
+		_, childBinary := n.Exp.(*ast.BinaryOperation)
 		if visitType == ast.PreVisit {
 			op := n.Operator
 			if op == "not" {
@@ -66,6 +73,14 @@ func (y *YololGenerator) Visit(node ast.Node, visitType int) error {
 				op = " " + op
 			}
 			y.programm += op
+			if childBinary {
+				y.programm += "("
+			}
+		}
+		if visitType == ast.PostVisit {
+			if childBinary {
+				y.programm += ")"
+			}
 		}
 		break
 	case *ast.FuncCall:
@@ -82,6 +97,47 @@ func (y *YololGenerator) Visit(node ast.Node, visitType int) error {
 		return fmt.Errorf("Unknown ast-node type: %t", node)
 	}
 	return nil
+}
+
+func (y *YololGenerator) generateBinaryOperation(o *ast.BinaryOperation, visitType int) {
+	lPrio := priorityForExpression(o.Exp1)
+	rPrio := priorityForExpression(o.Exp2)
+	_, rBinary := o.Exp2.(*ast.BinaryOperation)
+	myPrio := priorityForExpression(o)
+	switch visitType {
+	case ast.PreVisit:
+		if lPrio < myPrio {
+			y.programm += "("
+		}
+		break
+	case ast.InterVisit1:
+		if lPrio < myPrio {
+			y.programm += ")"
+		}
+		op := o.Operator
+		if op == "and" || op == "or" {
+			op = " " + op + " "
+		}
+		y.programm += op
+		if rBinary && rPrio <= myPrio {
+			y.programm += "("
+		}
+		break
+	case ast.PostVisit:
+		if rBinary && rPrio <= myPrio {
+			y.programm += ")"
+		}
+		break
+	}
+}
+
+func priorityForExpression(e ast.Expression) int {
+	switch ex := e.(type) {
+	case *ast.BinaryOperation:
+		return operatorPriority[ex.Operator]
+	default:
+		return 10
+	}
 }
 
 func (y *YololGenerator) generateIf(visitType int) {
@@ -101,18 +157,12 @@ func (y *YololGenerator) generateIf(visitType int) {
 
 func (y *YololGenerator) genDeref(d *ast.Dereference) {
 	txt := ""
-	if d.PrePost != "" && !d.IsStatement {
-		txt += "("
-	}
 	if d.PrePost == "Pre" {
-		txt += d.Operator
+		txt += " " + d.Operator
 	}
 	txt += d.Variable
 	if d.PrePost == "Post" {
-		txt += d.Operator
-	}
-	if d.PrePost != "" && !d.IsStatement {
-		txt += ")"
+		txt += d.Operator + " "
 	}
 	y.programm += txt
 }
@@ -120,5 +170,6 @@ func (y *YololGenerator) genDeref(d *ast.Dereference) {
 func (y *YololGenerator) Generate(prog *ast.Programm) string {
 	y.programm = ""
 	prog.Accept(y)
-	return y.programm
+	// during the generation duplicate spaces might appear. Remove them
+	return strings.Replace(y.programm, "  ", " ", -1)
 }

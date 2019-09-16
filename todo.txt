@@ -1,5 +1,4 @@
 optimizations:
-    remove superflous () when generating yolol
     remove static ifs
         (attention with mulitline ifs)
         line numbers!!!
