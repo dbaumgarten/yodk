@@ -1,9 +1,12 @@
 package generators
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/dbaumgarten/yodk/parser"
+	"github.com/dbaumgarten/yodk/vm"
+	"github.com/shopspring/decimal"
 )
 
 var testProgramm = `
@@ -56,11 +59,22 @@ func TestGenerator(t *testing.T) {
 		t.Fatal(err)
 	}
 	generated := gen.Generate(parsed)
-	newparsed, err := p.Parse(generated)
+
+	vm := vm.NewYololVM()
+	err = vm.Run(generated)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(newparsed.Lines) == 0 {
-		t.Fatal("Generated program has no lines")
+
+	if len(vm.GetVariables()) == 0 {
+		t.Fatal("Program not executed")
+	}
+
+	for name, value := range vm.GetVariables() {
+		if strings.HasPrefix(name, "test") {
+			if !value.(decimal.Decimal).Equal(decimal.NewFromFloat(1)) {
+				t.Fatal("Operator-test", name, "failed")
+			}
+		}
 	}
 }

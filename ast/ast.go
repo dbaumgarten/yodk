@@ -1,6 +1,7 @@
 package ast
 
 type Node interface {
+	Accept(v Visitor) error
 }
 
 type Programm struct {
@@ -14,6 +15,7 @@ type Line struct {
 // Expressions
 
 type Expression interface {
+	Node
 }
 
 type StringConstant struct {
@@ -25,9 +27,10 @@ type NumberConstant struct {
 }
 
 type Dereference struct {
-	Variable string
-	Operator string
-	PrePost  string
+	Variable    string
+	Operator    string
+	PrePost     string
+	IsStatement bool
 }
 
 type UnaryOperation struct {
@@ -49,6 +52,7 @@ type FuncCall struct {
 // Statements
 
 type Statement interface {
+	Node
 }
 
 type Assignment struct {

@@ -110,6 +110,7 @@ func (v *YololVM) Run(prog string) error {
 	v.program = ast
 	v.skipBp = false
 	v.state = StateRunning
+	v.variables = make(map[string]*variable)
 	v.lock.Unlock()
 	return v.run()
 }

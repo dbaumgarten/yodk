@@ -3,89 +3,105 @@ package generators
 import (
 	"fmt"
 	"strconv"
-	"strings"
 
 	"github.com/dbaumgarten/yodk/ast"
 )
 
 type YololGenerator struct {
+	programm string
 }
 
-func (y *YololGenerator) Generate(prog *ast.Programm) string {
-	out := ""
-	for _, line := range prog.Lines {
-		out += y.genLine(line) + "\n"
-	}
-	return out
-}
-
-func (y *YololGenerator) genLine(line *ast.Line) string {
-	out := ""
-	for _, stmt := range line.Statements {
-		out += y.genStmt(stmt) + " "
-	}
-	return out
-}
-
-func (y *YololGenerator) genStmt(stmt ast.Statement) string {
-	switch v := stmt.(type) {
+func (y *YololGenerator) Visit(node ast.Node, visitType int) error {
+	switch n := node.(type) {
+	case *ast.Line:
+		if visitType == ast.PostVisit {
+			y.programm += "\n"
+		}
+		if visitType > 0 {
+			y.programm += " "
+		}
+		break
 	case *ast.Assignment:
-		return v.Variable + v.Operator + y.genExpr(v.Value)
+		if visitType == ast.PreVisit {
+			y.programm += n.Variable + n.Operator
+		}
+		break
 	case *ast.IfStatement:
-		txt := "if " + y.genExpr(v.Condition) + " then "
-		for _, st := range v.IfBlock {
-			txt += y.genStmt(st) + " "
-		}
-		if v.ElseBlock != nil {
-			txt += "else "
-			for _, st := range v.ElseBlock {
-				txt += y.genStmt(st) + " "
-			}
-		}
-		txt += "end"
-		return txt
+		y.generateIf(visitType)
+		break
 	case *ast.GoToStatement:
-		return "goto " + strconv.Itoa(v.Line)
+		y.programm += "goto " + strconv.Itoa(n.Line)
+		break
 	case *ast.Dereference:
-		return strings.Trim(y.genDeref(v), "()")
-	default:
-		return fmt.Sprintf("UNKNWON-STATEMENT:%T", v)
-	}
-}
-
-func (y *YololGenerator) genExpr(expr ast.Expression) string {
-	switch v := expr.(type) {
+		y.genDeref(n)
+		break
 	case *ast.StringConstant:
-		return "\"" + v.Value + "\""
+		y.programm += "\"" + n.Value + "\""
+		break
 	case *ast.NumberConstant:
-		return fmt.Sprintf(v.Value)
+		y.programm += fmt.Sprintf(n.Value)
+		break
 	case *ast.BinaryOperation:
-		op := v.Operator
-		if op == "and" || op == "or" {
-			op = " " + op + " "
+		if visitType == ast.PreVisit {
+			y.programm += "("
 		}
-		return "(" + y.genExpr(v.Exp1) + op + y.genExpr(v.Exp2) + ")"
+		if visitType == ast.PostVisit {
+			y.programm += ")"
+		}
+		if visitType == ast.InterVisit1 {
+			op := n.Operator
+			if op == "and" || op == "or" {
+				op = " " + op + " "
+			}
+			y.programm += op
+		}
+		break
 	case *ast.UnaryOperation:
-		op := v.Operator
-		if op == "not" {
-			op = " " + op + " "
+		if visitType == ast.PreVisit {
+			op := n.Operator
+			if op == "not" {
+				op = " " + op + " "
+			}
+			if op == "-" {
+				op = " " + op
+			}
+			y.programm += op
 		}
-		if op == "-" {
-			op = " " + op
-		}
-		return op + y.genExpr(v.Exp)
-	case *ast.Dereference:
-		return y.genDeref(v)
+		break
 	case *ast.FuncCall:
-		return v.Function + "(" + y.genExpr(v.Argument) + ")"
+		if visitType == ast.PreVisit {
+			y.programm += n.Function + "("
+		} else {
+			y.programm += ")"
+		}
+		break
+	case *ast.Programm:
+		//do noting
+		break
 	default:
-		return fmt.Sprintf("UNKNWON-EXPRESSION:%T", v)
+		return fmt.Errorf("Unknown ast-node type: %t", node)
+	}
+	return nil
+}
+
+func (y *YololGenerator) generateIf(visitType int) {
+	switch visitType {
+	case ast.PreVisit:
+		y.programm += "if "
+	case ast.InterVisit1:
+		y.programm += " then "
+	case ast.InterVisit2:
+		y.programm += " else "
+	case ast.PostVisit:
+		y.programm += " end"
+	default:
+		y.programm += " "
 	}
 }
 
-func (y *YololGenerator) genDeref(d *ast.Dereference) string {
+func (y *YololGenerator) genDeref(d *ast.Dereference) {
 	txt := ""
-	if d.PrePost != "" {
+	if d.PrePost != "" && !d.IsStatement {
 		txt += "("
 	}
 	if d.PrePost == "Pre" {
@@ -95,8 +111,14 @@ func (y *YololGenerator) genDeref(d *ast.Dereference) string {
 	if d.PrePost == "Post" {
 		txt += d.Operator
 	}
-	if d.PrePost != "" {
+	if d.PrePost != "" && !d.IsStatement {
 		txt += ")"
 	}
-	return txt
+	y.programm += txt
+}
+
+func (y *YololGenerator) Generate(prog *ast.Programm) string {
+	y.programm = ""
+	prog.Accept(y)
+	return y.programm
 }

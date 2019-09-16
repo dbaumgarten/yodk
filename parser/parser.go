@@ -166,6 +166,7 @@ func (p *Parser) parsePreOrPostOperation() (*ast.Dereference, *ParserError) {
 		return nil, err
 	}
 	if err == nil {
+		preOpVarDeref.IsStatement = true
 		return preOpVarDeref, nil
 	}
 
@@ -174,6 +175,7 @@ func (p *Parser) parsePreOrPostOperation() (*ast.Dereference, *ParserError) {
 		return nil, err
 	}
 	if err == nil {
+		postOpVarDeref.IsStatement = true
 		return postOpVarDeref, nil
 	}
 	return nil, p.getError("No Pre- or Post expression-statement found", false)
