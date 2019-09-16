@@ -2,7 +2,6 @@ package vm
 
 import (
 	"fmt"
-	"math"
 	"strings"
 	"sync"
 
@@ -14,24 +13,12 @@ import (
 
 var errAbortLine = fmt.Errorf("")
 
-type variableType int
-
-const (
-	TypeString variableType = iota
-	TypeNumber variableType = iota
-)
-
 const (
 	StateIdle    = iota
 	StateRunning = iota
 	StatePaused  = iota
 	StateDone    = iota
 )
-
-type variable struct {
-	Type  variableType
-	Value interface{}
-}
 
 type BreakpointFunc func(vm *YololVM) bool
 
@@ -40,7 +27,7 @@ type ErrorHandlerFunc func(vm *YololVM, err error) bool
 type FinishHandlerFunc func(vm *YololVM)
 
 type YololVM struct {
-	variables         map[string]*variable
+	variables         map[string]*Variable
 	loop              bool
 	breakpointHandler BreakpointFunc
 	errorHandler      ErrorHandlerFunc
@@ -59,7 +46,7 @@ type YololVM struct {
 func NewYololVM() *YololVM {
 	decimal.DivisionPrecision = 3
 	return &YololVM{
-		variables:   make(map[string]*variable),
+		variables:   make(map[string]*Variable),
 		state:       StateIdle,
 		loop:        false,
 		breakpoints: make(map[int]bool),
@@ -86,10 +73,10 @@ func (v *YololVM) PrintVariables() string {
 	defer v.lock.Unlock()
 	txt := ""
 	for key, value := range v.variables {
-		if value.Type == TypeString {
-			txt += fmt.Sprintf("%s: '%s'\n", key, value.Value.(string))
-		} else if value.Type == TypeNumber {
-			txt += fmt.Sprintf("%s: %s\n", key, value.Value.(decimal.Decimal).String())
+		if value.IsString() {
+			txt += fmt.Sprintf("%s: '%s'\n", key, value.String())
+		} else if value.IsNumber() {
+			txt += fmt.Sprintf("%s: %s\n", key, value.Number())
 		} else {
 			txt += fmt.Sprintf("%s: Unknown type: %T\n", key, value.Value)
 		}
@@ -110,7 +97,7 @@ func (v *YololVM) Run(prog string) error {
 	v.program = ast
 	v.skipBp = false
 	v.state = StateRunning
-	v.variables = make(map[string]*variable)
+	v.variables = make(map[string]*Variable)
 	v.lock.Unlock()
 	return v.run()
 }
@@ -205,19 +192,10 @@ func (v *YololVM) GetVariables() map[string]interface{} {
 func (v *YololVM) SetVariable(name string, value interface{}) error {
 	v.lock.Lock()
 	defer v.lock.Unlock()
-	val := &variable{
-		Value: value,
+	val := Variable{
+		value,
 	}
-	switch value.(type) {
-	case string:
-		val.Type = TypeString
-		break
-	case decimal.Decimal:
-		val.Type = TypeNumber
-	default:
-		return fmt.Errorf("Unsupported variable type: %T", value)
-	}
-	v.variables[name] = val
+	v.variables[name] = &val
 	return nil
 }
 
@@ -308,10 +286,10 @@ func (v *YololVM) runStmt(stmt ast.Statement) error {
 		if err != nil {
 			return err
 		}
-		if conditionResult.Type != TypeNumber {
+		if !conditionResult.IsNumber() {
 			return fmt.Errorf("If-condition can not be a string")
 		}
-		if !conditionResult.Value.(decimal.Decimal).Equal(decimal.Zero) {
+		if !conditionResult.Number().Equal(decimal.Zero) {
 			for _, st := range e.IfBlock {
 				err := v.runStmt(st)
 				if err != nil {
@@ -339,7 +317,7 @@ func (v *YololVM) runStmt(stmt ast.Statement) error {
 }
 
 func (v *YololVM) runAssignment(as *ast.Assignment) error {
-	var newValue *variable
+	var newValue *Variable
 	var err error
 	if as.Operator != "=" {
 		binop := ast.BinaryOperation{
@@ -361,16 +339,16 @@ func (v *YololVM) runAssignment(as *ast.Assignment) error {
 	return nil
 }
 
-func (v *YololVM) runExpr(expr ast.Expression) (*variable, error) {
+func (v *YololVM) runExpr(expr ast.Expression) (*Variable, error) {
 	switch e := expr.(type) {
 	case *ast.StringConstant:
-		return &variable{Type: TypeString, Value: e.Value}, nil
+		return &Variable{Value: e.Value}, nil
 	case *ast.NumberConstant:
 		num, err := decimal.NewFromString(e.Value)
 		if err != nil {
 			return nil, err
 		}
-		return &variable{Type: TypeNumber, Value: num}, nil
+		return &Variable{Value: num}, nil
 	case *ast.BinaryOperation:
 		return v.runBinOp(e)
 	case *ast.UnaryOperation:
@@ -384,89 +362,47 @@ func (v *YololVM) runExpr(expr ast.Expression) (*variable, error) {
 	}
 }
 
-func (v *YololVM) runFuncCall(d *ast.FuncCall) (*variable, error) {
+func (v *YololVM) runFuncCall(d *ast.FuncCall) (*Variable, error) {
 	arg, err := v.runExpr(d.Argument)
 	if err != nil {
 		return nil, err
 	}
-	if arg.Type != TypeNumber {
-		return nil, fmt.Errorf("Function %s expects a number as argument", d.Function)
-	}
-	result := &variable{
-		Type: TypeNumber,
-	}
-	switch d.Function {
-	case "abs":
-		result.Value = arg.Value.(decimal.Decimal).Abs()
-		break
-	case "sqrt":
-		v, _ := arg.Value.(decimal.Decimal).Float64()
-		result.Value = decimal.NewFromFloat(math.Sqrt(v))
-		break
-	case "sin":
-		result.Value = arg.Value.(decimal.Decimal).Sin()
-		break
-	case "cos":
-		result.Value = arg.Value.(decimal.Decimal).Cos()
-		break
-	case "tan":
-		result.Value = arg.Value.(decimal.Decimal).Tan()
-		break
-	case "asin":
-		v, _ := arg.Value.(decimal.Decimal).Float64()
-		result.Value = decimal.NewFromFloat(math.Asin(v))
-		break
-	case "acos":
-		v, _ := arg.Value.(decimal.Decimal).Float64()
-		result.Value = decimal.NewFromFloat(math.Acos(v))
-		break
-	case "atan":
-		result.Value = arg.Value.(decimal.Decimal).Atan()
-		break
-	default:
-		return nil, fmt.Errorf("Unknown function: %s", d.Function)
-	}
-	result.Value = result.Value.(decimal.Decimal).Truncate(int32(decimal.DivisionPrecision))
-	return result, nil
+	return RunFunction(arg, d.Function)
 }
 
-func (v *YololVM) runDeref(d *ast.Dereference) (*variable, error) {
+func (v *YololVM) runDeref(d *ast.Dereference) (*Variable, error) {
 	oldval, exists := v.variables[d.Variable]
 	if !exists {
 		return nil, fmt.Errorf("Variable %s used before assignment", d.Variable)
 	}
-	var newval variable
-	if oldval.Type == TypeNumber {
+	var newval Variable
+	if oldval.IsNumber() {
 		switch d.Operator {
 		case "":
 			return oldval, nil
 		case "++":
-			newval.Value = oldval.Value.(decimal.Decimal).Add(decimal.NewFromFloat(1))
-			newval.Type = TypeNumber
+			newval.Value = oldval.Number().Add(decimal.NewFromFloat(1))
 			break
 		case "--":
-			newval.Value = oldval.Value.(decimal.Decimal).Sub(decimal.NewFromFloat(1))
-			newval.Type = TypeNumber
+			newval.Value = oldval.Number().Sub(decimal.NewFromFloat(1))
 			break
 		default:
 			return nil, fmt.Errorf("Unknown operator '%s'", d.Operator)
 		}
 		v.variables[d.Variable] = &newval
 	}
-	if oldval.Type == TypeString {
+	if oldval.IsString() {
 		switch d.Operator {
 		case "":
 			return oldval, nil
 		case "++":
-			newval.Value = oldval.Value.(string) + " "
-			newval.Type = TypeString
+			newval.Value = oldval.String() + " "
 			break
 		case "--":
-			if len(oldval.Value.(string)) == 0 {
+			if len(oldval.String()) == 0 {
 				return nil, fmt.Errorf("String in variable '%s' is already empty", d.Variable)
 			}
-			newval.Value = string([]rune(oldval.Value.(string))[:len(oldval.Value.(string))-1])
-			newval.Type = TypeString
+			newval.Value = string([]rune(oldval.String())[:len(oldval.String())-1])
 			break
 		default:
 			return nil, fmt.Errorf("Unknown operator '%s'", d.Operator)
@@ -479,7 +415,7 @@ func (v *YololVM) runDeref(d *ast.Dereference) (*variable, error) {
 	return oldval, nil
 }
 
-func (v *YololVM) runBinOp(op *ast.BinaryOperation) (*variable, error) {
+func (v *YololVM) runBinOp(op *ast.BinaryOperation) (*Variable, error) {
 	arg1, err1 := v.runExpr(op.Exp1)
 	if err1 != nil {
 		return nil, err1
@@ -488,169 +424,14 @@ func (v *YololVM) runBinOp(op *ast.BinaryOperation) (*variable, error) {
 	if err2 != nil {
 		return nil, err2
 	}
-	// automatic type casting
-	if arg1.Type != arg2.Type {
-		// do NOT modify the existing variable. Create a temporary new one
-		if arg1.Type != TypeString {
-			arg1 = &variable{
-				Type:  TypeString,
-				Value: arg1.Value.(decimal.Decimal).String(),
-			}
-		}
-		if arg2.Type != TypeString {
-			arg2 = &variable{
-				Type:  TypeString,
-				Value: arg2.Value.(decimal.Decimal).String(),
-			}
-		}
-	}
-	endResult := variable{
-		Type: arg1.Type,
-	}
-
-	one := decimal.NewFromFloat(1)
-
-	if arg1.Type == TypeNumber {
-		switch op.Operator {
-		case "+":
-			endResult.Value = arg1.Value.(decimal.Decimal).Add(arg2.Value.(decimal.Decimal))
-			break
-		case "-":
-			endResult.Value = arg1.Value.(decimal.Decimal).Sub(arg2.Value.(decimal.Decimal))
-			break
-		case "*":
-			endResult.Value = arg1.Value.(decimal.Decimal).Mul(arg2.Value.(decimal.Decimal))
-			break
-		case "/":
-			endResult.Value = arg1.Value.(decimal.Decimal).Div(arg2.Value.(decimal.Decimal))
-			break
-		case "%":
-			endResult.Value = arg1.Value.(decimal.Decimal).Mod(arg2.Value.(decimal.Decimal))
-			break
-		case "^":
-			endResult.Value = arg1.Value.(decimal.Decimal).Pow(arg2.Value.(decimal.Decimal))
-			break
-		case "==":
-			if arg1.Value.(decimal.Decimal).Equal(arg2.Value.(decimal.Decimal)) {
-				endResult.Value = one
-			} else {
-				endResult.Value = decimal.Zero
-			}
-			break
-		case "!=":
-			if !arg1.Value.(decimal.Decimal).Equal(arg2.Value.(decimal.Decimal)) {
-				endResult.Value = one
-			} else {
-				endResult.Value = decimal.Zero
-			}
-			break
-		case ">=":
-			if arg1.Value.(decimal.Decimal).GreaterThanOrEqual(arg2.Value.(decimal.Decimal)) {
-				endResult.Value = one
-			} else {
-				endResult.Value = decimal.Zero
-			}
-			break
-		case "<=":
-			if arg1.Value.(decimal.Decimal).LessThanOrEqual(arg2.Value.(decimal.Decimal)) {
-				endResult.Value = one
-			} else {
-				endResult.Value = decimal.Zero
-			}
-			break
-		case ">":
-			if arg1.Value.(decimal.Decimal).GreaterThan(arg2.Value.(decimal.Decimal)) {
-				endResult.Value = one
-			} else {
-				endResult.Value = decimal.Zero
-			}
-			break
-		case "<":
-			if arg1.Value.(decimal.Decimal).LessThan(arg2.Value.(decimal.Decimal)) {
-				endResult.Value = one
-			} else {
-				endResult.Value = decimal.Zero
-			}
-			break
-		case "and":
-			if !arg1.Value.(decimal.Decimal).Equal(decimal.Zero) && !arg2.Value.(decimal.Decimal).Equal(decimal.Zero) {
-				endResult.Value = one
-			} else {
-				endResult.Value = decimal.Zero
-			}
-			break
-		case "or":
-			if !arg1.Value.(decimal.Decimal).Equal(decimal.Zero) || !arg2.Value.(decimal.Decimal).Equal(decimal.Zero) {
-				endResult.Value = one
-			} else {
-				endResult.Value = decimal.Zero
-			}
-			break
-		default:
-			return nil, fmt.Errorf("Unknown binary operator for numbers '%s'", op.Operator)
-		}
-	}
-
-	if arg1.Type == TypeString {
-		switch op.Operator {
-		case "+":
-			endResult.Value = arg1.Value.(string) + arg2.Value.(string)
-			break
-		case "-":
-			lastIndex := strings.LastIndex(arg1.Value.(string), arg2.Value.(string))
-			if lastIndex >= 0 {
-				endResult.Value = string([]rune(arg1.Value.(string))[:lastIndex]) + string([]rune(arg1.Value.(string))[lastIndex+len(arg2.Value.(string)):])
-			} else {
-				endResult.Value = arg1.Value.(string)
-			}
-			break
-		case "==":
-			if arg1.Value.(string) == arg2.Value.(string) {
-				endResult.Value = decimal.NewFromFloat(1)
-			} else {
-				endResult.Value = decimal.Zero
-			}
-			endResult.Type = TypeNumber
-			break
-		case "!=":
-			if arg1.Value.(string) != arg2.Value.(string) {
-				endResult.Value = decimal.NewFromFloat(1)
-			} else {
-				endResult.Value = decimal.Zero
-			}
-			endResult.Type = TypeNumber
-			break
-		default:
-			return nil, fmt.Errorf("Unknown binary operator for strings '%s'", op.Operator)
-		}
-	}
-	return &endResult, nil
+	return RunBinaryOperation(arg1, arg2, op.Operator)
 }
 
-func (v *YololVM) runUnaryOp(op *ast.UnaryOperation) (*variable, error) {
+func (v *YololVM) runUnaryOp(op *ast.UnaryOperation) (*Variable, error) {
 	arg, err := v.runExpr(op.Exp)
 	if err != nil {
 		return nil, err
 	}
-	if arg.Type != TypeNumber {
-		return nil, fmt.Errorf("Unary operator '%s' is only available for numbers", op.Operator)
-	}
-	res := &variable{
-		Type: TypeNumber,
-	}
-	switch op.Operator {
-	case "-":
-		res.Value = arg.Value.(decimal.Decimal).Mul(decimal.NewFromFloat(-1))
-		break
-	case "not":
-		if arg.Value.(decimal.Decimal) == decimal.Zero {
-			res.Value = decimal.NewFromFloat(1)
-		} else {
-			res.Value = decimal.Zero
-		}
-		break
-	default:
-		return nil, fmt.Errorf("Unknown unary operator for numbers '%s'", op.Operator)
-	}
-	return res, nil
+
+	return RunUnaryOperation(arg, op.Operator)
 }
