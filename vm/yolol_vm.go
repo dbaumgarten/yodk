@@ -18,6 +18,7 @@ const (
 	StateRunning = iota
 	StatePaused  = iota
 	StateDone    = iota
+	StateStep    = iota
 )
 
 type BreakpointFunc func(vm *YololVM) bool
@@ -117,6 +118,21 @@ func (v *YololVM) Resume() error {
 	return v.run()
 }
 
+func (v *YololVM) Step() error {
+	v.lock.Lock()
+	if v.program == nil {
+		v.lock.Unlock()
+		err := fmt.Errorf("can not resume. Execution has not been started")
+		if v.errorHandler != nil {
+			v.errorHandler(v, err)
+		}
+		return err
+	}
+	v.state = StateStep
+	v.lock.Unlock()
+	return v.run()
+}
+
 func (v *YololVM) Pause() {
 	v.lock.Lock()
 	defer v.lock.Unlock()
@@ -212,7 +228,7 @@ func (v *YololVM) run() error {
 		v.lock.Unlock()
 		v.lock.Lock()
 
-		if v.state != StateRunning {
+		if v.state != StateRunning && v.state != StateStep {
 			return nil
 		}
 
@@ -264,6 +280,10 @@ func (v *YololVM) run() error {
 			}
 		}
 		v.currentLine++
+		if v.state == StateStep {
+			v.state = StatePaused
+			return nil
+		}
 	}
 }
 

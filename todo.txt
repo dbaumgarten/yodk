@@ -2,8 +2,8 @@ optimizations:
     remove static ifs
         (attention with mulitline ifs)
         line numbers!!!
-    simplify static expressions
     shorten variable names
+    automatic testing
 
 
 nolol features:

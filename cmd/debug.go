@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -22,7 +23,7 @@ var debugCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		inputProg = loadInputFile(args[0])
 
-		debugShell.Println("Loaded and paused programm. Enter 'x' to execute")
+		debugShell.Println("Loaded and paused programm. Enter 'run' to execute")
 		debugShell.Run()
 	},
 	Args: cobra.MinimumNArgs(1),
@@ -31,55 +32,70 @@ var debugCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(debugCmd)
 
+	debugShell = ishell.New()
+
 	yvm = vm.NewYololVM()
 	yvm.Pause()
 
 	yvm.SetBreakpointHandler(func(x *vm.YololVM) bool {
-		debugShell.Println("--Hit Breakpoint at line: ", x.CurrentLine())
+		debugShell.Println("--Hit Breakpoint at line: ", x.CurrentLine(), "--")
 		return false
 	})
 
 	yvm.SetErrorHandler(func(x *vm.YololVM, err error) bool {
 		debugShell.Println("--A runtime error occured--")
 		debugShell.Println(err)
-		debugShell.Println("Execution paused")
+		debugShell.Println("--Execution paused--")
 		x.Pause()
 		return true
 	})
 
 	yvm.SetFinishHandler(func(x *vm.YololVM) {
 		debugShell.Println("--Program finished--")
-		debugShell.Println("Enter x to restart")
+		debugShell.Println("--Enter r to restart--")
 	})
 
-	debugShell = ishell.New()
 	debugShell.AddCmd(&ishell.Cmd{
-		Name: "x",
-		Help: "execute program from start",
+		Name:    "run",
+		Aliases: []string{"r"},
+		Help:    "run programm from start",
 		Func: func(c *ishell.Context) {
 			debugShell.Println("--Started--")
 			go yvm.Run(inputProg)
 		},
 	})
 	debugShell.AddCmd(&ishell.Cmd{
-		Name: "p",
-		Help: "pause execution",
+		Name:    "pause",
+		Aliases: []string{"p"},
+		Help:    "pause execution",
 		Func: func(c *ishell.Context) {
 			yvm.Pause()
 			debugShell.Println("--Paused--")
 		},
 	})
 	debugShell.AddCmd(&ishell.Cmd{
-		Name: "r",
-		Help: "resume paused program",
+		Name:    "continue",
+		Aliases: []string{"c"},
+		Help:    "continue paused execution",
 		Func: func(c *ishell.Context) {
 			go yvm.Resume()
 			debugShell.Println("--Resumed--")
 		},
 	})
 	debugShell.AddCmd(&ishell.Cmd{
-		Name: "bp",
-		Help: "add breakpoint at line",
+		Name:    "step",
+		Aliases: []string{"s"},
+		Help:    "execute the next line and pause again",
+		Func: func(c *ishell.Context) {
+			if yvm.Step() == nil {
+				debugShell.Println("--Line executed. Paused again--")
+			}
+		},
+	})
+	debugShell.AddCmd(&ishell.Cmd{
+		Name:    "break",
+		Aliases: []string{"b"},
+		Help:    "add breakpoint at line",
 		Func: func(c *ishell.Context) {
 			if len(c.Args) != 1 {
 				debugShell.Println("You must enter a line number for the breakpoint.")
@@ -95,8 +111,9 @@ func init() {
 		},
 	})
 	debugShell.AddCmd(&ishell.Cmd{
-		Name: "rbp",
-		Help: "remove breakpoint at line",
+		Name:    "delete",
+		Aliases: []string{"d"},
+		Help:    "delete breakpoint at line",
 		Func: func(c *ishell.Context) {
 			if len(c.Args) != 1 {
 				debugShell.Println("You must enter a line number for the breakpoint.")
@@ -112,30 +129,36 @@ func init() {
 		},
 	})
 	debugShell.AddCmd(&ishell.Cmd{
-		Name: "lbp",
-		Help: "list breakpoints",
-		Func: func(c *ishell.Context) {
-			debugShell.Println("Breakpoints at lines:", yvm.ListBreakpoints())
-		},
-	})
-	debugShell.AddCmd(&ishell.Cmd{
-		Name: "v",
-		Help: "print all current variables",
+		Name:    "vars",
+		Aliases: []string{"v"},
+		Help:    "print all current variables",
 		Func: func(c *ishell.Context) {
 			debugShell.Println("--Variables--")
-			debugShell.Println(yvm.PrintVariables())
+			vars := sortVariables(yvm.GetVariables())
+			for _, variable := range vars {
+				if variable.val.IsString() {
+					debugShell.Println(variable.name, "'"+variable.val.String()+"'")
+				}
+				if variable.val.IsNumber() {
+					debugShell.Println(variable.name, variable.val.Itoa())
+				}
+			}
 		},
 	})
 	debugShell.AddCmd(&ishell.Cmd{
-		Name: "?",
-		Help: "show vm-state",
+		Name:    "info",
+		Aliases: []string{"i"},
+		Help:    "show vm-state",
 		Func: func(c *ishell.Context) {
+			c.ShowPrompt(false)
+			defer c.ShowPrompt(true)
 			debugShell.Printf("--State: %d\n", yvm.State())
 		},
 	})
 	debugShell.AddCmd(&ishell.Cmd{
-		Name: "s",
-		Help: "show programm",
+		Name:    "list",
+		Aliases: []string{"l"},
+		Help:    "show programm source code",
 		Func: func(c *ishell.Context) {
 			current := yvm.CurrentLine()
 			bps := yvm.ListBreakpoints()
@@ -158,6 +181,25 @@ func init() {
 			}
 		},
 	})
+}
+
+type namedVariable struct {
+	name string
+	val  vm.Variable
+}
+
+func sortVariables(vars map[string]vm.Variable) []namedVariable {
+	sorted := make([]namedVariable, 0, len(vars))
+	for k, v := range vars {
+		sorted = append(sorted, namedVariable{
+			k,
+			v,
+		})
+	}
+	sort.Slice(sorted, func(i, j int) bool {
+		return sorted[i].name < sorted[j].name
+	})
+	return sorted
 }
 
 func contains(arr []int, val int) bool {
