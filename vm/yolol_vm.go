@@ -169,22 +169,26 @@ func (v *YololVM) ListBreakpoints() []int {
 	return li
 }
 
-func (v *YololVM) GetVariable(name string) (interface{}, bool) {
+func (v *YololVM) GetVariable(name string) (*Variable, bool) {
 	v.lock.Lock()
 	defer v.lock.Unlock()
 	val, exists := v.variables[name]
 	if exists {
-		return val.Value, exists
+		return &Variable{
+			Value: val.Value,
+		}, true
 	}
 	return nil, false
 }
 
-func (v *YololVM) GetVariables() map[string]interface{} {
+func (v *YololVM) GetVariables() map[string]Variable {
 	v.lock.Lock()
 	defer v.lock.Unlock()
-	varlist := make(map[string]interface{})
+	varlist := make(map[string]Variable)
 	for key, value := range v.variables {
-		varlist[key] = value.Value
+		varlist[key] = Variable{
+			Value: value.Value,
+		}
 	}
 	return varlist
 }

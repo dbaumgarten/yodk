@@ -5,6 +5,7 @@ import (
 	"path"
 
 	"github.com/dbaumgarten/yodk/generators"
+	"github.com/dbaumgarten/yodk/optimizers"
 	"github.com/dbaumgarten/yodk/parser"
 	"github.com/spf13/cobra"
 )
@@ -22,8 +23,12 @@ var optimizeCmd = &cobra.Command{
 		file := loadInputFile(args[0])
 		parsed, err := p.Parse(file)
 		exitOnError(err, "parsing file")
+		opt := optimizers.CompoundOptimizer{}
+		err = opt.Optimize(parsed)
+		exitOnError(err, "performing optimisation")
 		gen := generators.YololGenerator{}
-		ioutil.WriteFile(outfile, []byte(gen.Generate(parsed)), 0700)
+		generated := gen.Generate(parsed)
+		ioutil.WriteFile(outfile, []byte(generated), 0700)
 	},
 	Args: cobra.MinimumNArgs(1),
 }

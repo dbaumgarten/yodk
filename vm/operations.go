@@ -58,7 +58,7 @@ func RunUnaryOperation(arg *Variable, operator string) (*Variable, error) {
 		res.Value = arg.Number().Mul(decimal.NewFromFloat(-1))
 		break
 	case "not":
-		if arg.Number() == decimal.Zero {
+		if arg.Number().Equal(decimal.Zero) {
 			res.Value = decimal.NewFromFloat(1)
 		} else {
 			res.Value = decimal.Zero

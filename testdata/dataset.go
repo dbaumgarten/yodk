@@ -1,13 +1,14 @@
-package vm
+package testdata
 
 import (
+	"fmt"
 	"strings"
-	"testing"
 
+	"github.com/dbaumgarten/yodk/vm"
 	"github.com/shopspring/decimal"
 )
 
-var testProgram = `
+var TestProgram = `
 testsum = 1 + 2 == 3
 testsub = 3 - 1 == 2
 testmul = 2*5 == 10
@@ -40,28 +41,39 @@ testz = (not 1 and not 10 and not not 0) == 0
 testor = 20 or 0
 testif = 0
 if pi > 3 then testif=1 else testif = 0 end
+testnestedif = 0
+if testif != 1000 then if 1==1 then testnestedif = 1 end end
 counter=0
 counter++
-if counter < 20 then goto 35 end
+if counter < 20 then goto 37 end
 testgoto = counter == 20
 testnested = 3+(1+1)*5 == 13
 k = 2
 testnestedop = (k + 5)*k++ == 14
 testautoconv = "test " + 123 == "test 123"
+constexp = 1 + (2*5) + sin(3.141*2/2)
 `
 
-func TestOperators(t *testing.T) {
-	vm := NewYololVM()
-	err := vm.Run(testProgram)
+func ExecuteTestProgram(prog string) error {
+	v := vm.NewYololVM()
+	err := v.Run(prog)
 	if err != nil {
-		t.Fatal(err)
+		return err
 	}
 
-	for name, value := range vm.GetVariables() {
+	if len(v.GetVariables()) == 0 {
+		return fmt.Errorf("Program not executed")
+	}
+
+	for name, value := range v.GetVariables() {
 		if strings.HasPrefix(name, "test") {
-			if !value.(decimal.Decimal).Equal(decimal.NewFromFloat(1)) {
-				t.Fatal("Operator-test", name, "failed")
+			if !value.IsNumber() {
+				return fmt.Errorf("Operator-test %s returend string '%s' instead of 1", name, value.String())
+			}
+			if !value.Number().Equal(decimal.NewFromFloat(1)) {
+				return fmt.Errorf("Operator-test %s failed", name)
 			}
 		}
 	}
+	return nil
 }

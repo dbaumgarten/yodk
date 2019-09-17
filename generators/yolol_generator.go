@@ -57,6 +57,9 @@ func (y *YololGenerator) Visit(node ast.Node, visitType int) error {
 		y.programm += "\"" + n.Value + "\""
 		break
 	case *ast.NumberConstant:
+		if strings.HasPrefix(n.Value, "-") {
+			y.programm += " "
+		}
 		y.programm += fmt.Sprintf(n.Value)
 		break
 	case *ast.BinaryOperation:
