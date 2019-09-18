@@ -536,6 +536,7 @@ func (p *Parser) parsePreOpExpression() (*ast.Dereference, *ParserError) {
 		exp := ast.Dereference{
 			Operator: p.current().Value,
 			PrePost:  "Pre",
+			Position: p.current().Position,
 		}
 		p.next()
 		if p.current().Type != tokenizer.TypeID {
@@ -555,6 +556,7 @@ func (p *Parser) parsePostOpExpression() (*ast.Dereference, *ParserError) {
 			Variable: p.current().Value,
 			Operator: p.peek().Value,
 			PrePost:  "Post",
+			Position: p.current().Position,
 		}
 		p.next()
 		p.next()

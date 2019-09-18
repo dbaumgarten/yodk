@@ -51,6 +51,16 @@ k = 2
 :testnestedop = (k + 5)*k++ == 14
 :testautoconv = "test " + 123 == "test 123"
 constexp = 1 + (2*5) + sin(3.141*2/2)
+:testaadd = 10 :testaadd += 2
+:testasub = 10 :testasub -= 2
+:testamul = 10 :testamul *= 2
+:testadiv = 10 :testadiv /= 2
+:testamod = 10 :testamod %= 2
+:testaadd = :testaadd == 12
+:testasub = :testasub == 8
+:testamul = :testamul == 20
+:testadiv = :testadiv == 5
+:testamod = :testamod == 0
 `
 
 func ExecuteTestProgram(prog string) error {

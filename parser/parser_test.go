@@ -1,31 +1,52 @@
-package parser
+package parser_test
 
 import (
-	"fmt"
 	"testing"
 
-	"github.com/dbaumgarten/yodk/generators"
+	"github.com/dbaumgarten/yodk/ast"
+	"github.com/dbaumgarten/yodk/parser"
+	"github.com/dbaumgarten/yodk/testdata"
 )
 
 func TestParser(t *testing.T) {
-	programm := `abc = 123
-	def = "hallo"
-	a = (-b + c * d) == 1
-	if a == 1 then b=2 else goto 1 end
-	if a==b and a+b==2 then c=x end
-	a = b
-	if a==b then if b==c then goto 2 end end
-	`
 
-	p := NewParser()
+	p := parser.NewParser()
 
-	result, err := p.Parse(programm)
+	result, err := p.Parse(testdata.TestProgram)
 
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	printer := &generators.YololGenerator{}
+	if len(result.Lines) == 0 {
+		t.Fatal("Parsed programm is empty")
+	}
 
-	fmt.Println(printer.Generate(result))
+}
+
+type nodePositionTester struct {
+	*testing.T
+}
+
+func (o *nodePositionTester) Visit(node ast.Node, visitType int) error {
+	if visitType == ast.PreVisit || visitType == ast.SingleVisit {
+		startPos := node.Start()
+		if startPos.Line == 0 && startPos.Coloumn == 0 {
+			o.Fatalf("Empty position for %T", node)
+		}
+	}
+	return nil
+}
+
+func TestNodePositions(t *testing.T) {
+	tester := nodePositionTester{t}
+
+	p := parser.NewParser()
+
+	result, err := p.Parse(testdata.TestProgram)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	result.Accept(&tester)
 }

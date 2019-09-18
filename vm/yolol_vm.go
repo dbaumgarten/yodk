@@ -27,6 +27,15 @@ type ErrorHandlerFunc func(vm *YololVM, err error) bool
 
 type FinishHandlerFunc func(vm *YololVM)
 
+type RuntimeError struct {
+	Base error
+	Node ast.Node
+}
+
+func (e RuntimeError) Error() string {
+	return fmt.Sprintf("Runtime error at %s (up to %s): %s", e.Node.Start(), e.Node.End(), e.Base.Error())
+}
+
 type YololVM struct {
 	variables         map[string]*Variable
 	loop              bool
@@ -268,15 +277,14 @@ func (v *YololVM) run() error {
 		line := v.program.Lines[v.currentLine-1]
 		err := v.runLine(line)
 		if err != nil {
-			errReport := fmt.Errorf("Runtime-Error on line %d: %s", v.currentLine, err.Error())
 			cont := v.loop
 			if v.errorHandler != nil {
 				v.lock.Unlock()
-				cont = v.errorHandler(v, errReport)
+				cont = v.errorHandler(v, err)
 				v.lock.Lock()
 			}
 			if !cont {
-				return errReport
+				return err
 			}
 		}
 		v.currentLine++
@@ -311,7 +319,7 @@ func (v *YololVM) runStmt(stmt ast.Statement) error {
 			return err
 		}
 		if !conditionResult.IsNumber() {
-			return fmt.Errorf("If-condition can not be a string")
+			return RuntimeError{fmt.Errorf("If-condition can not be a string"), stmt}
 		}
 		if !conditionResult.Number().Equal(decimal.Zero) {
 			for _, st := range e.IfBlock {
@@ -336,7 +344,7 @@ func (v *YololVM) runStmt(stmt ast.Statement) error {
 		_, err := v.runDeref(e)
 		return err
 	default:
-		return fmt.Errorf("UNKNWON-STATEMENT:%T", e)
+		return RuntimeError{fmt.Errorf("UNKNWON-STATEMENT:%T", e), stmt}
 	}
 }
 
@@ -347,6 +355,7 @@ func (v *YololVM) runAssignment(as *ast.Assignment) error {
 		binop := ast.BinaryOperation{
 			Exp1: &ast.Dereference{
 				Variable: as.Variable,
+				Position: as.Start(),
 			},
 			Exp2:     as.Value,
 			Operator: strings.Replace(as.Operator, "=", "", -1),
@@ -382,7 +391,7 @@ func (v *YololVM) runExpr(expr ast.Expression) (*Variable, error) {
 	case *ast.FuncCall:
 		return v.runFuncCall(e)
 	default:
-		return nil, fmt.Errorf("UNKNWON-EXPRESSION:%T", e)
+		return nil, RuntimeError{fmt.Errorf("UNKNWON-EXPRESSION:%T", e), expr}
 	}
 }
 
@@ -397,7 +406,7 @@ func (v *YololVM) runFuncCall(d *ast.FuncCall) (*Variable, error) {
 func (v *YololVM) runDeref(d *ast.Dereference) (*Variable, error) {
 	oldval, exists := v.variables[d.Variable]
 	if !exists {
-		return nil, fmt.Errorf("Variable %s used before assignment", d.Variable)
+		return nil, RuntimeError{fmt.Errorf("Variable %s used before assignment", d.Variable), d}
 	}
 	var newval Variable
 	if oldval.IsNumber() {
@@ -411,7 +420,7 @@ func (v *YololVM) runDeref(d *ast.Dereference) (*Variable, error) {
 			newval.Value = oldval.Number().Sub(decimal.NewFromFloat(1))
 			break
 		default:
-			return nil, fmt.Errorf("Unknown operator '%s'", d.Operator)
+			return nil, RuntimeError{fmt.Errorf("Unknown operator '%s'", d.Operator), d}
 		}
 		v.variables[d.Variable] = &newval
 	}
@@ -424,12 +433,12 @@ func (v *YololVM) runDeref(d *ast.Dereference) (*Variable, error) {
 			break
 		case "--":
 			if len(oldval.String()) == 0 {
-				return nil, fmt.Errorf("String in variable '%s' is already empty", d.Variable)
+				return nil, RuntimeError{fmt.Errorf("String in variable '%s' is already empty", d.Variable), d}
 			}
 			newval.Value = string([]rune(oldval.String())[:len(oldval.String())-1])
 			break
 		default:
-			return nil, fmt.Errorf("Unknown operator '%s'", d.Operator)
+			return nil, RuntimeError{fmt.Errorf("Unknown operator '%s'", d.Operator), d}
 		}
 		v.variables[d.Variable] = &newval
 	}
@@ -448,7 +457,11 @@ func (v *YololVM) runBinOp(op *ast.BinaryOperation) (*Variable, error) {
 	if err2 != nil {
 		return nil, err2
 	}
-	return RunBinaryOperation(arg1, arg2, op.Operator)
+	result, err := RunBinaryOperation(arg1, arg2, op.Operator)
+	if err != nil {
+		return nil, RuntimeError{err, op}
+	}
+	return result, err
 }
 
 func (v *YololVM) runUnaryOp(op *ast.UnaryOperation) (*Variable, error) {
@@ -457,5 +470,9 @@ func (v *YololVM) runUnaryOp(op *ast.UnaryOperation) (*Variable, error) {
 		return nil, err
 	}
 
-	return RunUnaryOperation(arg, op.Operator)
+	result, err := RunUnaryOperation(arg, op.Operator)
+	if err != nil {
+		return nil, RuntimeError{err, op}
+	}
+	return result, err
 }

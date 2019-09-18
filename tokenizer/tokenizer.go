@@ -61,7 +61,7 @@ type Token struct {
 }
 
 func (t Token) String() string {
-	str := fmt.Sprintf("%s,Type: %s", t.Position.String(), t.Type)
+	str := fmt.Sprintf("%s, Type: %s", t.Position.String(), t.Type)
 	if t.Value != "" {
 		str += ", Value: '" + t.Value + "'"
 	}
