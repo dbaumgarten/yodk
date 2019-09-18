@@ -9,13 +9,13 @@ import (
 	"github.com/dbaumgarten/yodk/testdata"
 )
 
-func TestStaticExpressions(t *testing.T) {
+func TestOptimizers(t *testing.T) {
 	p := parser.NewParser()
 	parsed, err := p.Parse(testdata.TestProgram)
 	if err != nil {
 		t.Fatal(err)
 	}
-	opt := StaticExpressionOptimizer{}
+	opt := NewCompoundOptimizer()
 	err = opt.Optimize(parsed)
 	if err != nil {
 		t.Fatal(err)

@@ -7,9 +7,21 @@ type Optimizer interface {
 }
 
 type CompoundOptimizer struct {
-	seopt StaticExpressionOptimizer
+	seopt  *StaticExpressionOptimizer
+	varopt *VariableNameOptimizer
+}
+
+func NewCompoundOptimizer() *CompoundOptimizer {
+	return &CompoundOptimizer{
+		seopt:  &StaticExpressionOptimizer{},
+		varopt: NewVariableNameOptimizer(),
+	}
 }
 
 func (co *CompoundOptimizer) Optimize(prog *ast.Programm) error {
-	return co.seopt.Optimize(prog)
+	err := co.seopt.Optimize(prog)
+	if err != nil {
+		return err
+	}
+	return co.varopt.Optimize(prog)
 }

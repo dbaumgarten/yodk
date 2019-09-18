@@ -1,12 +1,11 @@
-optimizations:
-    remove static ifs
-        (attention with mulitline ifs)
-        line numbers!!!
-    shorten variable names
+features:
     automatic testing
 
 
 nolol features:
+    remove static ifs
+        (attention with mulitline ifs)
+        line numbers!!!
     check number constants for precision
     comments:
         introduce no empty line, keep line-numbering intact
