@@ -18,6 +18,31 @@ const (
 	TypeComment = "Comment"
 )
 
+type Position struct {
+	Line    int
+	Coloumn int
+}
+
+func NewPosition(line int, coloumn int) Position {
+	return Position{
+		Line:    line,
+		Coloumn: coloumn,
+	}
+}
+
+func (p Position) String() string {
+	return fmt.Sprintf("Line: %d, Coloumn: %d", p.Line, p.Coloumn)
+}
+func (p Position) Add(col int) Position {
+	p.Coloumn += col
+	return p
+}
+
+func (p Position) Sub(col int) Position {
+	p.Coloumn -= col
+	return p
+}
+
 var symbols = []string{"++", "--", ">=", "<=", "!=", "==", "==", "+=", "-=", "*=", "/=", "%=",
 	"=", ">", "<", "+", "-", "*", "/", "^", "%", ",", "(", ")"}
 
@@ -30,14 +55,13 @@ var numberRegex = regexp.MustCompile("^[0-9]+(\\.[0-9]+)?")
 var commentRegex = regexp.MustCompile("^[ \\t]*\\/\\/([^\n]*)")
 
 type Token struct {
-	Type   string
-	Value  string
-	Line   int
-	Column int
+	Type     string
+	Value    string
+	Position Position
 }
 
 func (t Token) String() string {
-	str := fmt.Sprintf("Line %d, Col:%d, Type: %s", t.Line, t.Column, t.Type)
+	str := fmt.Sprintf("%s,Type: %s", t.Position.String(), t.Type)
 	if t.Value != "" {
 		str += ", Value: '" + t.Value + "'"
 	}
@@ -69,10 +93,12 @@ func NewTokenizer() *Tokenizer {
 
 func (t *Tokenizer) newToken(typ string, val string) *Token {
 	return &Token{
-		Type:   typ,
-		Value:  val,
-		Line:   t.line,
-		Column: t.column,
+		Type:  typ,
+		Value: val,
+		Position: Position{
+			Line:    t.line,
+			Coloumn: t.column,
+		},
 	}
 }
 
@@ -187,12 +213,28 @@ func (t *Tokenizer) getComment() *Token {
 	return nil
 }
 
+func countLeadingSpace(line string) int {
+	i := 0
+	for _, runeValue := range line {
+		if runeValue == ' ' {
+			i++
+		} else {
+			break
+		}
+	}
+	return i
+}
+
 func (t *Tokenizer) getKeyword() *Token {
 	found := keywordRegex.Find(t.remaining)
 	if found != nil {
 		defer t.advance(len(found))
 		kw := bytes.Trim(found, " \t\n")
-		return t.newToken(TypeKeyword, string(kw))
+		tok := t.newToken(TypeKeyword, string(kw))
+		// the keyword-regex matches may contain leading spaces.
+		// make sure the position is still correct
+		tok.Position.Coloumn += countLeadingSpace(string(found))
+		return tok
 	}
 	return nil
 }
