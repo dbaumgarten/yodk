@@ -1,8 +1,10 @@
-package tokenizer
+package parser_test
 
 import (
 	"strings"
 	"testing"
+
+	"github.com/dbaumgarten/yodk/parser"
 )
 
 func TestTokenizer(t *testing.T) {
@@ -77,7 +79,7 @@ func TestTokenizer(t *testing.T) {
 	Line: 10, Coloumn: 19, Type: Newline
 	`
 
-	tk := Tokenizer{}
+	tk := parser.Tokenizer{}
 	tk.Load(input)
 
 	output := ""
@@ -87,7 +89,7 @@ func TestTokenizer(t *testing.T) {
 		if err != nil {
 			t.Fatal("Error when tokenizing:", err)
 		}
-		if token.Type == TypeEOF {
+		if token.Type == parser.TypeEOF {
 			break
 		}
 		output += token.String()

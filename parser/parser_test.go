@@ -3,7 +3,6 @@ package parser_test
 import (
 	"testing"
 
-	"github.com/dbaumgarten/yodk/ast"
 	"github.com/dbaumgarten/yodk/parser"
 	"github.com/dbaumgarten/yodk/testdata"
 )
@@ -28,8 +27,8 @@ type nodePositionTester struct {
 	*testing.T
 }
 
-func (o *nodePositionTester) Visit(node ast.Node, visitType int) error {
-	if visitType == ast.PreVisit || visitType == ast.SingleVisit {
+func (o *nodePositionTester) Visit(node parser.Node, visitType int) error {
+	if visitType == parser.PreVisit || visitType == parser.SingleVisit {
 		startPos := node.Start()
 		if startPos.Line == 0 && startPos.Coloumn == 0 {
 			o.Fatalf("Empty position for %T", node)

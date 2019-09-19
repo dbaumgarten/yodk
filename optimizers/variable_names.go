@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/dbaumgarten/yodk/ast"
+	"github.com/dbaumgarten/yodk/parser"
 )
 
 type VariableNameOptimizer struct {
@@ -17,17 +17,17 @@ func NewVariableNameOptimizer() *VariableNameOptimizer {
 	}
 }
 
-func (o *VariableNameOptimizer) Optimize(prog *ast.Programm) error {
+func (o *VariableNameOptimizer) Optimize(prog *parser.Programm) error {
 	return prog.Accept(o)
 }
 
-func (o *VariableNameOptimizer) Visit(node ast.Node, visitType int) error {
-	if visitType == ast.SingleVisit || visitType == ast.PreVisit {
+func (o *VariableNameOptimizer) Visit(node parser.Node, visitType int) error {
+	if visitType == parser.SingleVisit || visitType == parser.PreVisit {
 		switch n := node.(type) {
-		case *ast.Assignment:
+		case *parser.Assignment:
 			n.Variable = o.replaceVarName(n.Variable)
 			break
-		case *ast.Dereference:
+		case *parser.Dereference:
 			n.Variable = o.replaceVarName(n.Variable)
 			break
 

@@ -3,7 +3,7 @@ package optimizers
 import (
 	"fmt"
 
-	"github.com/dbaumgarten/yodk/ast"
+	"github.com/dbaumgarten/yodk/parser"
 	"github.com/dbaumgarten/yodk/vm"
 	"github.com/shopspring/decimal"
 )
@@ -11,27 +11,27 @@ import (
 type StaticExpressionOptimizer struct {
 }
 
-func (o *StaticExpressionOptimizer) Optimize(prog *ast.Programm) error {
+func (o *StaticExpressionOptimizer) Optimize(prog *parser.Programm) error {
 	return prog.Accept(o)
 }
 
-func (o *StaticExpressionOptimizer) Visit(node ast.Node, visitType int) error {
-	if visitType == ast.PostVisit {
+func (o *StaticExpressionOptimizer) Visit(node parser.Node, visitType int) error {
+	if visitType == parser.PostVisit {
 		switch n := node.(type) {
-		case *ast.Assignment:
+		case *parser.Assignment:
 			n.Value = optimizeExpression(n.Value)
 			break
-		case *ast.IfStatement:
+		case *parser.IfStatement:
 			n.Condition = optimizeExpression(n.Condition)
 			break
-		case *ast.BinaryOperation:
+		case *parser.BinaryOperation:
 			n.Exp1 = optimizeExpression(n.Exp1)
 			n.Exp2 = optimizeExpression(n.Exp2)
 			break
-		case *ast.UnaryOperation:
+		case *parser.UnaryOperation:
 			n.Exp = optimizeExpression(n.Exp)
 			break
-		case *ast.FuncCall:
+		case *parser.FuncCall:
 			n.Argument = optimizeExpression(n.Argument)
 			break
 		}
@@ -39,9 +39,9 @@ func (o *StaticExpressionOptimizer) Visit(node ast.Node, visitType int) error {
 	return nil
 }
 
-func optimizeExpression(exp ast.Expression) ast.Expression {
+func optimizeExpression(exp parser.Expression) parser.Expression {
 	switch n := exp.(type) {
-	case *ast.FuncCall:
+	case *parser.FuncCall:
 		if !isConstant(n.Argument) {
 			break
 		}
@@ -50,7 +50,7 @@ func optimizeExpression(exp ast.Expression) ast.Expression {
 			break
 		}
 		return varToConst(res)
-	case *ast.UnaryOperation:
+	case *parser.UnaryOperation:
 		if !isConstant(n.Exp) {
 			break
 		}
@@ -61,7 +61,7 @@ func optimizeExpression(exp ast.Expression) ast.Expression {
 			break
 		}
 		return varToConst(res)
-	case *ast.BinaryOperation:
+	case *parser.BinaryOperation:
 		if !isConstant(n.Exp1) || !isConstant(n.Exp2) {
 			break
 		}
@@ -74,21 +74,21 @@ func optimizeExpression(exp ast.Expression) ast.Expression {
 	return exp
 }
 
-func isConstant(exp ast.Expression) bool {
+func isConstant(exp parser.Expression) bool {
 	switch exp.(type) {
-	case *ast.StringConstant:
+	case *parser.StringConstant:
 		return true
-	case *ast.NumberConstant:
+	case *parser.NumberConstant:
 		return true
 	}
 	return false
 }
 
-func constToVar(exp ast.Expression) *vm.Variable {
+func constToVar(exp parser.Expression) *vm.Variable {
 	switch e := exp.(type) {
-	case *ast.StringConstant:
+	case *parser.StringConstant:
 		return &vm.Variable{Value: e.Value}
-	case *ast.NumberConstant:
+	case *parser.NumberConstant:
 		num, err := decimal.NewFromString(e.Value)
 		if err != nil {
 			panic("This should never happen")
@@ -98,13 +98,13 @@ func constToVar(exp ast.Expression) *vm.Variable {
 	panic("This should never happen")
 }
 
-func varToConst(v *vm.Variable) ast.Expression {
+func varToConst(v *vm.Variable) parser.Expression {
 	if v.IsNumber() {
-		return &ast.NumberConstant{
+		return &parser.NumberConstant{
 			Value: v.Itoa(),
 		}
 	} else {
-		return &ast.StringConstant{
+		return &parser.StringConstant{
 			Value: v.String(),
 		}
 	}

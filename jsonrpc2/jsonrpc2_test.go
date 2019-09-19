@@ -14,7 +14,7 @@ import (
 	"reflect"
 	"testing"
 
-	"golang.org/x/tools/internal/jsonrpc2"
+	"github.com/dbaumgarten/yodk/jsonrpc2"
 )
 
 var logRPC = flag.Bool("logrpc", false, "Enable jsonrpc2 communication logging")

@@ -1,9 +1,9 @@
 package optimizers
 
-import "github.com/dbaumgarten/yodk/ast"
+import "github.com/dbaumgarten/yodk/parser"
 
 type Optimizer interface {
-	Optimize(prog *ast.Programm) error
+	Optimize(prog *parser.Programm) error
 }
 
 type CompoundOptimizer struct {
@@ -18,7 +18,7 @@ func NewCompoundOptimizer() *CompoundOptimizer {
 	}
 }
 
-func (co *CompoundOptimizer) Optimize(prog *ast.Programm) error {
+func (co *CompoundOptimizer) Optimize(prog *parser.Programm) error {
 	err := co.seopt.Optimize(prog)
 	if err != nil {
 		return err

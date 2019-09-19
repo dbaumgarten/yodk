@@ -1,26 +1,24 @@
-package ast
+package parser
 
 import (
 	"strconv"
-
-	"github.com/dbaumgarten/yodk/tokenizer"
 )
 
 type Node interface {
 	Accept(v Visitor) error
-	Start() tokenizer.Position
-	End() tokenizer.Position
+	Start() Position
+	End() Position
 }
 
 type Programm struct {
 	Lines []*Line
 }
 
-func (n *Programm) Start() tokenizer.Position {
+func (n *Programm) Start() Position {
 	return n.Lines[0].Start()
 }
 
-func (n *Programm) End() tokenizer.Position {
+func (n *Programm) End() Position {
 	return n.Lines[len(n.Lines)-1].End()
 }
 
@@ -28,11 +26,11 @@ type Line struct {
 	Statements []Statement
 }
 
-func (n *Line) Start() tokenizer.Position {
+func (n *Line) Start() Position {
 	return n.Statements[0].Start()
 }
 
-func (n *Line) End() tokenizer.Position {
+func (n *Line) End() Position {
 	return n.Statements[len(n.Statements)-1].End()
 }
 
@@ -43,60 +41,60 @@ type Expression interface {
 }
 
 type StringConstant struct {
-	Position tokenizer.Position
+	Position Position
 	Value    string
 }
 
-func (n *StringConstant) Start() tokenizer.Position {
+func (n *StringConstant) Start() Position {
 	return n.Position
 }
 
-func (n *StringConstant) End() tokenizer.Position {
+func (n *StringConstant) End() Position {
 	pos := n.Start()
 	pos.Coloumn += len(n.Value) + 2
 	return pos
 }
 
 type NumberConstant struct {
-	Position tokenizer.Position
+	Position Position
 	Value    string
 }
 
-func (n *NumberConstant) Start() tokenizer.Position {
+func (n *NumberConstant) Start() Position {
 	return n.Position
 }
 
-func (n *NumberConstant) End() tokenizer.Position {
+func (n *NumberConstant) End() Position {
 	return n.Start().Add(len(n.Value))
 }
 
 type Dereference struct {
-	Position    tokenizer.Position
+	Position    Position
 	Variable    string
 	Operator    string
 	PrePost     string
 	IsStatement bool
 }
 
-func (n *Dereference) Start() tokenizer.Position {
+func (n *Dereference) Start() Position {
 	return n.Position
 }
 
-func (n *Dereference) End() tokenizer.Position {
+func (n *Dereference) End() Position {
 	return n.Start().Add(len(n.Variable) + len(n.Operator))
 }
 
 type UnaryOperation struct {
-	Position tokenizer.Position
+	Position Position
 	Operator string
 	Exp      Expression
 }
 
-func (n *UnaryOperation) Start() tokenizer.Position {
+func (n *UnaryOperation) Start() Position {
 	return n.Position
 }
 
-func (n *UnaryOperation) End() tokenizer.Position {
+func (n *UnaryOperation) End() Position {
 	return n.Exp.End()
 }
 
@@ -106,11 +104,11 @@ type BinaryOperation struct {
 	Exp2     Expression
 }
 
-func (n *BinaryOperation) Start() tokenizer.Position {
+func (n *BinaryOperation) Start() Position {
 	return n.Exp1.Start()
 }
 
-func (n *BinaryOperation) End() tokenizer.Position {
+func (n *BinaryOperation) End() Position {
 	return n.Exp2.End()
 }
 
@@ -119,11 +117,11 @@ type FuncCall struct {
 	Argument Expression
 }
 
-func (n *FuncCall) Start() tokenizer.Position {
+func (n *FuncCall) Start() Position {
 	return n.Argument.Start().Sub(len(n.Function) + 1)
 }
 
-func (n *FuncCall) End() tokenizer.Position {
+func (n *FuncCall) End() Position {
 	return n.Argument.End().Add(1)
 }
 
@@ -134,32 +132,32 @@ type Statement interface {
 }
 
 type Assignment struct {
-	Position tokenizer.Position
+	Position Position
 	Variable string
 	Value    Expression
 	Operator string
 }
 
-func (n *Assignment) Start() tokenizer.Position {
+func (n *Assignment) Start() Position {
 	return n.Position
 }
 
-func (n *Assignment) End() tokenizer.Position {
+func (n *Assignment) End() Position {
 	return n.Value.End()
 }
 
 type IfStatement struct {
-	Position  tokenizer.Position
+	Position  Position
 	Condition Expression
 	IfBlock   []Statement
 	ElseBlock []Statement
 }
 
-func (n *IfStatement) Start() tokenizer.Position {
+func (n *IfStatement) Start() Position {
 	return n.Position
 }
 
-func (n *IfStatement) End() tokenizer.Position {
+func (n *IfStatement) End() Position {
 	if n.ElseBlock == nil {
 		return n.IfBlock[len(n.IfBlock)-1].End().Add(3)
 	}
@@ -167,14 +165,14 @@ func (n *IfStatement) End() tokenizer.Position {
 }
 
 type GoToStatement struct {
-	Position tokenizer.Position
+	Position Position
 	Line     int
 }
 
-func (n *GoToStatement) Start() tokenizer.Position {
+func (n *GoToStatement) Start() Position {
 	return n.Position
 }
 
-func (n *GoToStatement) End() tokenizer.Position {
+func (n *GoToStatement) End() Position {
 	return n.Position.Add(len(strconv.Itoa(n.Line)) + 1)
 }
