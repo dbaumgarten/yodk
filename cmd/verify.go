@@ -18,11 +18,11 @@ var verifyCmd = &cobra.Command{
 		p := parser.NewParser()
 		p.DebugLog = debugLog
 		file := loadInputFile(args[0])
-		_, err := p.Parse(file)
+		_, errs := p.Parse(file)
 
-		exitOnError(err, "parsing file")
-
+		exitOnError(errs, "parsing file")
 		fmt.Println("File is valid")
+
 	},
 	Args: cobra.MinimumNArgs(1),
 }

@@ -20,7 +20,33 @@ func TestParser(t *testing.T) {
 	if len(result.Lines) == 0 {
 		t.Fatal("Parsed programm is empty")
 	}
+}
 
+func TestParserMultipleErrors(t *testing.T) {
+
+	prog := `
+	a = b + c c++ x=sin(x)
+	a = b++c c-- b+-
+	x = y + z
+	y = if x then y=1 else z=1 end
+	if x then y=1 else z=1 end
+	if x then y=1 else z=1
+	`
+
+	p := parser.NewParser()
+
+	result, errs := p.Parse(prog)
+
+	if errs != nil && len(errs.(parser.ParserErrors)) != 3 {
+		for _, err := range errs.(parser.ParserErrors) {
+			t.Log(err)
+		}
+		t.Fatalf("Found %d errors instead of %d", len(errs.(parser.ParserErrors)), 3)
+	}
+
+	if result != nil && len(result.Lines) == 0 {
+		t.Fatal("Parsed programm is empty")
+	}
 }
 
 type nodePositionTester struct {

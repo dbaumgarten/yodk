@@ -21,10 +21,12 @@ var optimizeCmd = &cobra.Command{
 		outfile := path.Base(args[0]) + ".out"
 		p := parser.NewParser()
 		file := loadInputFile(args[0])
-		parsed, err := p.Parse(file)
-		exitOnError(err, "parsing file")
+		parsed, errs := p.Parse(file)
+		if errs != nil {
+			exitOnError(errs, "parsing file")
+		}
 		opt := optimizers.NewCompoundOptimizer()
-		err = opt.Optimize(parsed)
+		err := opt.Optimize(parsed)
 		exitOnError(err, "performing optimisation")
 		gen := generators.YololGenerator{}
 		generated := gen.Generate(parsed)

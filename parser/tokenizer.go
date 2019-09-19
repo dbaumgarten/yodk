@@ -163,6 +163,8 @@ func (t *Tokenizer) Next() (*Token, error) {
 		EndPosition:   NewPosition(t.line, t.column),
 	}
 
+	t.advance(1)
+
 	return nil, &err
 }
 

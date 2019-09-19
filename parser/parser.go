@@ -20,33 +20,6 @@ func NewParser() *Parser {
 	}
 }
 
-type ParserError struct {
-	Message       string
-	StartPosition Position
-	EndPosition   Position
-	ErrorStack    []error
-	Fatal         bool
-}
-
-func (e *ParserError) Append(err error) *ParserError {
-	if e.ErrorStack == nil {
-		e.ErrorStack = make([]error, 0)
-	}
-	e.ErrorStack = append(e.ErrorStack, err)
-	return e
-}
-
-func (e ParserError) Error() string {
-	txt := fmt.Sprintf("Parser error at %s (up to %s): %s", e.StartPosition.String(), e.EndPosition.String(), e.Message)
-	if e.ErrorStack != nil {
-		txt += "\n" + "Following errors:\n"
-		for _, err := range e.ErrorStack {
-			txt += "    " + err.Error() + "\n"
-		}
-	}
-	return txt
-}
-
 func (p *Parser) hasNext() bool {
 	return p.currentToken < len(p.tokens)-1
 }
@@ -70,42 +43,53 @@ func (p *Parser) peek() *Token {
 }
 
 func (p *Parser) Parse(prog string) (*Programm, error) {
+	errors := make(ParserErrors, 0)
 	p.tokenizer.Load(prog)
 	p.tokens = make([]*Token, 0, 1000)
 	for {
 		token, err := p.tokenizer.Next()
 		if err != nil {
-			return nil, err
-		}
-		if p.DebugLog {
-			fmt.Print(token)
-		}
-		p.tokens = append(p.tokens, token)
-		if token.Type == TypeEOF {
-			break
+			errors = append(errors, err.(*ParserError))
+		} else {
+			if p.DebugLog {
+				fmt.Print(token)
+			}
+			p.tokens = append(p.tokens, token)
+			if token.Type == TypeEOF {
+				break
+			}
 		}
 	}
 	p.currentToken = 0
-	parsed, err := p.parseProgram()
-	if err == nil {
-		return parsed, nil
+	parsed, err := p.parseProgramTolerant()
+	errors = append(errors, err...)
+	if len(errors) > 0 {
+		return nil, errors
 	}
-	return nil, err
+	return parsed, nil
 }
 
-func (p *Parser) parseProgram() (*Programm, *ParserError) {
+func (p *Parser) parseProgramTolerant() (*Programm, ParserErrors) {
 	p.log()
+	errors := make(ParserErrors, 0)
 	ret := Programm{
 		Lines: make([]*Line, 0),
 	}
 	for p.hasNext() {
 		line, err := p.parseLine()
 		if err != nil {
-			return nil, err
+			errors = append(errors, err)
+			p.skipLine()
 		}
 		ret.Lines = append(ret.Lines, line)
 	}
-	return &ret, nil
+	return &ret, errors
+}
+
+func (p *Parser) skipLine() {
+	for p.current().Type != TypeNewline && p.current().Type != TypeEOF {
+		p.next()
+	}
 }
 
 func (p *Parser) parseLine() (*Line, *ParserError) {
