@@ -13,13 +13,7 @@ type LangServer struct {
 	client lsp.Client
 }
 
-func Serve() error {
-	ctx := context.Background()
-	stream := NewStdioStream()
-	return RunServer(ctx, stream)
-}
-
-func RunServer(ctx context.Context, stream jsonrpc2.Stream, opts ...interface{}) error {
+func Run(ctx context.Context, stream jsonrpc2.Stream, opts ...interface{}) error {
 	s := &LangServer{}
 	conn, client := lsp.RunServer(ctx, stream, s, opts...)
 	s.client = client

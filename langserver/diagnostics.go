@@ -18,7 +18,7 @@ func (s *LangServer) Diagnose(ctx context.Context, uri lsp.DocumentURI, text str
 		if err != nil {
 			if pError, is := err.(*parser.ParserError); is {
 				diag := lsp.Diagnostic{
-					Source:   "compiler",
+					Source:   "parser",
 					Message:  pError.Message,
 					Severity: lsp.SeverityError,
 					Range: lsp.Range{

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -17,6 +18,7 @@ type StdioStream struct {
 	out   io.Writer
 	bufin *bufio.Reader
 	lock  *sync.Mutex
+	Log   bool
 }
 
 func NewStdioStream() *StdioStream {
@@ -31,6 +33,9 @@ func NewStdioStream() *StdioStream {
 func (s *StdioStream) Write(ctx context.Context, data []byte) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
+	if s.Log {
+		log.Printf("Sent: %s", string(data))
+	}
 	if _, err := fmt.Fprintf(s.out, "Content-Length: %d\r\n\r\n", len(data)); err != nil {
 		return err
 	}
@@ -72,5 +77,12 @@ func (s *StdioStream) Read(ctx context.Context) ([]byte, error) {
 		return nil, fmt.Errorf("jsonrpc2: no Content-Length header found")
 	}
 
-	return ioutil.ReadAll(io.LimitReader(s.bufin, int64(contentLength)))
+	result, err := ioutil.ReadAll(io.LimitReader(s.bufin, int64(contentLength)))
+	if err != nil {
+		return nil, err
+	}
+	if s.Log {
+		log.Printf("Received: %s", string(result))
+	}
+	return result, err
 }

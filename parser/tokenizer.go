@@ -157,7 +157,13 @@ func (t *Tokenizer) Next() (*Token, error) {
 		return token, nil
 	}
 
-	return nil, fmt.Errorf("Unknown token '%s' at line %d col %d", string(t.remaining), t.line, t.column)
+	err := ParserError{
+		Message:       fmt.Sprintf("Unknown token '%s'", string(t.remaining[0])),
+		StartPosition: NewPosition(t.line, t.column),
+		EndPosition:   NewPosition(t.line, t.column),
+	}
+
+	return nil, &err
 }
 
 func (t *Tokenizer) advance(amount int) {
