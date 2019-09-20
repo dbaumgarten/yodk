@@ -106,15 +106,13 @@ func (t *Tokenizer) newToken(typ string, val string) *Token {
 }
 
 func (t *Tokenizer) Load(input string) {
-	t.column = 0
+	t.column = 1
 	t.text = input
 	t.remaining = []byte(strings.ToLower(input))
 	t.line = 1
 }
 
 func (t *Tokenizer) Next() (*Token, error) {
-
-	t.getWhitespace()
 
 	t.getComment()
 
@@ -123,7 +121,12 @@ func (t *Tokenizer) Next() (*Token, error) {
 		return t.newToken(TypeEOF, ""), nil
 	}
 
-	token := t.getKeyword()
+	token := t.getWhitespace()
+	if token != nil {
+		return token, nil
+	}
+
+	token = t.getKeyword()
 	if token != nil {
 		return token, nil
 	}
