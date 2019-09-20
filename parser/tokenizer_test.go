@@ -38,7 +38,7 @@ func TestTokenizer(t *testing.T) {
 	Line: 4, Coloumn: 8, Type: Symbol, Value: '='
 	Line: 4, Coloumn: 10, Type: String, Value: 'welt'
 	Line: 4, Coloumn: 27, Type: Newline
-	Line: 5, Coloumn: 1, Type: Keyword, Value: 'if'
+	Line: 5, Coloumn: 2, Type: Keyword, Value: 'if'
 	Line: 5, Coloumn: 5, Type: ID, Value: 'hallo'
 	Line: 5, Coloumn: 11, Type: Symbol, Value: '=='
 	Line: 5, Coloumn: 14, Type: ID, Value: 'welt'
@@ -110,7 +110,7 @@ func TestTokenizer(t *testing.T) {
 
 	for i, line := range expectedLines {
 		if strings.Trim(line, " \t\n") != strings.Trim(outputLines[i], " \t\n") {
-			t.Fatalf("Unexpected token, wanted '%s' but found '%s", line, outputLines[i])
+			t.Fatalf("Unexpected token, wanted:\n'%s'\nbut found: \n'%s'\n", line, outputLines[i])
 		}
 	}
 }

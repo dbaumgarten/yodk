@@ -8,14 +8,15 @@ import (
 )
 
 const (
-	TypeID      = "ID"
-	TypeNumber  = "Number"
-	TypeString  = "String"
-	TypeKeyword = "Keyword"
-	TypeSymbol  = "Symbol"
-	TypeNewline = "Newline"
-	TypeEOF     = "EOF"
-	TypeComment = "Comment"
+	TypeID         = "ID"
+	TypeNumber     = "Number"
+	TypeString     = "String"
+	TypeKeyword    = "Keyword"
+	TypeSymbol     = "Symbol"
+	TypeNewline    = "Newline"
+	TypeEOF        = "EOF"
+	TypeComment    = "Comment"
+	TypeWhitespace = "Whitespace"
 )
 
 type Position struct {
@@ -46,13 +47,15 @@ func (p Position) Sub(col int) Position {
 var symbols = []string{"++", "--", ">=", "<=", "!=", "==", "==", "+=", "-=", "*=", "/=", "%=",
 	"=", ">", "<", "+", "-", "*", "/", "^", "%", ",", "(", ")"}
 
-var keywordRegex = regexp.MustCompile("^[ \t]*(if | else | end| then |goto | and | or | not )")
+var keywordRegex = regexp.MustCompile("^\\b(if|else|end|then|goto|and|or|not)\\b")
 
 var identifierRegex = regexp.MustCompile("^:?[a-zA-Z]+[a-zA-Z0-9_]*")
 
 var numberRegex = regexp.MustCompile("^[0-9]+(\\.[0-9]+)?")
 
 var commentRegex = regexp.MustCompile("^[ \\t]*\\/\\/([^\n]*)")
+
+var whitespaceRegex = regexp.MustCompile("^[ \\t\r]+")
 
 type Token struct {
 	Type     string
@@ -111,25 +114,18 @@ func (t *Tokenizer) Load(input string) {
 
 func (t *Tokenizer) Next() (*Token, error) {
 
+	t.getWhitespace()
+
+	t.getComment()
+
 	// no need to tokenize an empty string
 	if len(t.remaining) == 0 {
 		return t.newToken(TypeEOF, ""), nil
 	}
 
-	// try to get a comment, but silently discard it if found
-	t.getComment()
-
-	//searching for keywords must happen before trimming
 	token := t.getKeyword()
 	if token != nil {
 		return token, nil
-	}
-
-	t.trim()
-
-	//did the trimming result in an empty string?
-	if len(t.remaining) == 0 {
-		return t.newToken(TypeEOF, ""), nil
 	}
 
 	token = t.getNewline()
@@ -173,20 +169,13 @@ func (t *Tokenizer) advance(amount int) {
 	t.remaining = t.remaining[amount:]
 }
 
-func (t *Tokenizer) trim() bool {
-	counter := 0
-	for _, b := range t.remaining {
-		if b == ' ' || b == '\t' || b == '\r' {
-			counter++
-			continue
-		}
-		break
+func (t *Tokenizer) getWhitespace() *Token {
+	found := whitespaceRegex.Find(t.remaining)
+	if found != nil {
+		defer t.advance(len(found))
+		return t.newToken(TypeWhitespace, string(found))
 	}
-	if counter > 0 {
-		t.advance(counter)
-		return true
-	}
-	return false
+	return nil
 }
 
 func (t *Tokenizer) getNewline() *Token {
@@ -221,27 +210,12 @@ func (t *Tokenizer) getComment() *Token {
 	return nil
 }
 
-func countLeadingSpace(line string) int {
-	i := 0
-	for _, runeValue := range line {
-		if runeValue == ' ' {
-			i++
-		} else {
-			break
-		}
-	}
-	return i
-}
-
 func (t *Tokenizer) getKeyword() *Token {
-	found := keywordRegex.Find(t.remaining)
+	found := keywordRegex.FindSubmatch(t.remaining)
 	if found != nil {
-		defer t.advance(len(found))
-		kw := bytes.Trim(found, " \t\n")
+		defer t.advance(len(found[0]))
+		kw := found[1]
 		tok := t.newToken(TypeKeyword, string(kw))
-		// the keyword-regex matches may contain leading spaces.
-		// make sure the position is still correct
-		tok.Position.Coloumn += countLeadingSpace(string(found))
 		return tok
 	}
 	return nil
