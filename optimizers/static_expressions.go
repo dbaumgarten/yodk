@@ -17,23 +17,11 @@ func (o *StaticExpressionOptimizer) Optimize(prog *parser.Programm) error {
 
 func (o *StaticExpressionOptimizer) Visit(node parser.Node, visitType int) error {
 	if visitType == parser.PostVisit {
-		switch n := node.(type) {
-		case *parser.Assignment:
-			n.Value = optimizeExpression(n.Value)
-			break
-		case *parser.IfStatement:
-			n.Condition = optimizeExpression(n.Condition)
-			break
-		case *parser.BinaryOperation:
-			n.Exp1 = optimizeExpression(n.Exp1)
-			n.Exp2 = optimizeExpression(n.Exp2)
-			break
-		case *parser.UnaryOperation:
-			n.Exp = optimizeExpression(n.Exp)
-			break
-		case *parser.FuncCall:
-			n.Argument = optimizeExpression(n.Argument)
-			break
+		if exp, isexp := node.(parser.Expression); isexp {
+			optimized := optimizeExpression(exp)
+			if optimized != nil {
+				return parser.NewNodeReplacement(optimized)
+			}
 		}
 	}
 	return nil
@@ -71,7 +59,7 @@ func optimizeExpression(exp parser.Expression) parser.Expression {
 		}
 		return varToConst(res)
 	}
-	return exp
+	return nil
 }
 
 func isConstant(exp parser.Expression) bool {

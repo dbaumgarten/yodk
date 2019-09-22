@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/dbaumgarten/yodk/generators"
-
 	"github.com/dbaumgarten/yodk/parser"
 	"github.com/dbaumgarten/yodk/testdata"
 )
