@@ -12,6 +12,26 @@ type Visitor interface {
 	Visit(node Node, visitType int) error
 }
 
+type VisitorFunc func(node Node, visitType int) error
+
+func (f VisitorFunc) Visit(node Node, visitType int) error {
+	return f(node, visitType)
+}
+
+type NodeReplacement struct {
+	Replacement Node
+}
+
+func NewNodeReplacement(replacement Node) NodeReplacement {
+	return NodeReplacement{
+		Replacement: replacement,
+	}
+}
+
+func (e NodeReplacement) Error() string {
+	return "SHOULD NEVER HAPPEN"
+}
+
 func (p *Programm) Accept(v Visitor) error {
 	err := v.Visit(p, PreVisit)
 	if err != nil {
@@ -23,6 +43,10 @@ func (p *Programm) Accept(v Visitor) error {
 			return err
 		}
 		err = line.Accept(v)
+		if repl, is := err.(NodeReplacement); is {
+			p.Lines[i] = repl.Replacement.(*Line)
+			err = nil
+		}
 		if err != nil {
 			return err
 		}
@@ -41,6 +65,10 @@ func (l *Line) Accept(v Visitor) error {
 			return err
 		}
 		err = stmt.Accept(v)
+		if repl, is := err.(NodeReplacement); is {
+			l.Statements[i] = repl.Replacement.(Statement)
+			err = nil
+		}
 		if err != nil {
 			return err
 		}
@@ -66,6 +94,10 @@ func (u *UnaryOperation) Accept(v Visitor) error {
 		return err
 	}
 	err = u.Exp.Accept(v)
+	if repl, is := err.(NodeReplacement); is {
+		u.Exp = repl.Replacement.(Expression)
+		err = nil
+	}
 	if err != nil {
 		return err
 	}
@@ -78,11 +110,19 @@ func (o *BinaryOperation) Accept(v Visitor) error {
 		return err
 	}
 	err = o.Exp1.Accept(v)
+	if repl, is := err.(NodeReplacement); is {
+		o.Exp1 = repl.Replacement.(Expression)
+		err = nil
+	}
 	if err != nil {
 		return err
 	}
 	err = v.Visit(o, InterVisit1)
 	err = o.Exp2.Accept(v)
+	if repl, is := err.(NodeReplacement); is {
+		o.Exp2 = repl.Replacement.(Expression)
+		err = nil
+	}
 	if err != nil {
 		return err
 	}
@@ -95,6 +135,10 @@ func (f *FuncCall) Accept(v Visitor) error {
 		return err
 	}
 	err = f.Argument.Accept(v)
+	if repl, is := err.(NodeReplacement); is {
+		f.Argument = repl.Replacement.(Expression)
+		err = nil
+	}
 	if err != nil {
 		return err
 	}
@@ -107,6 +151,10 @@ func (a *Assignment) Accept(v Visitor) error {
 		return err
 	}
 	err = a.Value.Accept(v)
+	if repl, is := err.(NodeReplacement); is {
+		a.Value = repl.Replacement.(Expression)
+		err = nil
+	}
 	if err != nil {
 		return err
 	}
@@ -119,6 +167,10 @@ func (s *IfStatement) Accept(v Visitor) error {
 		return err
 	}
 	err = s.Condition.Accept(v)
+	if repl, is := err.(NodeReplacement); is {
+		s.Condition = repl.Replacement.(Expression)
+		err = nil
+	}
 	if err != nil {
 		return err
 	}
@@ -132,6 +184,10 @@ func (s *IfStatement) Accept(v Visitor) error {
 			return err
 		}
 		err = ifstmt.Accept(v)
+		if repl, is := err.(NodeReplacement); is {
+			s.IfBlock[i] = repl.Replacement.(Statement)
+			err = nil
+		}
 		if err != nil {
 			return err
 		}
@@ -147,6 +203,10 @@ func (s *IfStatement) Accept(v Visitor) error {
 				return err
 			}
 			err = elsestmt.Accept(v)
+			if repl, is := err.(NodeReplacement); is {
+				s.ElseBlock[i] = repl.Replacement.(Statement)
+				err = nil
+			}
 			if err != nil {
 				return err
 			}

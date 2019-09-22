@@ -12,12 +12,35 @@ type Parser struct {
 	tokenizer    *Tokenizer
 	tokens       []*Token
 	currentToken int
+	// using an interface of ourself to call the parsing-methods allows them to be overridden by 'subclasses'
+	this yololParser
+}
+
+type yololParser interface {
+	parseStatement() (Statement, *ParserError)
+	parsePreOrPostOperation() (Statement, *ParserError)
+	parseGoto() (Statement, *ParserError)
+	parseAssignment() (Statement, *ParserError)
+	parseIf() (Statement, *ParserError)
+	parseExpression() (Expression, *ParserError)
+	parseLogicExpression() (Expression, *ParserError)
+	parseCompareExpression() (Expression, *ParserError)
+	parseSumExpression() (Expression, *ParserError)
+	parseProdExpression() (Expression, *ParserError)
+	parseUnaryExpression() (Expression, *ParserError)
+	parseBracketExpression() (Expression, *ParserError)
+	parseSingleExpression() (Expression, *ParserError)
+	parseFuncCall() (Expression, *ParserError)
+	parsePreOpExpression() (Expression, *ParserError)
+	parsePostOpExpression() (Expression, *ParserError)
 }
 
 func NewParser() *Parser {
-	return &Parser{
+	p := &Parser{
 		tokenizer: NewTokenizer(),
 	}
+	p.this = p
+	return p
 }
 
 func (p *Parser) hasNext() bool {
@@ -124,7 +147,7 @@ func (p *Parser) parseLine() (*Line, *ParserError) {
 			p.advance()
 			return &ret, nil
 		}
-		stmt, err := p.parseStatement()
+		stmt, err := p.this.parseStatement()
 		if err != nil {
 			return nil, err
 		}
@@ -146,7 +169,7 @@ func (p *Parser) parseStatement() (Statement, *ParserError) {
 		return nil, p.newError("Statements on same line must be seperated by space", true, p.current().Position, p.current().Position)
 	}
 
-	stmt, err := p.parseAssignment()
+	stmt, err := p.this.parseAssignment()
 	if err != nil && err.Fatal {
 		return nil, err
 	}
@@ -154,7 +177,7 @@ func (p *Parser) parseStatement() (Statement, *ParserError) {
 		return stmt, nil
 	}
 
-	stmt2, err2 := p.parseIf()
+	stmt2, err2 := p.this.parseIf()
 	if err2 != nil && err2.Fatal {
 		return nil, err2
 	}
@@ -162,7 +185,7 @@ func (p *Parser) parseStatement() (Statement, *ParserError) {
 		return stmt2, nil
 	}
 
-	stmt3, err3 := p.parseGoto()
+	stmt3, err3 := p.this.parseGoto()
 	if err3 != nil && err3.Fatal {
 		return nil, err3
 	}
@@ -170,7 +193,7 @@ func (p *Parser) parseStatement() (Statement, *ParserError) {
 		return stmt3, nil
 	}
 
-	stmt4, err4 := p.parsePreOrPostOperation()
+	stmt4, err4 := p.this.parsePreOrPostOperation()
 	if err4 != nil && err4.Fatal {
 		return nil, err4
 	}
@@ -181,29 +204,29 @@ func (p *Parser) parseStatement() (Statement, *ParserError) {
 	return nil, p.newError("Expected assignment, if-statement or goto", false, p.current().Position, p.current().Position)
 }
 
-func (p *Parser) parsePreOrPostOperation() (*Dereference, *ParserError) {
+func (p *Parser) parsePreOrPostOperation() (Statement, *ParserError) {
 	p.log()
-	preOpVarDeref, err := p.parsePreOpExpression()
+	preOpVarDeref, err := p.this.parsePreOpExpression()
 	if err != nil && err.Fatal {
 		return nil, err
 	}
 	if err == nil {
-		preOpVarDeref.IsStatement = true
+		preOpVarDeref.(*Dereference).IsStatement = true
 		return preOpVarDeref, nil
 	}
 
-	postOpVarDeref, err := p.parsePostOpExpression()
+	postOpVarDeref, err := p.this.parsePostOpExpression()
 	if err != nil && err.Fatal {
 		return nil, err
 	}
 	if err == nil {
-		postOpVarDeref.IsStatement = true
+		postOpVarDeref.(*Dereference).IsStatement = true
 		return postOpVarDeref, nil
 	}
 	return nil, p.newError("No Pre- or Post expression-statement found", false, p.current().Position, p.current().Position)
 }
 
-func (p *Parser) parseGoto() (*GoToStatement, *ParserError) {
+func (p *Parser) parseGoto() (Statement, *ParserError) {
 	if p.current().Type == TypeKeyword && p.current().Value == "goto" {
 		stmt := GoToStatement{
 			Position: p.current().Position,
@@ -223,7 +246,7 @@ func (p *Parser) parseGoto() (*GoToStatement, *ParserError) {
 	return nil, p.newError("Goto statements must start with 'goto'", false, p.current().Position, p.current().Position)
 }
 
-func (p *Parser) parseAssignment() (*Assignment, *ParserError) {
+func (p *Parser) parseAssignment() (Statement, *ParserError) {
 	p.log()
 	assignmentOperators := []string{"=", "+=", "-=", "*=", "/=", "%="}
 	ret := Assignment{
@@ -236,7 +259,7 @@ func (p *Parser) parseAssignment() (*Assignment, *ParserError) {
 	p.advance()
 	ret.Operator = p.current().Value
 	p.advance()
-	exp, err := p.parseExpression()
+	exp, err := p.this.parseExpression()
 	if err != nil {
 		err.Fatal = true
 		return nil, err.Append(fmt.Errorf("Expected expression on right side of assignment"))
@@ -245,7 +268,7 @@ func (p *Parser) parseAssignment() (*Assignment, *ParserError) {
 	return &ret, nil
 }
 
-func (p *Parser) parseIf() (*IfStatement, *ParserError) {
+func (p *Parser) parseIf() (Statement, *ParserError) {
 	p.log()
 	ret := IfStatement{
 		Position: p.current().Position,
@@ -256,7 +279,7 @@ func (p *Parser) parseIf() (*IfStatement, *ParserError) {
 	p.advance()
 
 	var err *ParserError
-	ret.Condition, err = p.parseExpression()
+	ret.Condition, err = p.this.parseExpression()
 	if err != nil {
 		err.Fatal = true
 		return nil, err.Append(fmt.Errorf("No expression found as if-condition"))
@@ -267,7 +290,7 @@ func (p *Parser) parseIf() (*IfStatement, *ParserError) {
 	}
 	p.advance()
 
-	stmt, err := p.parseStatement()
+	stmt, err := p.this.parseStatement()
 	if err != nil {
 		err.Fatal = true
 		return nil, err.Append(fmt.Errorf("Expected statement after 'then'"))
@@ -276,7 +299,7 @@ func (p *Parser) parseIf() (*IfStatement, *ParserError) {
 	ret.IfBlock = append(ret.IfBlock, stmt)
 
 	for {
-		stmt2, err := p.parseStatement()
+		stmt2, err := p.this.parseStatement()
 		if err != nil {
 			break
 		}
@@ -285,7 +308,7 @@ func (p *Parser) parseIf() (*IfStatement, *ParserError) {
 
 	if p.current().Type == TypeKeyword && p.current().Value == "else" {
 		p.advance()
-		stmt, err := p.parseStatement()
+		stmt, err := p.this.parseStatement()
 		if err != nil {
 			err.Fatal = true
 			return nil, err.Append(fmt.Errorf("Expected statement after 'else'"))
@@ -294,7 +317,7 @@ func (p *Parser) parseIf() (*IfStatement, *ParserError) {
 		ret.ElseBlock = append(ret.IfBlock, stmt)
 
 		for {
-			stmt2, err := p.parseStatement()
+			stmt2, err := p.this.parseStatement()
 			if err != nil {
 				break
 			}
@@ -312,7 +335,7 @@ func (p *Parser) parseIf() (*IfStatement, *ParserError) {
 
 func (p *Parser) parseExpression() (Expression, *ParserError) {
 	p.log()
-	return p.parseLogicExpression()
+	return p.this.parseLogicExpression()
 }
 
 func (p *Parser) parseLogicExpression() (Expression, *ParserError) {
@@ -320,7 +343,7 @@ func (p *Parser) parseLogicExpression() (Expression, *ParserError) {
 	var exp Expression
 	var err *ParserError
 
-	exp, err = p.parseCompareExpression()
+	exp, err = p.this.parseCompareExpression()
 	if err != nil {
 		return nil, err
 	}
@@ -333,7 +356,7 @@ func (p *Parser) parseLogicExpression() (Expression, *ParserError) {
 		}
 		p.advance()
 		var err *ParserError
-		binexp.Exp2, err = p.parseCompareExpression()
+		binexp.Exp2, err = p.this.parseCompareExpression()
 		if err != nil {
 			err.Fatal = true
 			return nil, err.Append(fmt.Errorf("Expected expression on right side of %s", binexp.Operator))
@@ -345,7 +368,7 @@ func (p *Parser) parseLogicExpression() (Expression, *ParserError) {
 
 func (p *Parser) parseCompareExpression() (Expression, *ParserError) {
 	p.log()
-	exp1, err := p.parseSumExpression()
+	exp1, err := p.this.parseSumExpression()
 	if err != nil {
 		return nil, err
 	}
@@ -358,7 +381,7 @@ func (p *Parser) parseCompareExpression() (Expression, *ParserError) {
 		}
 		p.advance()
 		var err *ParserError
-		binexp.Exp2, err = p.parseSumExpression()
+		binexp.Exp2, err = p.this.parseSumExpression()
 		if err != nil {
 			err.Fatal = true
 			return nil, err.Append(fmt.Errorf("Expected expression on right side of %s", binexp.Operator))
@@ -373,7 +396,7 @@ func (p *Parser) parseSumExpression() (Expression, *ParserError) {
 	var exp Expression
 	var err *ParserError
 
-	exp, err = p.parseProdExpression()
+	exp, err = p.this.parseProdExpression()
 	if err != nil {
 		return nil, err
 	}
@@ -386,7 +409,7 @@ func (p *Parser) parseSumExpression() (Expression, *ParserError) {
 		}
 		p.advance()
 		var err *ParserError
-		binexp.Exp2, err = p.parseProdExpression()
+		binexp.Exp2, err = p.this.parseProdExpression()
 		if err != nil {
 			err.Fatal = true
 			return nil, err.Append(fmt.Errorf("Expected expression on right side of %s", binexp.Operator))
@@ -401,7 +424,7 @@ func (p *Parser) parseProdExpression() (Expression, *ParserError) {
 	var exp Expression
 	var err *ParserError
 
-	exp, err = p.parseUnaryExpression()
+	exp, err = p.this.parseUnaryExpression()
 	if err != nil {
 		return nil, err
 	}
@@ -414,7 +437,7 @@ func (p *Parser) parseProdExpression() (Expression, *ParserError) {
 		}
 		p.advance()
 		var err *ParserError
-		binexp.Exp2, err = p.parseUnaryExpression()
+		binexp.Exp2, err = p.this.parseUnaryExpression()
 		if err != nil {
 			err.Fatal = true
 			return nil, err.Append(fmt.Errorf("Expected expression on right side of %s", binexp.Operator))
@@ -433,7 +456,7 @@ func (p *Parser) parseUnaryExpression() (Expression, *ParserError) {
 			Position: p.current().Position,
 		}
 		p.advance()
-		subexp, err := p.parseUnaryExpression()
+		subexp, err := p.this.parseUnaryExpression()
 		if err != nil {
 			err.Fatal = true
 			return nil, err.Append(fmt.Errorf("Expected expression on right side of %s", unaryExp.Operator))
@@ -441,14 +464,14 @@ func (p *Parser) parseUnaryExpression() (Expression, *ParserError) {
 		unaryExp.Exp = subexp
 		return unaryExp, nil
 	}
-	return p.parseBracketExpression()
+	return p.this.parseBracketExpression()
 }
 
 func (p *Parser) parseBracketExpression() (Expression, *ParserError) {
 	p.log()
 	if p.current().Type == TypeSymbol && p.current().Value == "(" {
 		p.advance()
-		innerExp, err := p.parseExpression()
+		innerExp, err := p.this.parseExpression()
 		if err != nil {
 			err.Fatal = true
 			return nil, err.Append(fmt.Errorf("Expected expression after '('"))
@@ -459,13 +482,13 @@ func (p *Parser) parseBracketExpression() (Expression, *ParserError) {
 		}
 		return nil, p.newError("Missing ')'", true, innerExp.End(), innerExp.End())
 	}
-	return p.parseSingleExpression()
+	return p.this.parseSingleExpression()
 }
 
 func (p *Parser) parseSingleExpression() (Expression, *ParserError) {
 	p.log()
 
-	preOpVarDeref, err := p.parsePreOpExpression()
+	preOpVarDeref, err := p.this.parsePreOpExpression()
 	if err != nil && err.Fatal {
 		return nil, err
 	}
@@ -473,7 +496,7 @@ func (p *Parser) parseSingleExpression() (Expression, *ParserError) {
 		return preOpVarDeref, nil
 	}
 
-	postOpVarDeref, err := p.parsePostOpExpression()
+	postOpVarDeref, err := p.this.parsePostOpExpression()
 	if err != nil && err.Fatal {
 		return nil, err
 	}
@@ -481,7 +504,7 @@ func (p *Parser) parseSingleExpression() (Expression, *ParserError) {
 		return postOpVarDeref, nil
 	}
 
-	funccall, err := p.parseFuncCall()
+	funccall, err := p.this.parseFuncCall()
 	if err != nil && err.Fatal {
 		return nil, err
 	}
@@ -513,7 +536,7 @@ func (p *Parser) parseSingleExpression() (Expression, *ParserError) {
 	return nil, p.newError("Expected constant, variable, func-call or pre/post operation", true, p.current().Position, p.current().Position)
 }
 
-func (p *Parser) parseFuncCall() (*FuncCall, *ParserError) {
+func (p *Parser) parseFuncCall() (Expression, *ParserError) {
 	p.log()
 	if p.current().Type != TypeID || p.next().Type != TypeSymbol || p.next().Value != "(" {
 		return nil, p.newError("No function call detected", false, p.current().Position, p.current().Position)
@@ -523,7 +546,7 @@ func (p *Parser) parseFuncCall() (*FuncCall, *ParserError) {
 	}
 	p.advance()
 	p.advance()
-	arg, err := p.parseExpression()
+	arg, err := p.this.parseExpression()
 	fc.Argument = arg
 	if err != nil {
 		err.Fatal = true
@@ -538,7 +561,7 @@ func (p *Parser) parseFuncCall() (*FuncCall, *ParserError) {
 	return fc, nil
 }
 
-func (p *Parser) parsePreOpExpression() (*Dereference, *ParserError) {
+func (p *Parser) parsePreOpExpression() (Expression, *ParserError) {
 	p.log()
 	if p.current().Type == TypeSymbol && (p.current().Value == "++" || p.current().Value == "--") {
 		exp := Dereference{
@@ -557,7 +580,7 @@ func (p *Parser) parsePreOpExpression() (*Dereference, *ParserError) {
 	return nil, p.newError("No Pre-Operator found", false, p.current().Position, p.current().Position)
 }
 
-func (p *Parser) parsePostOpExpression() (*Dereference, *ParserError) {
+func (p *Parser) parsePostOpExpression() (Expression, *ParserError) {
 	p.log()
 	if p.next().Type == TypeSymbol && (p.next().Value == "++" || p.next().Value == "--") && p.current().Type == TypeID {
 		exp := Dereference{

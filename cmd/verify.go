@@ -15,7 +15,7 @@ var verifyCmd = &cobra.Command{
 	Short: "Check if a (y/n)olol programm compiles correctly",
 	Long:  `Try to compile the file and run checks on it`,
 	Run: func(cmd *cobra.Command, args []string) {
-		p := parser.NewParser()
+		p := parser.NewExtParser()
 		p.DebugLog = debugLog
 		file := loadInputFile(args[0])
 		_, errs := p.Parse(file)
