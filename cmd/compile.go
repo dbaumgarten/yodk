@@ -17,7 +17,7 @@ var compileCmd = &cobra.Command{
 	Short: "Compile a nolol programm to yolol",
 	Run: func(cmd *cobra.Command, args []string) {
 		outfile := path.Base(args[0]) + ".out"
-		p := parser.NewExtParser()
+		p := parser.NewNololParser()
 		file := loadInputFile(args[0])
 		parsed, errs := p.Parse(file)
 		if errs != nil {

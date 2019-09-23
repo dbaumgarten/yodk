@@ -5,19 +5,19 @@ import (
 	"strconv"
 )
 
-type ExtParser struct {
+type NololParser struct {
 	*Parser
 }
 
-func NewExtParser() *ExtParser {
-	ep := &ExtParser{
+func NewNololParser() *NololParser {
+	ep := &NololParser{
 		Parser: NewParser(),
 	}
 	ep.this = ep
 	return ep
 }
 
-func (p *ExtParser) Parse(prog string) (*ExtProgramm, error) {
+func (p *NololParser) Parse(prog string) (*ExtProgramm, error) {
 	errors := make(ParserErrors, 0)
 	p.tokenizer.Load(prog)
 	p.tokens = make([]*Token, 0, 1000)
@@ -44,7 +44,7 @@ func (p *ExtParser) Parse(prog string) (*ExtProgramm, error) {
 	return parsed, nil
 }
 
-func (p *ExtParser) parseProgram() (*ExtProgramm, ParserErrors) {
+func (p *NololParser) parseProgram() (*ExtProgramm, ParserErrors) {
 	p.log()
 	errors := make(ParserErrors, 0)
 	ret := ExtProgramm{
@@ -61,7 +61,7 @@ func (p *ExtParser) parseProgram() (*ExtProgramm, ParserErrors) {
 	return &ret, errors
 }
 
-func (p *ExtParser) parseLine() (*ExtLine, *ParserError) {
+func (p *NololParser) parseLine() (*ExtLine, *ParserError) {
 	p.log()
 	ret := ExtLine{
 		Line: Line{
@@ -95,7 +95,7 @@ func (p *ExtParser) parseLine() (*ExtLine, *ParserError) {
 	return nil, p.newError("Missing newline", true, ret.Start(), ret.End())
 }
 
-func (p *ExtParser) parseGoto() (Statement, *ParserError) {
+func (p *NololParser) parseGoto() (Statement, *ParserError) {
 	if p.current().Type == TypeKeyword && p.current().Value == "goto" {
 		p.advance()
 		if p.current().Type == TypeNumber {
