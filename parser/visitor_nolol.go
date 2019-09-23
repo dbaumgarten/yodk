@@ -16,7 +16,7 @@ func (p *ExtProgramm) Accept(v Visitor) error {
 		}
 		err = line.Accept(v)
 		if repl, is := err.(NodeReplacement); is {
-			p.ExecutableLines[i] = repl.Replacement.(*ExtLine)
+			p.ExecutableLines[i] = repl.Replacement.(*ExecutableLine)
 			err = nil
 		}
 		if err != nil {
@@ -26,7 +26,7 @@ func (p *ExtProgramm) Accept(v Visitor) error {
 	return v.Visit(p, PostVisit)
 }
 
-func (l *ExtLine) Accept(v Visitor) error {
+func (l *ExecutableLine) Accept(v Visitor) error {
 	err := v.Visit(l, PreVisit)
 	if err != nil {
 		return err
@@ -44,6 +44,22 @@ func (l *ExtLine) Accept(v Visitor) error {
 		if err != nil {
 			return err
 		}
+	}
+	return v.Visit(l, PostVisit)
+}
+
+func (l *ConstDeclaration) Accept(v Visitor) error {
+	err := v.Visit(l, PreVisit)
+	if err != nil {
+		return err
+	}
+	err = l.Value.Accept(v)
+	if repl, is := err.(NodeReplacement); is {
+		l.Value = repl.Replacement.(Expression)
+		err = nil
+	}
+	if err != nil {
+		return err
 	}
 	return v.Visit(l, PostVisit)
 }

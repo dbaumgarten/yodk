@@ -205,7 +205,7 @@ func (t *Tokenizer) getSymbol() *Token {
 }
 
 func (t *Tokenizer) getComment() *Token {
-	found := commentRegex.Find(t.remaining)
+	found := t.commentRegex.Find(t.remaining)
 	if found != nil {
 		defer t.advance(len(found))
 		return t.newToken(TypeComment, string(found))
@@ -214,7 +214,7 @@ func (t *Tokenizer) getComment() *Token {
 }
 
 func (t *Tokenizer) getKeyword() *Token {
-	found := keywordRegex.FindSubmatch(t.remaining)
+	found := t.keywordRegex.FindSubmatch(t.remaining)
 	if found != nil {
 		defer t.advance(len(found[0]))
 		kw := found[1]
@@ -225,7 +225,7 @@ func (t *Tokenizer) getKeyword() *Token {
 }
 
 func (t *Tokenizer) getIdentifier() *Token {
-	found := identifierRegex.Find(t.remaining)
+	found := t.identifierRegex.Find(t.remaining)
 	if found != nil {
 		defer t.advance(len(found))
 		return t.newToken(TypeID, string(found))
@@ -256,7 +256,7 @@ func (t *Tokenizer) getStringConstant() *Token {
 }
 
 func (t *Tokenizer) getNumberConstant() *Token {
-	found := numberRegex.Find(t.remaining)
+	found := t.numberRegex.Find(t.remaining)
 	if found != nil {
 		defer t.advance(len(found))
 		return t.newToken(TypeNumber, string(found))

@@ -114,7 +114,7 @@ func TestTokenizer(t *testing.T) {
 	Line: 11, Coloumn: 1, Type: Whitespace, Value: '	'
 	`
 
-	tk := parser.Tokenizer{}
+	tk := parser.NewTokenizer()
 	tk.Load(input)
 
 	output := ""

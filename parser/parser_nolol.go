@@ -13,6 +13,7 @@ func NewNololParser() *NololParser {
 	ep := &NololParser{
 		Parser: NewParser(),
 	}
+	ep.tokenizer = NewNololTokenizer()
 	ep.this = ep
 	return ep
 }
@@ -48,7 +49,7 @@ func (p *NololParser) parseProgram() (*ExtProgramm, ParserErrors) {
 	p.log()
 	errors := make(ParserErrors, 0)
 	ret := ExtProgramm{
-		ExecutableLines: make([]*ExtLine, 0),
+		ExecutableLines: make([]ExtLine, 0),
 	}
 	for p.hasNext() {
 		line, err := p.parseLine()
@@ -61,9 +62,18 @@ func (p *NololParser) parseProgram() (*ExtProgramm, ParserErrors) {
 	return &ret, errors
 }
 
-func (p *NololParser) parseLine() (*ExtLine, *ParserError) {
+func (p *NololParser) parseLine() (ExtLine, *ParserError) {
 	p.log()
-	ret := ExtLine{
+
+	constDecl, err := p.parseConstantDeclaration()
+	if err != nil && err.Fatal {
+		return nil, err
+	}
+	if err == nil {
+		return constDecl, nil
+	}
+
+	ret := ExecutableLine{
 		Line: Line{
 			Statements: make([]Statement, 0),
 		},
@@ -93,6 +103,37 @@ func (p *NololParser) parseLine() (*ExtLine, *ParserError) {
 	}
 
 	return nil, p.newError("Missing newline", true, ret.Start(), ret.End())
+}
+
+func (p *NololParser) parseConstantDeclaration() (*ConstDeclaration, *ParserError) {
+	if p.current().Type != TypeKeyword || p.current().Value != "const" {
+		return nil, p.newError("Const declaration must start with const", false, p.current().Position, p.current().Position)
+	}
+	startpos := p.current().Position
+	p.advance()
+	if p.current().Type != TypeID {
+		return nil, p.newError("const keyword must be followed by identifier", true, p.current().Position, p.current().Position)
+	}
+	decl := &ConstDeclaration{
+		Name:     p.current().Value,
+		Position: startpos,
+	}
+	p.advance()
+	if p.current().Type != TypeSymbol || p.current().Value != "=" {
+		return nil, p.newError("Identifier in const declaration must be followed by '='", true, p.current().Position, p.current().Position)
+	}
+	p.advance()
+	value, err := p.parseSingleExpression()
+	if err != nil {
+		err.Fatal = true
+		return nil, err
+	}
+	decl.Value = value
+	if p.current().Type != TypeNewline && p.current().Type != TypeEOF {
+		return nil, p.newError("Const declaration must be followed by newline or EOF", true, p.current().Position, p.current().Position)
+	}
+	p.advance()
+	return decl, nil
 }
 
 func (p *NololParser) parseGoto() (Statement, *ParserError) {
