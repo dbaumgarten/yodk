@@ -19,7 +19,12 @@ type ExtLine interface {
 
 type ExecutableLine struct {
 	Line
-	Label string
+	Label    string
+	Position Position
+}
+
+func (n *ExecutableLine) Start() Position {
+	return n.Position
 }
 
 type ExtProgramm struct {

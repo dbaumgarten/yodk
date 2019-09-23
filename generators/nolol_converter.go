@@ -184,6 +184,10 @@ func (c *NololConverter) convertProgramm(p *parser.ExtProgramm) *parser.Programm
 	}
 	for _, rawline := range p.ExecutableLines {
 		if line, isExecutableLine := rawline.(*parser.ExecutableLine); isExecutableLine {
+			if len(line.Statements) == 0 {
+				c.lineNumberChanges[line.Start().Line] = len(newprog.Lines) + 1
+				continue
+			}
 			newline := &parser.Line{
 				Statements: line.Statements,
 			}

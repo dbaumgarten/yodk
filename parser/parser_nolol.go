@@ -77,6 +77,7 @@ func (p *NololParser) parseLine() (ExtLine, *ParserError) {
 		Line: Line{
 			Statements: make([]Statement, 0),
 		},
+		Position: p.current().Position,
 	}
 
 	// get line-label if it exists
