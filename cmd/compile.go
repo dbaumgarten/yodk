@@ -4,7 +4,7 @@ import (
 	"io/ioutil"
 	"path"
 
-	"github.com/dbaumgarten/yodk/generators"
+	"github.com/dbaumgarten/yodk/nolol"
 	"github.com/dbaumgarten/yodk/optimizers"
 	"github.com/dbaumgarten/yodk/parser"
 
@@ -17,19 +17,19 @@ var compileCmd = &cobra.Command{
 	Short: "Compile a nolol programm to yolol",
 	Run: func(cmd *cobra.Command, args []string) {
 		outfile := path.Base(args[0]) + ".out"
-		p := parser.NewNololParser()
+		p := nolol.NewNololParser()
 		file := loadInputFile(args[0])
 		parsed, errs := p.Parse(file)
 		if errs != nil {
 			exitOnError(errs, "parsing file")
 		}
-		converter := generators.NewNololConverter()
+		converter := nolol.NewNololConverter()
 		converted, err := converter.Convert(parsed)
 		exitOnError(err, "compiling")
 		opt := optimizers.NewCompoundOptimizer()
 		err = opt.Optimize(converted)
 		exitOnError(err, "performing optimisation")
-		gen := generators.YololGenerator{}
+		gen := parser.YololGenerator{}
 		generated := gen.Generate(converted)
 		ioutil.WriteFile(outfile, []byte(generated), 0700)
 	},

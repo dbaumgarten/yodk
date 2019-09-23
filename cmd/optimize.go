@@ -4,7 +4,6 @@ import (
 	"io/ioutil"
 	"path"
 
-	"github.com/dbaumgarten/yodk/generators"
 	"github.com/dbaumgarten/yodk/optimizers"
 	"github.com/dbaumgarten/yodk/parser"
 	"github.com/spf13/cobra"
@@ -28,7 +27,7 @@ var optimizeCmd = &cobra.Command{
 		opt := optimizers.NewCompoundOptimizer()
 		err := opt.Optimize(parsed)
 		exitOnError(err, "performing optimisation")
-		gen := generators.YololGenerator{}
+		gen := parser.YololGenerator{}
 		generated := gen.Generate(parsed)
 		ioutil.WriteFile(outfile, []byte(generated), 0700)
 	},

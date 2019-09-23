@@ -1,4 +1,4 @@
-package generators
+package nolol
 
 import (
 	"fmt"
@@ -16,7 +16,7 @@ func NewNololConverter() *NololConverter {
 	return &NololConverter{}
 }
 func (c *NololConverter) ConvertFromSource(prog string) (*parser.Programm, error) {
-	p := parser.NewNololParser()
+	p := NewNololParser()
 	parsed, err := p.Parse(prog)
 	if err != nil {
 		return nil, err
@@ -24,7 +24,7 @@ func (c *NololConverter) ConvertFromSource(prog string) (*parser.Programm, error
 	return c.Convert(parsed)
 }
 
-func (c *NololConverter) Convert(prog *parser.ExtProgramm) (*parser.Programm, error) {
+func (c *NololConverter) Convert(prog *ExtProgramm) (*parser.Programm, error) {
 	err := c.findConstantDeclarations(prog)
 	if err != nil {
 		return nil, err
@@ -50,7 +50,7 @@ func (c *NololConverter) findConstantDeclarations(p parser.Node) error {
 	c.constants = make(map[string]interface{}, 0)
 	f := func(node parser.Node, visitType int) error {
 		if visitType == parser.PreVisit {
-			if constDecl, is := node.(*parser.ConstDeclaration); is {
+			if constDecl, is := node.(*ConstDeclaration); is {
 				_, exists := c.constants[constDecl.Name]
 				if exists {
 					return &parser.ParserError{
@@ -116,7 +116,7 @@ func (c *NololConverter) insertConstants(p parser.Node) error {
 func (c *NololConverter) findJumpLabels(p parser.Node) error {
 	c.jumpLabels = make(map[string]int)
 	f := func(node parser.Node, visitType int) error {
-		if line, isExecutableLine := node.(*parser.ExecutableLine); isExecutableLine {
+		if line, isExecutableLine := node.(*ExecutableLine); isExecutableLine {
 			if visitType == parser.PreVisit && line.Label != "" {
 				_, exists := c.jumpLabels[line.Label]
 				if exists {
@@ -137,7 +137,7 @@ func (c *NololConverter) findJumpLabels(p parser.Node) error {
 
 func (c *NololConverter) convertLabelGoto(p parser.Node) error {
 	f := func(node parser.Node, visitType int) error {
-		if gotostmt, is := node.(*parser.GoToLabelStatement); is {
+		if gotostmt, is := node.(*GoToLabelStatement); is {
 			line, exists := c.jumpLabels[gotostmt.Label]
 			if !exists {
 				return parser.ParserError{
@@ -177,13 +177,13 @@ func (c *NololConverter) fixGotoLineNumbers(p parser.Node) error {
 	return p.Accept(parser.VisitorFunc(f))
 }
 
-func (c *NololConverter) convertProgramm(p *parser.ExtProgramm) *parser.Programm {
+func (c *NololConverter) convertProgramm(p *ExtProgramm) *parser.Programm {
 	c.lineNumberChanges = make(map[int]int)
 	newprog := parser.Programm{
 		Lines: make([]*parser.Line, 0),
 	}
 	for _, rawline := range p.ExecutableLines {
-		if line, isExecutableLine := rawline.(*parser.ExecutableLine); isExecutableLine {
+		if line, isExecutableLine := rawline.(*ExecutableLine); isExecutableLine {
 			if len(line.Statements) == 0 {
 				c.lineNumberChanges[line.Start().Line] = len(newprog.Lines) + 1
 				continue

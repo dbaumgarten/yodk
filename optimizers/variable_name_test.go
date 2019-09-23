@@ -5,7 +5,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dbaumgarten/yodk/generators"
 	"github.com/dbaumgarten/yodk/parser"
 	"github.com/dbaumgarten/yodk/testdata"
 )
@@ -75,7 +74,7 @@ func TestVarOpt(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	gen := generators.YololGenerator{}
+	gen := parser.YololGenerator{}
 	generated := gen.Generate(parsed)
 
 	if strings.Contains(generated, "pi = ") || strings.Contains(generated, "hw = ") {

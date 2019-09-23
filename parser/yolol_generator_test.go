@@ -1,4 +1,4 @@
-package generators
+package parser_test
 
 import (
 	"testing"
@@ -9,7 +9,7 @@ import (
 
 func TestGenerator(t *testing.T) {
 	p := parser.NewParser()
-	gen := YololGenerator{}
+	gen := parser.YololGenerator{}
 	parsed, err := p.Parse(testdata.TestProgram)
 	if err != nil {
 		t.Fatal(err)

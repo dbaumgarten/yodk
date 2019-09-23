@@ -1,11 +1,9 @@
-package generators
+package parser
 
 import (
 	"fmt"
 	"strconv"
 	"strings"
-
-	"github.com/dbaumgarten/yodk/parser"
 )
 
 type YololGenerator struct {
@@ -29,45 +27,45 @@ var operatorPriority = map[string]int{
 	"not": 4,
 }
 
-func (y *YololGenerator) Visit(node parser.Node, visitType int) error {
+func (y *YololGenerator) Visit(node Node, visitType int) error {
 	switch n := node.(type) {
-	case *parser.Line:
-		if visitType == parser.PostVisit {
+	case *Line:
+		if visitType == PostVisit {
 			y.programm += "\n"
 		}
 		if visitType > 0 {
 			y.programm += " "
 		}
 		break
-	case *parser.Assignment:
-		if visitType == parser.PreVisit {
+	case *Assignment:
+		if visitType == PreVisit {
 			y.programm += n.Variable + n.Operator
 		}
 		break
-	case *parser.IfStatement:
+	case *IfStatement:
 		y.generateIf(visitType)
 		break
-	case *parser.GoToStatement:
+	case *GoToStatement:
 		y.programm += "goto " + strconv.Itoa(n.Line)
 		break
-	case *parser.Dereference:
+	case *Dereference:
 		y.genDeref(n)
 		break
-	case *parser.StringConstant:
+	case *StringConstant:
 		y.programm += "\"" + n.Value + "\""
 		break
-	case *parser.NumberConstant:
+	case *NumberConstant:
 		if strings.HasPrefix(n.Value, "-") {
 			y.programm += " "
 		}
 		y.programm += fmt.Sprintf(n.Value)
 		break
-	case *parser.BinaryOperation:
+	case *BinaryOperation:
 		y.generateBinaryOperation(n, visitType)
 		break
-	case *parser.UnaryOperation:
-		_, childBinary := n.Exp.(*parser.BinaryOperation)
-		if visitType == parser.PreVisit {
+	case *UnaryOperation:
+		_, childBinary := n.Exp.(*BinaryOperation)
+		if visitType == PreVisit {
 			op := n.Operator
 			if op == "not" {
 				op = " " + op + " "
@@ -80,20 +78,20 @@ func (y *YololGenerator) Visit(node parser.Node, visitType int) error {
 				y.programm += "("
 			}
 		}
-		if visitType == parser.PostVisit {
+		if visitType == PostVisit {
 			if childBinary {
 				y.programm += ")"
 			}
 		}
 		break
-	case *parser.FuncCall:
-		if visitType == parser.PreVisit {
+	case *FuncCall:
+		if visitType == PreVisit {
 			y.programm += n.Function + "("
 		} else {
 			y.programm += ")"
 		}
 		break
-	case *parser.Programm:
+	case *Programm:
 		//do noting
 		break
 	default:
@@ -102,18 +100,18 @@ func (y *YololGenerator) Visit(node parser.Node, visitType int) error {
 	return nil
 }
 
-func (y *YololGenerator) generateBinaryOperation(o *parser.BinaryOperation, visitType int) {
+func (y *YololGenerator) generateBinaryOperation(o *BinaryOperation, visitType int) {
 	lPrio := priorityForExpression(o.Exp1)
 	rPrio := priorityForExpression(o.Exp2)
-	_, rBinary := o.Exp2.(*parser.BinaryOperation)
+	_, rBinary := o.Exp2.(*BinaryOperation)
 	myPrio := priorityForExpression(o)
 	switch visitType {
-	case parser.PreVisit:
+	case PreVisit:
 		if lPrio < myPrio {
 			y.programm += "("
 		}
 		break
-	case parser.InterVisit1:
+	case InterVisit1:
 		if lPrio < myPrio {
 			y.programm += ")"
 		}
@@ -126,7 +124,7 @@ func (y *YololGenerator) generateBinaryOperation(o *parser.BinaryOperation, visi
 			y.programm += "("
 		}
 		break
-	case parser.PostVisit:
+	case PostVisit:
 		if rBinary && rPrio <= myPrio {
 			y.programm += ")"
 		}
@@ -134,9 +132,9 @@ func (y *YololGenerator) generateBinaryOperation(o *parser.BinaryOperation, visi
 	}
 }
 
-func priorityForExpression(e parser.Expression) int {
+func priorityForExpression(e Expression) int {
 	switch ex := e.(type) {
-	case *parser.BinaryOperation:
+	case *BinaryOperation:
 		return operatorPriority[ex.Operator]
 	default:
 		return 10
@@ -145,20 +143,20 @@ func priorityForExpression(e parser.Expression) int {
 
 func (y *YololGenerator) generateIf(visitType int) {
 	switch visitType {
-	case parser.PreVisit:
+	case PreVisit:
 		y.programm += "if "
-	case parser.InterVisit1:
+	case InterVisit1:
 		y.programm += " then "
-	case parser.InterVisit2:
+	case InterVisit2:
 		y.programm += " else "
-	case parser.PostVisit:
+	case PostVisit:
 		y.programm += " end"
 	default:
 		y.programm += " "
 	}
 }
 
-func (y *YololGenerator) genDeref(d *parser.Dereference) {
+func (y *YololGenerator) genDeref(d *Dereference) {
 	txt := ""
 	if d.PrePost == "Pre" {
 		txt += " " + d.Operator
@@ -170,7 +168,7 @@ func (y *YololGenerator) genDeref(d *parser.Dereference) {
 	y.programm += txt
 }
 
-func (y *YololGenerator) Generate(prog *parser.Programm) string {
+func (y *YololGenerator) Generate(prog *Programm) string {
 	y.programm = ""
 	prog.Accept(y)
 	// during the generation duplicate spaces might appear. Remove them

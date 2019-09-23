@@ -47,13 +47,13 @@ func (p Position) Sub(col int) Position {
 var symbols = []string{"++", "--", ">=", "<=", "!=", "==", "==", "+=", "-=", "*=", "/=", "%=",
 	"=", ">", "<", "+", "-", "*", "/", "^", "%", ",", "(", ")"}
 
-var keywordRegex = regexp.MustCompile("^\\b(if|else|end|then|goto|and|or|not)\\b")
+var KeywordRegex = regexp.MustCompile("^\\b(if|else|end|then|goto|and|or|not)\\b")
 
-var identifierRegex = regexp.MustCompile("^:?[a-zA-Z]+[a-zA-Z0-9_]*")
+var IdentifierRegex = regexp.MustCompile("^:?[a-zA-Z]+[a-zA-Z0-9_]*")
 
-var numberRegex = regexp.MustCompile("^[0-9]+(\\.[0-9]+)?")
+var NumberRegex = regexp.MustCompile("^[0-9]+(\\.[0-9]+)?")
 
-var commentRegex = regexp.MustCompile("^[ \\t]*\\/\\/([^\n]*)")
+var CommentRegex = regexp.MustCompile("^[ \\t]*\\/\\/([^\n]*)")
 
 var whitespaceRegex = regexp.MustCompile("^[ \\t\r]+")
 
@@ -78,19 +78,19 @@ type Tokenizer struct {
 	text            string
 	remaining       []byte
 	symbols         []string
-	keywordRegex    *regexp.Regexp
-	identifierRegex *regexp.Regexp
-	numberRegex     *regexp.Regexp
-	commentRegex    *regexp.Regexp
+	KeywordRegex    *regexp.Regexp
+	IdentifierRegex *regexp.Regexp
+	NumberRegex     *regexp.Regexp
+	CommentRegex    *regexp.Regexp
 }
 
 func NewTokenizer() *Tokenizer {
 	return &Tokenizer{
 		symbols:         symbols,
-		keywordRegex:    keywordRegex,
-		identifierRegex: identifierRegex,
-		numberRegex:     numberRegex,
-		commentRegex:    commentRegex,
+		KeywordRegex:    KeywordRegex,
+		IdentifierRegex: IdentifierRegex,
+		NumberRegex:     NumberRegex,
+		CommentRegex:    CommentRegex,
 	}
 }
 
@@ -205,7 +205,7 @@ func (t *Tokenizer) getSymbol() *Token {
 }
 
 func (t *Tokenizer) getComment() *Token {
-	found := t.commentRegex.Find(t.remaining)
+	found := t.CommentRegex.Find(t.remaining)
 	if found != nil {
 		defer t.advance(len(found))
 		return t.newToken(TypeComment, string(found))
@@ -214,7 +214,7 @@ func (t *Tokenizer) getComment() *Token {
 }
 
 func (t *Tokenizer) getKeyword() *Token {
-	found := t.keywordRegex.FindSubmatch(t.remaining)
+	found := t.KeywordRegex.FindSubmatch(t.remaining)
 	if found != nil {
 		defer t.advance(len(found[0]))
 		kw := found[1]
@@ -225,7 +225,7 @@ func (t *Tokenizer) getKeyword() *Token {
 }
 
 func (t *Tokenizer) getIdentifier() *Token {
-	found := t.identifierRegex.Find(t.remaining)
+	found := t.IdentifierRegex.Find(t.remaining)
 	if found != nil {
 		defer t.advance(len(found))
 		return t.newToken(TypeID, string(found))
@@ -256,7 +256,7 @@ func (t *Tokenizer) getStringConstant() *Token {
 }
 
 func (t *Tokenizer) getNumberConstant() *Token {
-	found := t.numberRegex.Find(t.remaining)
+	found := t.NumberRegex.Find(t.remaining)
 	if found != nil {
 		defer t.advance(len(found))
 		return t.newToken(TypeNumber, string(found))

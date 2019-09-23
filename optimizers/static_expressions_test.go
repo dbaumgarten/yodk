@@ -3,8 +3,6 @@ package optimizers
 import (
 	"testing"
 
-	"github.com/dbaumgarten/yodk/generators"
-
 	"github.com/dbaumgarten/yodk/parser"
 	"github.com/dbaumgarten/yodk/testdata"
 )
@@ -21,7 +19,7 @@ func TestStaticExpressions(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	gen := generators.YololGenerator{}
+	gen := parser.YololGenerator{}
 	generated := gen.Generate(parsed)
 
 	err = testdata.ExecuteTestProgram(generated)
