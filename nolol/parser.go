@@ -51,7 +51,7 @@ func (p *NololParser) ParseProgram() (*ExtProgramm, parser.ParserErrors) {
 	p.Log()
 	errors := make(parser.ParserErrors, 0)
 	ret := ExtProgramm{
-		ExecutableLines: make([]ExtLine, 0),
+		Lines: make([]ExtLine, 0),
 	}
 	for p.HasNext() {
 		line, err := p.ParseLine()
@@ -59,7 +59,7 @@ func (p *NololParser) ParseProgram() (*ExtProgramm, parser.ParserErrors) {
 			errors = append(errors, err)
 			p.SkipLine()
 		}
-		ret.ExecutableLines = append(ret.ExecutableLines, line)
+		ret.Lines = append(ret.Lines, line)
 	}
 	return &ret, errors
 }

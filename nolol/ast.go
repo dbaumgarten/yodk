@@ -30,15 +30,15 @@ func (n *ExecutableLine) Start() parser.Position {
 }
 
 type ExtProgramm struct {
-	ExecutableLines []ExtLine
+	Lines []ExtLine
 }
 
 func (n *ExtProgramm) Start() parser.Position {
-	return n.ExecutableLines[0].Start()
+	return n.Lines[0].Start()
 }
 
 func (n *ExtProgramm) End() parser.Position {
-	return n.ExecutableLines[len(n.ExecutableLines)-1].End()
+	return n.Lines[len(n.Lines)-1].End()
 }
 
 type ConstDeclaration struct {

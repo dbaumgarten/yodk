@@ -19,10 +19,10 @@ func (f VisitorFunc) Visit(node Node, visitType int) error {
 }
 
 type NodeReplacement struct {
-	Replacement Node
+	Replacement []Node
 }
 
-func NewNodeReplacement(replacement Node) NodeReplacement {
+func NewNodeReplacement(replacement ...Node) NodeReplacement {
 	return NodeReplacement{
 		Replacement: replacement,
 	}
@@ -37,14 +37,15 @@ func (p *Programm) Accept(v Visitor) error {
 	if err != nil {
 		return err
 	}
-	for i, line := range p.Lines {
+	for i := 0; i < len(p.Lines); i++ {
 		err = v.Visit(p, i)
 		if err != nil {
 			return err
 		}
-		err = line.Accept(v)
+		err = p.Lines[i].Accept(v)
 		if repl, is := err.(NodeReplacement); is {
-			p.Lines[i] = repl.Replacement.(*Line)
+			p.Lines = PatchLines(p.Lines, i, repl)
+			i += len(repl.Replacement) - 1
 			err = nil
 		}
 		if err != nil {
@@ -59,14 +60,15 @@ func (l *Line) Accept(v Visitor) error {
 	if err != nil {
 		return err
 	}
-	for i, stmt := range l.Statements {
+	for i := 0; i < len(l.Statements); i++ {
 		err = v.Visit(l, i)
 		if err != nil {
 			return err
 		}
-		err = stmt.Accept(v)
+		err = l.Statements[i].Accept(v)
 		if repl, is := err.(NodeReplacement); is {
-			l.Statements[i] = repl.Replacement.(Statement)
+			l.Statements = PatchStatements(l.Statements, i, repl)
+			i += len(repl.Replacement) - 1
 			err = nil
 		}
 		if err != nil {
@@ -95,7 +97,7 @@ func (u *UnaryOperation) Accept(v Visitor) error {
 	}
 	err = u.Exp.Accept(v)
 	if repl, is := err.(NodeReplacement); is {
-		u.Exp = repl.Replacement.(Expression)
+		u.Exp = repl.Replacement[0].(Expression)
 		err = nil
 	}
 	if err != nil {
@@ -111,7 +113,7 @@ func (o *BinaryOperation) Accept(v Visitor) error {
 	}
 	err = o.Exp1.Accept(v)
 	if repl, is := err.(NodeReplacement); is {
-		o.Exp1 = repl.Replacement.(Expression)
+		o.Exp1 = repl.Replacement[0].(Expression)
 		err = nil
 	}
 	if err != nil {
@@ -120,7 +122,7 @@ func (o *BinaryOperation) Accept(v Visitor) error {
 	err = v.Visit(o, InterVisit1)
 	err = o.Exp2.Accept(v)
 	if repl, is := err.(NodeReplacement); is {
-		o.Exp2 = repl.Replacement.(Expression)
+		o.Exp2 = repl.Replacement[0].(Expression)
 		err = nil
 	}
 	if err != nil {
@@ -136,7 +138,7 @@ func (f *FuncCall) Accept(v Visitor) error {
 	}
 	err = f.Argument.Accept(v)
 	if repl, is := err.(NodeReplacement); is {
-		f.Argument = repl.Replacement.(Expression)
+		f.Argument = repl.Replacement[0].(Expression)
 		err = nil
 	}
 	if err != nil {
@@ -152,7 +154,7 @@ func (a *Assignment) Accept(v Visitor) error {
 	}
 	err = a.Value.Accept(v)
 	if repl, is := err.(NodeReplacement); is {
-		a.Value = repl.Replacement.(Expression)
+		a.Value = repl.Replacement[0].(Expression)
 		err = nil
 	}
 	if err != nil {
@@ -168,7 +170,7 @@ func (s *IfStatement) Accept(v Visitor) error {
 	}
 	err = s.Condition.Accept(v)
 	if repl, is := err.(NodeReplacement); is {
-		s.Condition = repl.Replacement.(Expression)
+		s.Condition = repl.Replacement[0].(Expression)
 		err = nil
 	}
 	if err != nil {
@@ -178,14 +180,15 @@ func (s *IfStatement) Accept(v Visitor) error {
 	if err != nil {
 		return err
 	}
-	for i, ifstmt := range s.IfBlock {
+	for i := 0; i < len(s.IfBlock); i++ {
 		err = v.Visit(s, i)
 		if err != nil {
 			return err
 		}
-		err = ifstmt.Accept(v)
+		err = s.IfBlock[i].Accept(v)
 		if repl, is := err.(NodeReplacement); is {
-			s.IfBlock[i] = repl.Replacement.(Statement)
+			s.IfBlock = PatchStatements(s.IfBlock, i, repl)
+			i += len(repl.Replacement) - 1
 			err = nil
 		}
 		if err != nil {
@@ -197,14 +200,15 @@ func (s *IfStatement) Accept(v Visitor) error {
 		if err != nil {
 			return err
 		}
-		for i, elsestmt := range s.ElseBlock {
+		for i := 0; i < len(s.ElseBlock); i++ {
 			err = v.Visit(s, i)
 			if err != nil {
 				return err
 			}
-			err = elsestmt.Accept(v)
+			err = s.ElseBlock[i].Accept(v)
 			if repl, is := err.(NodeReplacement); is {
-				s.ElseBlock[i] = repl.Replacement.(Statement)
+				s.ElseBlock = PatchStatements(s.ElseBlock, i, repl)
+				i += len(repl.Replacement) - 1
 				err = nil
 			}
 			if err != nil {
@@ -220,4 +224,32 @@ func (s *IfStatement) Accept(v Visitor) error {
 
 func (g *GoToStatement) Accept(v Visitor) error {
 	return v.Visit(g, SingleVisit)
+}
+
+func PatchLines(old []*Line, position int, repl NodeReplacement) []*Line {
+	newv := make([]*Line, 0, len(old)+len(repl.Replacement)-1)
+	newv = append(newv, old[:position]...)
+	for _, elem := range repl.Replacement {
+		if line, is := elem.(*Line); is {
+			newv = append(newv, line)
+		} else {
+			panic("Could not patch slice. Wrong type.")
+		}
+	}
+	newv = append(newv, old[position+1:]...)
+	return newv
+}
+
+func PatchStatements(old []Statement, position int, repl NodeReplacement) []Statement {
+	newv := make([]Statement, 0, len(old)+len(repl.Replacement)-1)
+	newv = append(newv, old[:position]...)
+	for _, elem := range repl.Replacement {
+		if line, is := elem.(Statement); is {
+			newv = append(newv, line)
+		} else {
+			panic("Could not patch slice. Wrong type.")
+		}
+	}
+	newv = append(newv, old[position+1:]...)
+	return newv
 }
