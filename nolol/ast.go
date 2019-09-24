@@ -2,43 +2,34 @@ package nolol
 
 import "github.com/dbaumgarten/yodk/parser"
 
-type GoToLabelStatement struct {
-	Position parser.Position
-	Label    string
+type NololProgramm struct {
+	Lines []NololLine
 }
 
-func (n *GoToLabelStatement) Start() parser.Position {
-	return n.Position
+func (n *NololProgramm) Start() parser.Position {
+	return n.Lines[0].Start()
 }
 
-func (n *GoToLabelStatement) End() parser.Position {
-	return n.Position.Add(len(n.Label) + 1)
+func (n *NololProgramm) End() parser.Position {
+	return n.Lines[len(n.Lines)-1].End()
 }
 
-type ExtLine interface {
+type NololLine interface {
 	parser.Node
 }
 
-type ExecutableLine struct {
+type ExecutableLine interface {
+	NololLine
+}
+
+type StatementLine struct {
 	parser.Line
 	Label    string
 	Position parser.Position
 }
 
-func (n *ExecutableLine) Start() parser.Position {
+func (n *StatementLine) Start() parser.Position {
 	return n.Position
-}
-
-type ExtProgramm struct {
-	Lines []ExtLine
-}
-
-func (n *ExtProgramm) Start() parser.Position {
-	return n.Lines[0].Start()
-}
-
-func (n *ExtProgramm) End() parser.Position {
-	return n.Lines[len(n.Lines)-1].End()
 }
 
 type ConstDeclaration struct {
@@ -53,4 +44,35 @@ func (n *ConstDeclaration) Start() parser.Position {
 
 func (n *ConstDeclaration) End() parser.Position {
 	return n.Value.End()
+}
+
+type MultilineIf struct {
+	Position  parser.Position
+	Condition parser.Expression
+	IfBlock   []ExecutableLine
+	ElseBlock []ExecutableLine
+}
+
+func (n *MultilineIf) Start() parser.Position {
+	return n.Position
+}
+
+func (n *MultilineIf) End() parser.Position {
+	if n.ElseBlock == nil {
+		return n.IfBlock[len(n.IfBlock)-1].End()
+	}
+	return n.ElseBlock[len(n.ElseBlock)-1].End()
+}
+
+type GoToLabelStatement struct {
+	Position parser.Position
+	Label    string
+}
+
+func (n *GoToLabelStatement) Start() parser.Position {
+	return n.Position
+}
+
+func (n *GoToLabelStatement) End() parser.Position {
+	return n.Position.Add(len(n.Label) + 1)
 }

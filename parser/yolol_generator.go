@@ -95,7 +95,7 @@ func (y *YololGenerator) Visit(node Node, visitType int) error {
 		//do noting
 		break
 	default:
-		return fmt.Errorf("Unknown ast-node type: %t", node)
+		y.programm += fmt.Sprintf("Unknown ast-node: %T%v", node, node)
 	}
 	return nil
 }

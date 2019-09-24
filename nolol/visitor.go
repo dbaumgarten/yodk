@@ -1,12 +1,14 @@
 package nolol
 
-import "github.com/dbaumgarten/yodk/parser"
+import (
+	"github.com/dbaumgarten/yodk/parser"
+)
 
 func (g *GoToLabelStatement) Accept(v parser.Visitor) error {
 	return v.Visit(g, parser.SingleVisit)
 }
 
-func (p *ExtProgramm) Accept(v parser.Visitor) error {
+func (p *NololProgramm) Accept(v parser.Visitor) error {
 	err := v.Visit(p, parser.PreVisit)
 	if err != nil {
 		return err
@@ -18,7 +20,7 @@ func (p *ExtProgramm) Accept(v parser.Visitor) error {
 		}
 		err = p.Lines[i].Accept(v)
 		if repl, is := err.(parser.NodeReplacement); is {
-			p.Lines = patchExtLines(p.Lines, i, repl)
+			p.Lines = patchLines(p.Lines, i, repl)
 			i += len(repl.Replacement) - 1
 			err = nil
 		}
@@ -29,7 +31,7 @@ func (p *ExtProgramm) Accept(v parser.Visitor) error {
 	return v.Visit(p, parser.PostVisit)
 }
 
-func (l *ExecutableLine) Accept(v parser.Visitor) error {
+func (l *StatementLine) Accept(v parser.Visitor) error {
 	err := v.Visit(l, parser.PreVisit)
 	if err != nil {
 		return err
@@ -68,11 +70,84 @@ func (l *ConstDeclaration) Accept(v parser.Visitor) error {
 	return v.Visit(l, parser.PostVisit)
 }
 
-func patchExtLines(old []ExtLine, position int, repl parser.NodeReplacement) []ExtLine {
-	newv := make([]ExtLine, 0, len(old)+len(repl.Replacement)-1)
+func (s *MultilineIf) Accept(v parser.Visitor) error {
+	err := v.Visit(s, parser.PreVisit)
+	if err != nil {
+		return err
+	}
+	err = s.Condition.Accept(v)
+	if repl, is := err.(parser.NodeReplacement); is {
+		s.Condition = repl.Replacement[0].(parser.Expression)
+		err = nil
+	}
+	if err != nil {
+		return err
+	}
+	err = v.Visit(s, parser.InterVisit1)
+	if err != nil {
+		return err
+	}
+	for i := 0; i < len(s.IfBlock); i++ {
+		err = v.Visit(s, i)
+		if err != nil {
+			return err
+		}
+		err = s.IfBlock[i].Accept(v)
+		if repl, is := err.(parser.NodeReplacement); is {
+			s.IfBlock = patchExecutableLines(s.IfBlock, i, repl)
+			i += len(repl.Replacement) - 1
+			err = nil
+		}
+		if err != nil {
+			return err
+		}
+	}
+	if s.ElseBlock != nil {
+		err = v.Visit(s, parser.InterVisit2)
+		if err != nil {
+			return err
+		}
+		for i := 0; i < len(s.ElseBlock); i++ {
+			err = v.Visit(s, i)
+			if err != nil {
+				return err
+			}
+			err = s.ElseBlock[i].Accept(v)
+			if repl, is := err.(parser.NodeReplacement); is {
+				s.ElseBlock = patchExecutableLines(s.ElseBlock, i, repl)
+				i += len(repl.Replacement) - 1
+				err = nil
+			}
+			if err != nil {
+				return err
+			}
+		}
+		if err != nil {
+			return err
+		}
+	}
+	return v.Visit(s, parser.PostVisit)
+}
+
+func patchLines(old []NololLine, position int, repl parser.NodeReplacement) []NololLine {
+	newv := make([]NololLine, 0, len(old)+len(repl.Replacement)-1)
 	newv = append(newv, old[:position]...)
 	for _, elem := range repl.Replacement {
-		if line, is := elem.(ExtLine); is {
+		if line, is := elem.(NololLine); is {
+			newv = append(newv, line)
+		} else {
+			panic("Could not patch slice. Wrong type.")
+		}
+	}
+	newv = append(newv, old[position+1:]...)
+	return newv
+}
+
+func patchExecutableLines(old []ExecutableLine, position int, repl parser.NodeReplacement) []ExecutableLine {
+	newv := make([]ExecutableLine, 0, len(old)+len(repl.Replacement)-1)
+	newv = append(newv, old[:position]...)
+	for _, elem := range repl.Replacement {
+		if line, is := elem.(ExecutableLine); is {
 			newv = append(newv, line)
 		} else {
 			panic("Could not patch slice. Wrong type.")

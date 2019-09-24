@@ -3,35 +3,22 @@ features:
 
 
 nolol features:
+    collapse lines
+    one-line ifs if possible
     remove static ifs
         (attention with mulitline ifs)
         line numbers!!!
     check number constants for precision
-    comments:
-        introduce no empty line, keep line-numbering intact
-    multiline-lines
-        \ or {}
     declare external vars
         warn if using undeclared
         alias for external variables
     typecheck + cast
         warn if wrong types
-    named constants
-    multiline if
-        line numbers?
     include other files
         line-number hints for tokenizer
-    remove empty lines
-        special keyword/character for keeping them?
-        replace woth sleep?
-        incompatible with yolol?
-    builtin functions
-        e.g. sleep
+    introduce sleep()
     macros:
         c-style or inline functions?
         expression or statement?
-    goto-labels
-        handle line numbering
-        must be first stmt on line
     loops
        

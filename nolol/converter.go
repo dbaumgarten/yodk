@@ -7,9 +7,8 @@ import (
 )
 
 type NololConverter struct {
-	jumpLabels        map[string]int
-	constants         map[string]interface{}
-	lineNumberChanges map[int]int
+	jumpLabels map[string]int
+	constants  map[string]interface{}
 }
 
 func NewNololConverter() *NololConverter {
@@ -24,12 +23,20 @@ func (c *NololConverter) ConvertFromSource(prog string) (*parser.Programm, error
 	return c.Convert(parsed)
 }
 
-func (c *NololConverter) Convert(prog *ExtProgramm) (*parser.Programm, error) {
-	err := c.findConstantDeclarations(prog)
+func (c *NololConverter) Convert(prog *NololProgramm) (*parser.Programm, error) {
+	err := c.convertMultilineIf(prog)
+	if err != nil {
+		return nil, err
+	}
+	err = c.findConstantDeclarations(prog)
 	if err != nil {
 		return nil, err
 	}
 	err = c.insertConstants(prog)
+	if err != nil {
+		return nil, err
+	}
+	err = c.filterLines(prog)
 	if err != nil {
 		return nil, err
 	}
@@ -41,9 +48,9 @@ func (c *NololConverter) Convert(prog *ExtProgramm) (*parser.Programm, error) {
 	if err != nil {
 		return nil, err
 	}
-	newprog := c.convertProgramm(prog)
+	newprog := c.convertToYololLines(prog)
 
-	return newprog, c.fixGotoLineNumbers(newprog)
+	return newprog, nil
 }
 
 func (c *NololConverter) findConstantDeclarations(p parser.Node) error {
@@ -115,19 +122,28 @@ func (c *NololConverter) insertConstants(p parser.Node) error {
 
 func (c *NololConverter) findJumpLabels(p parser.Node) error {
 	c.jumpLabels = make(map[string]int)
+	linecounter := 0
 	f := func(node parser.Node, visitType int) error {
-		if line, isExecutableLine := node.(*ExecutableLine); isExecutableLine {
-			if visitType == parser.PreVisit && line.Label != "" {
-				_, exists := c.jumpLabels[line.Label]
-				if exists {
-					return &parser.ParserError{
-						Message:       fmt.Sprintf("Duplicate declaration of jump-label: %s", line.Label),
-						Fatal:         true,
-						StartPosition: line.Start(),
-						EndPosition:   line.End(),
+		if line, isExecutableLine := node.(*StatementLine); isExecutableLine {
+			if visitType == parser.PreVisit {
+				linecounter++
+				if line.Label != "" {
+					_, exists := c.jumpLabels[line.Label]
+					if exists {
+						return &parser.ParserError{
+							Message:       fmt.Sprintf("Duplicate declaration of jump-label: %s", line.Label),
+							Fatal:         true,
+							StartPosition: line.Start(),
+							EndPosition:   line.Start(),
+						}
+					}
+					c.jumpLabels[line.Label] = linecounter
+
+					if len(line.Statements) == 0 {
+						linecounter--
+						return parser.NewNodeReplacement()
 					}
 				}
-				c.jumpLabels[line.Label] = line.Start().Line
 			}
 		}
 		return nil
@@ -158,42 +174,115 @@ func (c *NololConverter) convertLabelGoto(p parser.Node) error {
 	return p.Accept(parser.VisitorFunc(f))
 }
 
-func (c *NololConverter) fixGotoLineNumbers(p parser.Node) error {
+func (c *NololConverter) convertMultilineIf(p parser.Node) error {
+	counter := 0
 	f := func(node parser.Node, visitType int) error {
-		if gotostmt, is := node.(*parser.GoToStatement); is {
-			newline, exists := c.lineNumberChanges[gotostmt.Line]
-			if !exists {
-				return parser.ParserError{
-					Message:       fmt.Sprintf("Can not jump to line: %d", gotostmt.Line),
-					Fatal:         true,
-					StartPosition: gotostmt.Start(),
-					EndPosition:   gotostmt.End(),
+		if mlif, is := node.(*MultilineIf); is && visitType == parser.PostVisit {
+			skipIf := fmt.Sprintf("iflbl%d", counter)
+			skipElse := fmt.Sprintf("elselbl%d", counter)
+			repl := []parser.Node{
+				&StatementLine{
+					Position: mlif.Position,
+					Line: parser.Line{
+						Statements: []parser.Statement{
+							&parser.IfStatement{
+								Position: mlif.Position,
+								Condition: &parser.UnaryOperation{
+									Operator: "not",
+									Exp:      mlif.Condition,
+								},
+								IfBlock: []parser.Statement{
+									&GoToLabelStatement{
+										Position: mlif.Position,
+										Label:    skipIf,
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			for _, ifblling := range mlif.IfBlock {
+				repl = append(repl, ifblling)
+			}
+
+			if mlif.ElseBlock != nil {
+				repl = append(repl, &StatementLine{
+					Position: mlif.Position,
+					Line: parser.Line{
+						Statements: []parser.Statement{
+							&GoToLabelStatement{
+								Position: mlif.Position,
+								Label:    skipElse,
+							},
+						},
+					},
+				})
+			}
+
+			repl = append(repl, &StatementLine{
+				Position: mlif.Position,
+				Label:    skipIf,
+				Line: parser.Line{
+					Statements: []parser.Statement{},
+				},
+			})
+
+			if mlif.ElseBlock != nil {
+				for _, ifblling := range mlif.ElseBlock {
+					repl = append(repl, ifblling)
 				}
 			}
-			gotostmt.Line = newline
+
+			repl = append(repl, &StatementLine{
+				Position: mlif.Position,
+				Label:    skipElse,
+				Line: parser.Line{
+					Statements: []parser.Statement{},
+				},
+			})
+
+			counter++
+			return parser.NewNodeReplacement(repl...)
 		}
 		return nil
 	}
 	return p.Accept(parser.VisitorFunc(f))
 }
 
-func (c *NololConverter) convertProgramm(p *ExtProgramm) *parser.Programm {
-	c.lineNumberChanges = make(map[int]int)
+func (c *NololConverter) filterLines(p parser.Node) error {
+	f := func(node parser.Node, visitType int) error {
+		switch n := node.(type) {
+		case *StatementLine:
+			if n.Label == "" && len(n.Statements) == 0 {
+				// empty line
+				return parser.NewNodeReplacement()
+			}
+		case *ConstDeclaration:
+			return parser.NewNodeReplacement()
+		}
+		return nil
+	}
+	return p.Accept(parser.VisitorFunc(f))
+}
+
+func (c *NololConverter) convertToYololLines(p *NololProgramm) *parser.Programm {
 	newprog := parser.Programm{
 		Lines: make([]*parser.Line, 0),
 	}
-	for _, rawline := range p.ExecutableLines {
-		if line, isExecutableLine := rawline.(*ExecutableLine); isExecutableLine {
-			if len(line.Statements) == 0 {
-				c.lineNumberChanges[line.Start().Line] = len(newprog.Lines) + 1
-				continue
-			}
+	for _, rawline := range p.Lines {
+		switch line := rawline.(type) {
+		case *StatementLine:
 			newline := &parser.Line{
 				Statements: line.Statements,
 			}
 			newprog.Lines = append(newprog.Lines, newline)
-			c.lineNumberChanges[line.Start().Line] = len(newprog.Lines)
+			break
+		default:
+			fmt.Printf("Unexpected type: %T\n", rawline)
 		}
+
 	}
 	return &newprog
 }

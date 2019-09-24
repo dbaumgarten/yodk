@@ -2,7 +2,6 @@ package nolol
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/dbaumgarten/yodk/parser"
 )
@@ -20,7 +19,7 @@ func NewNololParser() *NololParser {
 	return ep
 }
 
-func (p *NololParser) Parse(prog string) (*ExtProgramm, error) {
+func (p *NololParser) Parse(prog string) (*NololProgramm, error) {
 	errors := make(parser.ParserErrors, 0)
 	p.Tokenizer.Load(prog)
 	p.Tokens = make([]*parser.Token, 0, 1000)
@@ -47,11 +46,11 @@ func (p *NololParser) Parse(prog string) (*ExtProgramm, error) {
 	return parsed, nil
 }
 
-func (p *NololParser) ParseProgram() (*ExtProgramm, parser.ParserErrors) {
+func (p *NololParser) ParseProgram() (*NololProgramm, parser.ParserErrors) {
 	p.Log()
 	errors := make(parser.ParserErrors, 0)
-	ret := ExtProgramm{
-		Lines: make([]ExtLine, 0),
+	ret := NololProgramm{
+		Lines: make([]NololLine, 0),
 	}
 	for p.HasNext() {
 		line, err := p.ParseLine()
@@ -64,18 +63,8 @@ func (p *NololParser) ParseProgram() (*ExtProgramm, parser.ParserErrors) {
 	return &ret, errors
 }
 
-func (p *NololParser) ParseLine() (ExtLine, *parser.ParserError) {
-	p.Log()
-
-	constDecl, err := p.ParseConstantDeclaration()
-	if err != nil && err.Fatal {
-		return nil, err
-	}
-	if err == nil {
-		return constDecl, nil
-	}
-
-	ret := ExecutableLine{
+func (p *NololParser) ParseStatementLine() (*StatementLine, *parser.ParserError) {
+	ret := StatementLine{
 		Line: parser.Line{
 			Statements: make([]parser.Statement, 0),
 		},
@@ -106,6 +95,33 @@ func (p *NololParser) ParseLine() (ExtLine, *parser.ParserError) {
 	}
 
 	return nil, p.NewError("Missing newline", true, ret.Start(), ret.End())
+}
+
+func (p *NololParser) ParseExecutableLine() (ExecutableLine, *parser.ParserError) {
+
+	ifline, err := p.ParseIfLine()
+	if err != nil && err.Fatal {
+		return nil, err
+	}
+	if err == nil {
+		return ifline, nil
+	}
+
+	return p.ParseStatementLine()
+}
+
+func (p *NololParser) ParseLine() (NololLine, *parser.ParserError) {
+	p.Log()
+
+	constDecl, err := p.ParseConstantDeclaration()
+	if err != nil && err.Fatal {
+		return nil, err
+	}
+	if err == nil {
+		return constDecl, nil
+	}
+
+	return p.ParseExecutableLine()
 }
 
 func (p *NololParser) ParseConstantDeclaration() (*ConstDeclaration, *parser.ParserError) {
@@ -139,18 +155,79 @@ func (p *NololParser) ParseConstantDeclaration() (*ConstDeclaration, *parser.Par
 	return decl, nil
 }
 
+func (p *NololParser) ParseLinesUntil(stop func() bool) ([]ExecutableLine, *parser.ParserError) {
+	lines := make([]ExecutableLine, 0)
+	for p.HasNext() && !stop() {
+		line, err := p.ParseExecutableLine()
+		if err != nil {
+			return nil, err
+		}
+		lines = append(lines, line)
+	}
+	return lines, nil
+}
+
+func (p *NololParser) ParseIfLine() (NololLine, *parser.ParserError) {
+	p.Log()
+	mlif := MultilineIf{
+		Position: p.Current().Position,
+	}
+	if p.Current().Type != parser.TypeKeyword || p.Current().Value != "if" {
+		return nil, p.NewError("If-statements have to start with 'if'", false, p.Current().Position, p.Current().Position)
+	}
+	p.Advance()
+
+	var err *parser.ParserError
+	mlif.Condition, err = p.This.ParseExpression()
+	if err != nil {
+		err.Fatal = true
+		return nil, err.Append(fmt.Errorf("No expression found as if-condition"))
+	}
+
+	if p.Current().Type != parser.TypeKeyword || p.Current().Value != "then" {
+		return nil, p.NewError("Expected 'then' after condition", true, p.Current().Position, p.Current().Position)
+	}
+	p.Advance()
+
+	if p.Current().Type != parser.TypeNewline {
+		return nil, p.NewError("Expected newline after then", true, p.Current().Position, p.Current().Position)
+	}
+	p.Advance()
+	// mulitline if
+
+	mlif.IfBlock, err = p.ParseLinesUntil(func() bool {
+		return p.Current().Type == parser.TypeKeyword && (p.Current().Value == "end" || p.Current().Value == "else")
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if p.Current().Type == parser.TypeKeyword && p.Current().Value == "else" {
+		p.Advance()
+		mlif.ElseBlock, err = p.ParseLinesUntil(func() bool {
+			return p.Current().Type == parser.TypeKeyword && p.Current().Value == "end"
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if p.Current().Type != parser.TypeKeyword || p.Current().Value != "end" {
+		return nil, p.NewError("Expected 'end' after if statement", true, mlif.Start(), mlif.Start())
+	}
+	p.Advance()
+	return &mlif, nil
+
+}
+
+func (p *NololParser) ParseIf() (parser.Statement, *parser.ParserError) {
+	p.Log()
+	return nil, p.NewError("Inline if is not supported.", false, p.Current().Position, p.Current().Position)
+}
+
 func (p *NololParser) ParseGoto() (parser.Statement, *parser.ParserError) {
 	if p.Current().Type == parser.TypeKeyword && p.Current().Value == "goto" {
 		p.Advance()
-		if p.Current().Type == parser.TypeNumber {
-			stmt := &parser.GoToStatement{
-				Position: p.Current().Position,
-			}
-			line, _ := strconv.Atoi(p.Current().Value)
-			stmt.Line = line
-			p.Advance()
-			return stmt, nil
-		}
 
 		if p.Current().Type == parser.TypeID {
 			stmt := &GoToLabelStatement{
@@ -161,7 +238,7 @@ func (p *NololParser) ParseGoto() (parser.Statement, *parser.ParserError) {
 			return stmt, nil
 		}
 
-		return nil, p.NewError("Goto must be followed by number or identifier", true, p.Current().Position, p.Current().Position)
+		return nil, p.NewError("Goto must be followed by an identifier", true, p.Current().Position, p.Current().Position)
 	}
 	return nil, p.NewError("Goto statements must start with 'goto'", false, p.Current().Position, p.Current().Position)
 }
