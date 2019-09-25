@@ -11,7 +11,11 @@ import (
 type StaticExpressionOptimizer struct {
 }
 
-func (o *StaticExpressionOptimizer) Optimize(prog *parser.Programm) error {
+func NewStaticExpressionOptimizer() *StaticExpressionOptimizer {
+	return &StaticExpressionOptimizer{}
+}
+
+func (o *StaticExpressionOptimizer) Optimize(prog parser.Node) error {
 	return prog.Accept(o)
 }
 

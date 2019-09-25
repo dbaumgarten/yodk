@@ -3,6 +3,8 @@ package nolol
 import (
 	"fmt"
 
+	"github.com/dbaumgarten/yodk/optimizers"
+
 	"github.com/dbaumgarten/yodk/parser"
 )
 
@@ -28,6 +30,10 @@ func (c *NololConverter) Convert(prog *NololProgramm) (*parser.Programm, error) 
 	if err != nil {
 		return nil, err
 	}
+	err = optimizers.NewStaticExpressionOptimizer().Optimize(prog)
+	if err != nil {
+		return nil, err
+	}
 	err = c.findConstantDeclarations(prog)
 	if err != nil {
 		return nil, err
@@ -37,6 +43,10 @@ func (c *NololConverter) Convert(prog *NololProgramm) (*parser.Programm, error) 
 		return nil, err
 	}
 	err = c.filterLines(prog)
+	if err != nil {
+		return nil, err
+	}
+	err = optimizers.NewVariableNameOptimizer().Optimize(prog)
 	if err != nil {
 		return nil, err
 	}

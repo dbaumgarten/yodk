@@ -5,7 +5,6 @@ import (
 	"path"
 
 	"github.com/dbaumgarten/yodk/nolol"
-	"github.com/dbaumgarten/yodk/optimizers"
 	"github.com/dbaumgarten/yodk/parser"
 
 	"github.com/spf13/cobra"
@@ -26,9 +25,6 @@ var compileCmd = &cobra.Command{
 		converter := nolol.NewNololConverter()
 		converted, err := converter.Convert(parsed)
 		exitOnError(err, "compiling")
-		opt := optimizers.NewCompoundOptimizer()
-		err = opt.Optimize(converted)
-		exitOnError(err, "performing optimisation")
 		gen := parser.YololGenerator{}
 		generated, err := gen.Generate(converted)
 		exitOnError(err, "generating code")

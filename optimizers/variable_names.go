@@ -17,7 +17,7 @@ func NewVariableNameOptimizer() *VariableNameOptimizer {
 	}
 }
 
-func (o *VariableNameOptimizer) Optimize(prog *parser.Programm) error {
+func (o *VariableNameOptimizer) Optimize(prog parser.Node) error {
 	return prog.Accept(o)
 }
 
@@ -30,7 +30,6 @@ func (o *VariableNameOptimizer) Visit(node parser.Node, visitType int) error {
 		case *parser.Dereference:
 			n.Variable = o.replaceVarName(n.Variable)
 			break
-
 		}
 	}
 	return nil
