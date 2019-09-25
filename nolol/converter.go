@@ -40,6 +40,10 @@ func (c *NololConverter) Convert(prog *NololProgramm) (*parser.Programm, error) 
 	if err != nil {
 		return nil, err
 	}
+	err = c.mergeLines(prog)
+	if err != nil {
+		return nil, err
+	}
 	err = c.findJumpLabels(prog)
 	if err != nil {
 		return nil, err
@@ -265,6 +269,47 @@ func (c *NololConverter) filterLines(p parser.Node) error {
 		return nil
 	}
 	return p.Accept(parser.VisitorFunc(f))
+}
+
+func (c *NololConverter) mergeLines(p *NololProgramm) error {
+	maxlen := 70
+	newLines := make([]NololLine, 0, len(p.Lines))
+	i := 0
+	for i < len(p.Lines)-1 {
+		if current, is := p.Lines[i].(*StatementLine); is {
+			nextcounter := 1
+			for i+nextcounter < len(p.Lines) {
+				currlen := getLengthOfLine(&current.Line)
+				nextline := p.Lines[i+nextcounter].(*StatementLine)
+				nextlen := getLengthOfLine(&nextline.Line)
+				if nextline.Label != "" || currlen+nextlen > maxlen {
+					newLines = append(newLines, current)
+					current = nextline
+					i += nextcounter
+					nextcounter = 1
+					continue
+				}
+				current.Statements = append(current.Statements, nextline.Statements...)
+				nextcounter++
+			}
+		} else {
+			panic("mergeLines can only work with Statement-lines")
+		}
+	}
+	p.Lines = newLines
+	return nil
+}
+
+func getLengthOfLine(line *parser.Line) int {
+	ygen := parser.YololGenerator{}
+	ygen.UnknownHandlerFunc = func(node parser.Node) (string, error) {
+		if _, is := node.(*GoToLabelStatement); is {
+			return "goto XX", nil
+		}
+		return "", fmt.Errorf("Unknown node-type: %T", node)
+	}
+	generated, _ := ygen.Generate(line)
+	return len(generated)
 }
 
 func (c *NololConverter) convertToYololLines(p *NololProgramm) *parser.Programm {

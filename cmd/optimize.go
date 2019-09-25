@@ -28,7 +28,8 @@ var optimizeCmd = &cobra.Command{
 		err := opt.Optimize(parsed)
 		exitOnError(err, "performing optimisation")
 		gen := parser.YololGenerator{}
-		generated := gen.Generate(parsed)
+		generated, err := gen.Generate(parsed)
+		exitOnError(err, "generating code")
 		ioutil.WriteFile(outfile, []byte(generated), 0700)
 	},
 	Args: cobra.MinimumNArgs(1),

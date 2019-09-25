@@ -7,7 +7,8 @@ import (
 )
 
 type YololGenerator struct {
-	programm string
+	programm           string
+	UnknownHandlerFunc func(node Node) (string, error)
 }
 
 var operatorPriority = map[string]int{
@@ -95,7 +96,14 @@ func (y *YololGenerator) Visit(node Node, visitType int) error {
 		//do noting
 		break
 	default:
-		y.programm += fmt.Sprintf("Unknown ast-node: %T%v", node, node)
+		if y.UnknownHandlerFunc != nil {
+			str, err := y.UnknownHandlerFunc(node)
+			if err != nil {
+				return err
+			}
+			y.programm += str
+		}
+		return fmt.Errorf("Unknown ast-node: %T%v", node, node)
 	}
 	return nil
 }
@@ -168,9 +176,12 @@ func (y *YololGenerator) genDeref(d *Dereference) {
 	y.programm += txt
 }
 
-func (y *YololGenerator) Generate(prog *Programm) string {
+func (y *YololGenerator) Generate(prog Node) (string, error) {
 	y.programm = ""
-	prog.Accept(y)
+	err := prog.Accept(y)
+	if err != nil {
+		return "", err
+	}
 	// during the generation duplicate spaces might appear. Remove them
-	return strings.Replace(y.programm, "  ", " ", -1)
+	return strings.Replace(y.programm, "  ", " ", -1), nil
 }

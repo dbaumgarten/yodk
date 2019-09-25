@@ -3,7 +3,6 @@ features:
 
 
 nolol features:
-    collapse lines
     one-line ifs if possible
     remove static ifs
         (attention with mulitline ifs)
