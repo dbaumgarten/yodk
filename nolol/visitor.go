@@ -129,6 +129,41 @@ func (s *MultilineIf) Accept(v parser.Visitor) error {
 	return v.Visit(s, parser.PostVisit)
 }
 
+func (s *WhileLoop) Accept(v parser.Visitor) error {
+	err := v.Visit(s, parser.PreVisit)
+	if err != nil {
+		return err
+	}
+	err = s.Condition.Accept(v)
+	if repl, is := err.(parser.NodeReplacement); is {
+		s.Condition = repl.Replacement[0].(parser.Expression)
+		err = nil
+	}
+	if err != nil {
+		return err
+	}
+	err = v.Visit(s, parser.InterVisit1)
+	if err != nil {
+		return err
+	}
+	for i := 0; i < len(s.Block); i++ {
+		err = v.Visit(s, i)
+		if err != nil {
+			return err
+		}
+		err = s.Block[i].Accept(v)
+		if repl, is := err.(parser.NodeReplacement); is {
+			s.Block = patchExecutableLines(s.Block, i, repl)
+			i += len(repl.Replacement) - 1
+			err = nil
+		}
+		if err != nil {
+			return err
+		}
+	}
+	return v.Visit(s, parser.PostVisit)
+}
+
 func patchLines(old []NololLine, position int, repl parser.NodeReplacement) []NololLine {
 	newv := make([]NololLine, 0, len(old)+len(repl.Replacement)-1)
 	newv = append(newv, old[:position]...)

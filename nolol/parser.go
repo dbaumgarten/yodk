@@ -107,6 +107,14 @@ func (p *NololParser) ParseExecutableLine() (ExecutableLine, *parser.ParserError
 		return ifline, nil
 	}
 
+	whileline, err := p.ParseWhileLine()
+	if err != nil && err.Fatal {
+		return nil, err
+	}
+	if err == nil {
+		return whileline, nil
+	}
+
 	return p.ParseStatementLine()
 }
 
@@ -217,6 +225,47 @@ func (p *NololParser) ParseIfLine() (NololLine, *parser.ParserError) {
 	}
 	p.Advance()
 	return &mlif, nil
+}
+
+func (p *NololParser) ParseWhileLine() (NololLine, *parser.ParserError) {
+	p.Log()
+	loop := WhileLoop{
+		Position: p.Current().Position,
+	}
+	if p.Current().Type != parser.TypeKeyword || p.Current().Value != "while" {
+		return nil, p.NewError("While-statements have to start with 'while'", false, p.Current().Position, p.Current().Position)
+	}
+	p.Advance()
+
+	var err *parser.ParserError
+	loop.Condition, err = p.This.ParseExpression()
+	if err != nil {
+		err.Fatal = true
+		return nil, err.Append(fmt.Errorf("No expression found as loop-condition"))
+	}
+
+	if p.Current().Type != parser.TypeKeyword || p.Current().Value != "do" {
+		return nil, p.NewError("Expected 'do' after condition", true, p.Current().Position, p.Current().Position)
+	}
+	p.Advance()
+
+	if p.Current().Type != parser.TypeNewline {
+		return nil, p.NewError("Expected newline after do", true, p.Current().Position, p.Current().Position)
+	}
+	p.Advance()
+
+	loop.Block, err = p.ParseLinesUntil(func() bool {
+		return p.Current().Type == parser.TypeKeyword && p.Current().Value == "end"
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if p.Current().Type != parser.TypeKeyword || p.Current().Value != "end" {
+		return nil, p.NewError("Expected 'end' after if statement", true, loop.Start(), loop.Start())
+	}
+	p.Advance()
+	return &loop, nil
 
 }
 

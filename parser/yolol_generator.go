@@ -96,14 +96,14 @@ func (y *YololGenerator) Visit(node Node, visitType int) error {
 		//do noting
 		break
 	default:
-		if y.UnknownHandlerFunc != nil {
-			str, err := y.UnknownHandlerFunc(node)
-			if err != nil {
-				return err
-			}
-			y.programm += str
+		if y.UnknownHandlerFunc == nil {
+			return fmt.Errorf("Unknown ast-node: %T%v", node, node)
 		}
-		return fmt.Errorf("Unknown ast-node: %T%v", node, node)
+		str, err := y.UnknownHandlerFunc(node)
+		if err != nil {
+			return err
+		}
+		y.programm += str
 	}
 	return nil
 }

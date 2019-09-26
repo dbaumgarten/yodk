@@ -76,3 +76,17 @@ func (n *GoToLabelStatement) Start() parser.Position {
 func (n *GoToLabelStatement) End() parser.Position {
 	return n.Position.Add(len(n.Label) + 1)
 }
+
+type WhileLoop struct {
+	Position  parser.Position
+	Condition parser.Expression
+	Block     []ExecutableLine
+}
+
+func (n *WhileLoop) Start() parser.Position {
+	return n.Position
+}
+
+func (n *WhileLoop) End() parser.Position {
+	return n.Block[len(n.Block)-1].End()
+}

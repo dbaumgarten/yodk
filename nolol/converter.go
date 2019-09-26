@@ -30,6 +30,10 @@ func (c *NololConverter) Convert(prog *NololProgramm) (*parser.Programm, error) 
 	if err != nil {
 		return nil, err
 	}
+	err = c.convertWhileLoops(prog)
+	if err != nil {
+		return nil, err
+	}
 	err = optimizers.NewStaticExpressionOptimizer().Optimize(prog)
 	if err != nil {
 		return nil, err
@@ -265,6 +269,67 @@ func (c *NololConverter) convertMultilineIf(p parser.Node) error {
 	return p.Accept(parser.VisitorFunc(f))
 }
 
+func (c *NololConverter) convertWhileLoops(p parser.Node) error {
+	counter := 0
+	f := func(node parser.Node, visitType int) error {
+		if loop, is := node.(*WhileLoop); is && visitType == parser.PostVisit {
+			startLabel := fmt.Sprintf("while%d", counter)
+			endLabel := fmt.Sprintf("endwhile%d", counter)
+			repl := []parser.Node{
+				&StatementLine{
+					Position: loop.Position,
+					Label:    startLabel,
+					Line: parser.Line{
+						Statements: []parser.Statement{
+							&parser.IfStatement{
+								Position: loop.Condition.Start(),
+								Condition: &parser.UnaryOperation{
+									Operator: "not",
+									Exp:      loop.Condition,
+								},
+								IfBlock: []parser.Statement{
+									&GoToLabelStatement{
+										Position: loop.Position,
+										Label:    endLabel,
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			for _, blockline := range loop.Block {
+				repl = append(repl, blockline)
+			}
+			repl = append(repl, &StatementLine{
+				Position: loop.Position,
+				Line: parser.Line{
+					Statements: []parser.Statement{
+						&GoToLabelStatement{
+							Position: loop.Position,
+							Label:    startLabel,
+						},
+					},
+				},
+			})
+
+			repl = append(repl, &StatementLine{
+				Position: loop.Position,
+				Label:    endLabel,
+				Line: parser.Line{
+					Statements: []parser.Statement{},
+				},
+			})
+
+			counter++
+			return parser.NewNodeReplacement(repl...)
+		}
+		return nil
+	}
+	return p.Accept(parser.VisitorFunc(f))
+}
+
 func (c *NololConverter) filterLines(p parser.Node) error {
 	f := func(node parser.Node, visitType int) error {
 		switch n := node.(type) {
@@ -297,6 +362,11 @@ func (c *NololConverter) mergeLines(p *NololProgramm) error {
 					current = nextline
 					i += nextcounter
 					nextcounter = 1
+					if i+nextcounter == len(p.Lines) {
+						//the next line has not been merged, but it is the last line in the programm
+						//append it to the list so it is not left out
+						newLines = append(newLines, current)
+					}
 					continue
 				}
 				current.Statements = append(current.Statements, nextline.Statements...)
@@ -318,7 +388,11 @@ func getLengthOfLine(line *parser.Line) int {
 		}
 		return "", fmt.Errorf("Unknown node-type: %T", node)
 	}
-	generated, _ := ygen.Generate(line)
+	generated, err := ygen.Generate(line)
+	if err != nil{
+		panic(err)
+	}
+
 	return len(generated)
 }
 
