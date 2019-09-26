@@ -3,6 +3,7 @@ package cmd
 import (
 	"io/ioutil"
 	"path"
+	"strings"
 
 	"github.com/dbaumgarten/yodk/optimizers"
 	"github.com/dbaumgarten/yodk/parser"
@@ -15,9 +16,9 @@ var outputFile string
 var optimizeCmd = &cobra.Command{
 	Use:   "optimize [file]",
 	Short: "Optimize a yolo programm",
-	Long:  `Parse the input file, run optimizers and re-generate yolol-code from the ast.`,
+	Long:  `Perform optimizations on a yolol-programm`,
 	Run: func(cmd *cobra.Command, args []string) {
-		outfile := path.Base(args[0]) + ".out"
+		outfile := strings.Replace(args[0], path.Ext(args[0]), "", -1) + "-opt" + path.Ext(args[0])
 		p := parser.NewParser()
 		file := loadInputFile(args[0])
 		parsed, errs := p.Parse(file)

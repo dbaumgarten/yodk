@@ -1,5 +1,6 @@
 .vscode/
 *.out
-example.yolol
+*.yolol
+*.nolol
 yodk
 lslog

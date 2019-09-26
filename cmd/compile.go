@@ -3,6 +3,7 @@ package cmd
 import (
 	"io/ioutil"
 	"path"
+	"strings"
 
 	"github.com/dbaumgarten/yodk/nolol"
 	"github.com/dbaumgarten/yodk/parser"
@@ -15,16 +16,11 @@ var compileCmd = &cobra.Command{
 	Use:   "compile [file]",
 	Short: "Compile a nolol programm to yolol",
 	Run: func(cmd *cobra.Command, args []string) {
-		outfile := path.Base(args[0]) + ".out"
-		p := nolol.NewNololParser()
+		outfile := strings.Replace(args[0], path.Ext(args[0]), ".yolol", -1)
 		file := loadInputFile(args[0])
-		parsed, errs := p.Parse(file)
-		if errs != nil {
-			exitOnError(errs, "parsing file")
-		}
 		converter := nolol.NewNololConverter()
-		converted, err := converter.Convert(parsed)
-		exitOnError(err, "compiling")
+		converted, err := converter.ConvertFromSource(file)
+		exitOnError(err, "converting to yolol")
 		gen := parser.YololGenerator{}
 		generated, err := gen.Generate(converted)
 		exitOnError(err, "generating code")

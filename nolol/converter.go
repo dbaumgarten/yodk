@@ -170,7 +170,7 @@ func (c *NololConverter) convertLabelGoto(p parser.Node) error {
 		if gotostmt, is := node.(*GoToLabelStatement); is {
 			line, exists := c.jumpLabels[gotostmt.Label]
 			if !exists {
-				return parser.ParserError{
+				return &parser.ParserError{
 					Message:       "Unknown jump-label: " + gotostmt.Label,
 					Fatal:         true,
 					StartPosition: gotostmt.Start(),
