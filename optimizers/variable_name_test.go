@@ -75,7 +75,10 @@ func TestVarOpt(t *testing.T) {
 	}
 
 	gen := parser.YololGenerator{}
-	generated := gen.Generate(parsed)
+	generated, err := gen.Generate(parsed)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if strings.Contains(generated, "pi = ") || strings.Contains(generated, "hw = ") {
 		t.Fatal("Variables have not been replaced")

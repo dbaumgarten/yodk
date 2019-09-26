@@ -14,7 +14,10 @@ func TestGenerator(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	generated := gen.Generate(parsed)
+	generated, err := gen.Generate(parsed)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	err = testdata.ExecuteTestProgram(generated)
 	if err != nil {
