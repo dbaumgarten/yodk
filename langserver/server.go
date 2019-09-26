@@ -42,7 +42,6 @@ func callingFunctionName() string {
 func (ls *LangServer) Initialize(ctx context.Context, params *lsp.InitializeParams) (*lsp.InitializeResult, error) {
 	return &lsp.InitializeResult{
 		Capabilities: lsp.ServerCapabilities{
-			DocumentFormattingProvider: true,
 			TextDocumentSync: lsp.TextDocumentSyncOptions{
 				Change:    float64(lsp.Full), // full contents of file sent on each update
 				OpenClose: true,
@@ -133,13 +132,13 @@ func (ls *LangServer) CodeAction(ctx context.Context, params *lsp.CodeActionPara
 	return nil, unsupported()
 }
 func (ls *LangServer) CodeLens(ctx context.Context, params *lsp.CodeLensParams) ([]lsp.CodeLens, error) {
-	return nil, unsupported()
+	return nil, nil
 }
 func (ls *LangServer) CodeLensResolve(ctx context.Context, params *lsp.CodeLens) (*lsp.CodeLens, error) {
 	return nil, unsupported()
 }
 func (ls *LangServer) DocumentLink(ctx context.Context, params *lsp.DocumentLinkParams) ([]lsp.DocumentLink, error) {
-	return nil, unsupported()
+	return nil, nil
 }
 func (ls *LangServer) DocumentLinkResolve(ctx context.Context, params *lsp.DocumentLink) (*lsp.DocumentLink, error) {
 	return nil, unsupported()

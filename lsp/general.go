@@ -730,7 +730,7 @@ type ServerCapabilities struct {
 	/**
 	 * The server provides completion support.
 	 */
-	CompletionProvider CompletionOptions `json:"completionProvider,omitempty"`
+	CompletionProvider *CompletionOptions `json:"completionProvider,omitempty"`
 	/**
 	 * The server provides signature help support.
 	 */
@@ -774,7 +774,7 @@ type ServerCapabilities struct {
 	/**
 	 * The server provides code lens.
 	 */
-	CodeLensProvider CodeLensOptions `json:"codeLensProvider,omitempty"`
+	CodeLensProvider *CodeLensOptions `json:"codeLensProvider,omitempty"`
 	/**
 	 * The server provides document formatting.
 	 */
@@ -794,7 +794,7 @@ type ServerCapabilities struct {
 	/**
 	 * The server provides document link support.
 	 */
-	DocumentLinkProvider DocumentLinkOptions `json:"documentLinkProvider,omitempty"`
+	DocumentLinkProvider *DocumentLinkOptions `json:"documentLinkProvider,omitempty"`
 	/**
 	 * The server provides color provider support.
 	 *
@@ -812,7 +812,7 @@ type ServerCapabilities struct {
 	/**
 	 * The server provides execute command support.
 	 */
-	ExecuteCommandProvider ExecuteCommandOptions `json:"executeCommandProvider,omitempty"`
+	ExecuteCommandProvider *ExecuteCommandOptions `json:"executeCommandProvider,omitempty"`
 	/**
 	 * Workspace specific server capabilities
 	 */
