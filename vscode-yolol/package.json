@@ -6,12 +6,13 @@
 	"version": "1.0.0",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/dbaumgarten/vscode-yolol"
+		"url": "https://github.com/dbaumgarten/yodk"
 	},
 	"keywords": [
 		"yolol",
 		"nolol",
-		"starbase"
+		"starbase",
+		"dev-kit"
 	],
 	"main": "./out/extension",
 	"activationEvents": [
