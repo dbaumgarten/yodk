@@ -4,7 +4,7 @@
 YOLOL is the ingame programming language for the upcoming game starbase.
 
 # What is the YODK?
-The yodk aims to be a toolkit the helps with the development of YOLOL-Scripts. YOLOL is a pretty limmited language and the lack of common features is really annoying for experienced programmers. The yodk (and in the future especially nolol) will try to mitigate this.
+The yodk aims to be a toolkit that helps with the development of YOLOL-Scripts. YOLOL is a pretty limmited language and the lack of common features is really annoying for experienced programmers. The yodk (and in the future especially nolol) will try to mitigate this.
 
 # Installation
 You will need to have the go-toolchain installed.  
@@ -77,6 +77,8 @@ Error when parsing file: Parser error at Line: 2, Coloumn: 1 (up to Line: 2, Col
 
 ## vscode Extension
 Extension for visual studio code. Adds syntax highlighting and validation. [More information](vscode-yolol/README.md)
+
+![VSCODE-Extension](images/vscode-screenshot.png)
 
 ## Implementation of the language server protocol
 Can be used to add support for YOLOL to many IDEs. Just run ```yodk langserv``` to start a server instance. Refer to the documentation of your IDE on how to integrate a language server into it.
