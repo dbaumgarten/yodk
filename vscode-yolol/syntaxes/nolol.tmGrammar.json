@@ -1,0 +1,87 @@
+{
+	"scopeName": "nolol",
+	"patterns": [
+		{
+			"include": "#expression"
+		}
+	],
+	"repository": {
+		"expression": {
+			"patterns": [
+				{
+					"include": "#keyword"
+				},
+				{
+					"include": "#label"
+				},
+				{
+					"include": "#string"
+				},
+				{
+					"include": "#comment"
+				},
+				{
+					"include": "#constant"
+				},
+				{
+					"include": "#function"
+				},
+				{
+					"include": "#operator"
+				},
+				{
+					"include": "#extvariable"
+				},
+				{
+					"include": "#variable"
+				}
+			]
+		},
+		"keyword": {
+			"match": "\\b(if|then|else|end|const)\\b",
+			"name": "keyword.control"
+		},
+		"label": {
+			"match": "[a-zA-Z]+[a-zA-Z0-9_]*>",
+			"name": "storage.type.string.go"
+		},
+		"string": {
+			"match": "\"[^\"]*\"",
+			"name": "string"
+		},
+		"constant": {
+			"match": "[0-9]+(\\.[0-9]+)?",
+			"name": "constant.numeric"
+		},
+		"function": {
+			"match": "([a-zA-Z]+)\\(",
+			"captures": {
+				"1": {
+					"name": "support.function"
+				}
+			}
+		},
+		"operator": {
+			"match": "\\b(and|or|not)\\b",
+			"name": "keyword.operator"
+		},
+		"extvariable": {
+			"match": ":[a-zA-Z]+[a-zA-Z0-9_]*",
+			"name": "variable.language"
+		},
+		"variable": {
+			"match": ":?[a-zA-Z]+[a-zA-Z0-9_]*",
+			"name": "variable"
+		},
+		"comment": {
+			"begin": "//",
+			"beginCaptures": {
+				"0": {
+					"name": "punctuation.definition.comment.go.mod"
+				}
+			},
+			"end": "$",
+			"name": "comment.line"
+		}
+	}
+}

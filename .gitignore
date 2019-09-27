@@ -4,3 +4,4 @@
 *.nolol
 yodk
 lslog
+!vscode-yolol/.vscode
