@@ -12,6 +12,7 @@ import (
 
 var errAbortLine = fmt.Errorf("")
 
+// The current state of the VM
 const (
 	StateIdle    = iota
 	StateRunning = iota
@@ -20,14 +21,21 @@ const (
 	StateStep    = iota
 )
 
+// BreakpointFunc is a function that is called when a breakpoint is encountered.
+// If true is returned the execution is resumed. Otherwise the vm remains paused
 type BreakpointFunc func(vm *YololVM) bool
 
+// ErrorHandlerFunc is a function that is called when a runtime-error is encountered.
+// If true is returned the execution is resumed. Otherwise the vm remains paused
 type ErrorHandlerFunc func(vm *YololVM, err error) bool
 
+// FinishHandlerFunc is a function that is called when the programm finished execution (looping is disabled)
 type FinishHandlerFunc func(vm *YololVM)
 
+// RuntimeError represents an error encountered during execution
 type RuntimeError struct {
 	Base error
+	// The Node that caused the error
 	Node parser.Node
 }
 
@@ -35,23 +43,33 @@ func (e RuntimeError) Error() string {
 	return fmt.Sprintf("Runtime error at %s (up to %s): %s", e.Node.Start(), e.Node.End(), e.Base.Error())
 }
 
+// YololVM is a virtual machine to execute YOLOL-Code
 type YololVM struct {
-	variables         map[string]*Variable
+	// the current variables of the programm
+	variables map[string]*Variable
+	// if true, restart programm after executing line 20
 	loop              bool
 	breakpointHandler BreakpointFunc
 	errorHandler      ErrorHandlerFunc
 	finishHandler     FinishHandlerFunc
 
+	// the parser to use
 	parser *parser.Parser
 	// currentLine is 1-indexed
 	currentLine int
-	state       int
+	// current state of the vm
+	state int
+	// list of active breakpoints
 	breakpoints map[int]bool
-	program     *parser.Programm
-	lock        *sync.Mutex
-	skipBp      bool
+	// the parsed program
+	program *parser.Programm
+	// a lock to synchronize acces to the vms state
+	lock *sync.Mutex
+	// needed to resume after hitting a breakpoint
+	skipBp bool
 }
 
+// NewYololVM creates a new VM
 func NewYololVM() *YololVM {
 	decimal.DivisionPrecision = 3
 	return &YololVM{
@@ -65,18 +83,21 @@ func NewYololVM() *YololVM {
 	}
 }
 
+// AddBreakpoint adds a breakpoint at the line
 func (v *YololVM) AddBreakpoint(line int) {
 	v.lock.Lock()
 	defer v.lock.Unlock()
 	v.breakpoints[line] = true
 }
 
+// RemoveBreakpoint removes the breakpoint at the line
 func (v *YololVM) RemoveBreakpoint(line int) {
 	v.lock.Lock()
 	defer v.lock.Unlock()
 	delete(v.breakpoints, line)
 }
 
+// PrintVariables gets an overview over the current variable state
 func (v *YololVM) PrintVariables() string {
 	v.lock.Lock()
 	defer v.lock.Unlock()
@@ -93,6 +114,7 @@ func (v *YololVM) PrintVariables() string {
 	return txt
 }
 
+// Run compiles and runs the given programm code
 func (v *YololVM) Run(prog string) error {
 	ast, err := v.parser.Parse(prog)
 	if err != nil {
@@ -111,6 +133,7 @@ func (v *YololVM) Run(prog string) error {
 	return v.run()
 }
 
+// Resume resumes execution after a breakpoint or pause()
 func (v *YololVM) Resume() error {
 	v.lock.Lock()
 	if v.program == nil {
@@ -126,6 +149,7 @@ func (v *YololVM) Resume() error {
 	return v.run()
 }
 
+// Step executes the next line and stops the execution again
 func (v *YololVM) Step() error {
 	v.lock.Lock()
 	if v.program == nil {
@@ -141,48 +165,56 @@ func (v *YololVM) Step() error {
 	return v.run()
 }
 
+// Pause pauses the execution
 func (v *YololVM) Pause() {
 	v.lock.Lock()
 	defer v.lock.Unlock()
 	v.state = StatePaused
 }
 
+// State returns the current vm state
 func (v *YololVM) State() int {
 	v.lock.Lock()
 	defer v.lock.Unlock()
 	return v.state
 }
 
+// CurrentLine returns the current (=next to be executed) line of the program
 func (v *YololVM) CurrentLine() int {
 	v.lock.Lock()
 	defer v.lock.Unlock()
 	return v.currentLine
 }
 
+// SetBreakpointHandler sets the function to be called when hitting a breakpoint
 func (v *YololVM) SetBreakpointHandler(f BreakpointFunc) {
 	v.lock.Lock()
 	defer v.lock.Unlock()
 	v.breakpointHandler = f
 }
 
+// SetErrorHandler sets the function to be called when encountering an error
 func (v *YololVM) SetErrorHandler(f ErrorHandlerFunc) {
 	v.lock.Lock()
 	defer v.lock.Unlock()
 	v.errorHandler = f
 }
 
+// SetFinishHandler sets the function to be called when execution finishes
 func (v *YololVM) SetFinishHandler(f FinishHandlerFunc) {
 	v.lock.Lock()
 	defer v.lock.Unlock()
 	v.finishHandler = f
 }
 
+// EnableLoop wheter or not to loop from line 20 back to 1
 func (v *YololVM) EnableLoop(b bool) {
 	v.lock.Lock()
 	defer v.lock.Unlock()
 	v.loop = b
 }
 
+// ListBreakpoints returns the list of active breakpoints
 func (v *YololVM) ListBreakpoints() []int {
 	v.lock.Lock()
 	defer v.lock.Unlock()
@@ -193,6 +225,7 @@ func (v *YololVM) ListBreakpoints() []int {
 	return li
 }
 
+// GetVariable gets the current state of a variable
 func (v *YololVM) GetVariable(name string) (*Variable, bool) {
 	v.lock.Lock()
 	defer v.lock.Unlock()
@@ -205,6 +238,7 @@ func (v *YololVM) GetVariable(name string) (*Variable, bool) {
 	return nil, false
 }
 
+// GetVariables gets the current state of all variables
 func (v *YololVM) GetVariables() map[string]Variable {
 	v.lock.Lock()
 	defer v.lock.Unlock()
@@ -217,6 +251,7 @@ func (v *YololVM) GetVariables() map[string]Variable {
 	return varlist
 }
 
+// SetVariable sets the current state of a variable
 func (v *YololVM) SetVariable(name string, value interface{}) error {
 	v.lock.Lock()
 	defer v.lock.Unlock()
@@ -236,10 +271,12 @@ func (v *YololVM) run() error {
 		v.lock.Unlock()
 		v.lock.Lock()
 
+		// the vm should pause now. Stop the loop
 		if v.state != StateRunning && v.state != StateStep {
 			return nil
 		}
 
+		// did we hit a breakpoint?
 		if _, exists := v.breakpoints[v.currentLine]; exists && !v.skipBp {
 
 			if v.breakpointHandler != nil {

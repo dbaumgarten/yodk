@@ -8,6 +8,7 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+// RunFunction executes the given yolol-function with the given argument and returns the result
 func RunFunction(arg *Variable, function string) (*Variable, error) {
 	if !arg.IsNumber() {
 		return nil, fmt.Errorf("Function %s expects a number as argument", function)
@@ -48,6 +49,7 @@ func RunFunction(arg *Variable, function string) (*Variable, error) {
 	return &result, nil
 }
 
+// RunUnaryOperation executes the given operation with the given argument and returns the result
 func RunUnaryOperation(arg *Variable, operator string) (*Variable, error) {
 	if !arg.IsNumber() {
 		return nil, fmt.Errorf("Unary operator '%s' is only available for numbers", operator)
@@ -70,6 +72,7 @@ func RunUnaryOperation(arg *Variable, operator string) (*Variable, error) {
 	return &res, nil
 }
 
+// RunBinaryOperation executes the given operation with the given arguments and returns the result
 func RunBinaryOperation(arg1 *Variable, arg2 *Variable, operator string) (*Variable, error) {
 	// automatic type casting
 	if !arg1.SameType(arg2) {
