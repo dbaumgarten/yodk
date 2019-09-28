@@ -8,17 +8,21 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+// StaticExpressionOptimizer evaluates static expressions at compile-time
 type StaticExpressionOptimizer struct {
 }
 
+// NewStaticExpressionOptimizer returns a new StaticExpressionOptimizer
 func NewStaticExpressionOptimizer() *StaticExpressionOptimizer {
 	return &StaticExpressionOptimizer{}
 }
 
+// Optimize is required to implement Optimizer
 func (o *StaticExpressionOptimizer) Optimize(prog parser.Node) error {
 	return prog.Accept(o)
 }
 
+// Visit is needed to implement the Visitor interface
 func (o *StaticExpressionOptimizer) Visit(node parser.Node, visitType int) error {
 	if visitType == parser.PostVisit {
 		if exp, isexp := node.(parser.Expression); isexp {
@@ -66,6 +70,7 @@ func optimizeExpression(exp parser.Expression) parser.Expression {
 	return nil
 }
 
+// is the given expression constant (does not depend on a variable)
 func isConstant(exp parser.Expression) bool {
 	switch exp.(type) {
 	case *parser.StringConstant:
@@ -76,6 +81,7 @@ func isConstant(exp parser.Expression) bool {
 	return false
 }
 
+// convert a constant AST-node to a vm-variable
 func constToVar(exp parser.Expression) *vm.Variable {
 	switch e := exp.(type) {
 	case *parser.StringConstant:
@@ -90,14 +96,14 @@ func constToVar(exp parser.Expression) *vm.Variable {
 	panic("This should never happen")
 }
 
+// convert a vm-variable to a constant AST-Node
 func varToConst(v *vm.Variable) parser.Expression {
 	if v.IsNumber() {
 		return &parser.NumberConstant{
 			Value: v.Itoa(),
 		}
-	} else {
-		return &parser.StringConstant{
-			Value: v.String(),
-		}
+	}
+	return &parser.StringConstant{
+		Value: v.String(),
 	}
 }
