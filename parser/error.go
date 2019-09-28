@@ -2,6 +2,7 @@ package parser
 
 import "fmt"
 
+// ParserError represents an error encountered during parsing
 type ParserError struct {
 	Message       string
 	StartPosition Position
@@ -10,6 +11,7 @@ type ParserError struct {
 	Fatal         bool
 }
 
+// Append adds a follow-up error to the error to make the displayed error-message more helpful
 func (e *ParserError) Append(err error) *ParserError {
 	if e.ErrorStack == nil {
 		e.ErrorStack = make([]error, 0)
@@ -29,6 +31,7 @@ func (e ParserError) Error() string {
 	return txt
 }
 
+// ParserErrors represents multiple ParserErrors
 type ParserErrors []*ParserError
 
 func (e ParserErrors) Error() string {

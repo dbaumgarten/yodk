@@ -6,8 +6,12 @@ import (
 	"strings"
 )
 
+// YololGenerator generates yolol-code from an AST
 type YololGenerator struct {
-	programm           string
+	programm string
+	// This function is called whenever an unknown node-type is encountered.
+	// It can be used to add support for additional types to the generator
+	// returns the yolol-code for the giben node or an error
 	UnknownHandlerFunc func(node Node) (string, error)
 }
 
@@ -28,6 +32,7 @@ var operatorPriority = map[string]int{
 	"not": 4,
 }
 
+// Visit is needed to implement the Visitor interface
 func (y *YololGenerator) Visit(node Node, visitType int) error {
 	switch n := node.(type) {
 	case *Line:
@@ -176,6 +181,7 @@ func (y *YololGenerator) genDeref(d *Dereference) {
 	y.programm += txt
 }
 
+// Generate returns the yolol-code the ast-node and it's children represent
 func (y *YololGenerator) Generate(prog Node) (string, error) {
 	y.programm = ""
 	err := prog.Accept(y)

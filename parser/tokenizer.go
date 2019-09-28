@@ -7,6 +7,7 @@ import (
 	"strings"
 )
 
+// Defines the different types a token can be
 const (
 	TypeID         = "ID"
 	TypeNumber     = "Number"
@@ -19,11 +20,13 @@ const (
 	TypeWhitespace = "Whitespace"
 )
 
+// Position represents the starting-position of a token in the source-code
 type Position struct {
 	Line    int
 	Coloumn int
 }
 
+// NewPosition creates a new position from a given line and coloumn
 func NewPosition(line int, coloumn int) Position {
 	return Position{
 		Line:    line,
@@ -34,11 +37,14 @@ func NewPosition(line int, coloumn int) Position {
 func (p Position) String() string {
 	return fmt.Sprintf("Line: %d, Coloumn: %d", p.Line, p.Coloumn)
 }
+
+// Add creates a new position from the old one and adds the given amount of coloumns
 func (p Position) Add(col int) Position {
 	p.Coloumn += col
 	return p
 }
 
+// Sub creates a new position from the old one and substracts the given amount of coloumns
 func (p Position) Sub(col int) Position {
 	p.Coloumn -= col
 	return p
@@ -47,16 +53,17 @@ func (p Position) Sub(col int) Position {
 var symbols = []string{"++", "--", ">=", "<=", "!=", "==", "==", "+=", "-=", "*=", "/=", "%=",
 	"=", ">", "<", "+", "-", "*", "/", "^", "%", ",", "(", ")"}
 
-var KeywordRegex = regexp.MustCompile("^\\b(if|else|end|then|goto|and|or|not)\\b")
+var keywordRegex = regexp.MustCompile("^\\b(if|else|end|then|goto|and|or|not)\\b")
 
-var IdentifierRegex = regexp.MustCompile("^:?[a-zA-Z]+[a-zA-Z0-9_]*")
+var identifierRegex = regexp.MustCompile("^:?[a-zA-Z]+[a-zA-Z0-9_]*")
 
-var NumberRegex = regexp.MustCompile("^[0-9]+(\\.[0-9]+)?")
+var numberRegex = regexp.MustCompile("^[0-9]+(\\.[0-9]+)?")
 
-var CommentRegex = regexp.MustCompile("^[ \\t]*\\/\\/([^\n]*)")
+var commentRegex = regexp.MustCompile("^[ \\t]*\\/\\/([^\n]*)")
 
 var whitespaceRegex = regexp.MustCompile("^[ \\t\r]+")
 
+// Token represents a token fount in the source-code
 type Token struct {
 	Type     string
 	Value    string
@@ -72,25 +79,31 @@ func (t Token) String() string {
 	return str
 }
 
+// Tokenizer splits the input source-code into tokens
 type Tokenizer struct {
-	column          int
-	line            int
-	text            string
-	remaining       []byte
-	symbols         []string
-	KeywordRegex    *regexp.Regexp
+	column    int
+	line      int
+	text      string
+	remaining []byte
+	symbols   []string
+	// KeywordRegex is used to parse keywords
+	KeywordRegex *regexp.Regexp
+	// IdentifierRegex is used to parse identifiers
 	IdentifierRegex *regexp.Regexp
-	NumberRegex     *regexp.Regexp
-	CommentRegex    *regexp.Regexp
+	// NumberRegex is used to parse numbers
+	NumberRegex *regexp.Regexp
+	// CommentRegex is used to parse comments
+	CommentRegex *regexp.Regexp
 }
 
+// NewTokenizer creates a new tokenizer
 func NewTokenizer() *Tokenizer {
 	return &Tokenizer{
 		symbols:         symbols,
-		KeywordRegex:    KeywordRegex,
-		IdentifierRegex: IdentifierRegex,
-		NumberRegex:     NumberRegex,
-		CommentRegex:    CommentRegex,
+		KeywordRegex:    keywordRegex,
+		IdentifierRegex: identifierRegex,
+		NumberRegex:     numberRegex,
+		CommentRegex:    commentRegex,
 	}
 }
 
@@ -105,6 +118,7 @@ func (t *Tokenizer) newToken(typ string, val string) *Token {
 	}
 }
 
+// Load loads programm code as input
 func (t *Tokenizer) Load(input string) {
 	t.column = 1
 	t.text = input
@@ -112,6 +126,7 @@ func (t *Tokenizer) Load(input string) {
 	t.line = 1
 }
 
+// Next returns the next token from the source document
 func (t *Tokenizer) Next() (*Token, error) {
 
 	t.getComment()

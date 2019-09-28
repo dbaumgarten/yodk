@@ -7,6 +7,7 @@ import (
 	"strings"
 )
 
+// Parser parses a yolol programm into an AST
 type Parser struct {
 	DebugLog     bool
 	Tokenizer    *Tokenizer
@@ -16,6 +17,7 @@ type Parser struct {
 	This YololParserFunctions
 }
 
+// YololParserFunctions is used together with Parser.This to allow 'subclasses' to override 'virtual functions'
 type YololParserFunctions interface {
 	ParseStatement() (Statement, *ParserError)
 	ParsePreOrPostOperation() (Statement, *ParserError)
@@ -35,6 +37,7 @@ type YololParserFunctions interface {
 	ParsePostOpExpression() (Expression, *ParserError)
 }
 
+// NewParser creates a new parser
 func NewParser() *Parser {
 	p := &Parser{
 		Tokenizer: NewTokenizer(),
@@ -43,10 +46,12 @@ func NewParser() *Parser {
 	return p
 }
 
+// HasNext returns true if there is a next token
 func (p *Parser) HasNext() bool {
 	return p.CurrentToken < len(p.Tokens)-1
 }
 
+// Advance advances the current token to the next (non whitespace) token in the list
 func (p *Parser) Advance() *Token {
 	if p.CurrentToken < len(p.Tokens) {
 		p.CurrentToken++
@@ -65,6 +70,7 @@ func (p *Parser) prevWithWhitespace() *Token {
 	return p.Tokens[p.CurrentToken]
 }
 
+// Current returns the current token
 func (p *Parser) Current() *Token {
 	offset := 0
 	// skip whitespace
@@ -74,6 +80,7 @@ func (p *Parser) Current() *Token {
 	return p.Tokens[p.CurrentToken+offset]
 }
 
+// Next returns the next token
 func (p *Parser) Next() *Token {
 	offset := 1
 	// skip whitespace
@@ -86,6 +93,7 @@ func (p *Parser) Next() *Token {
 	return p.Tokens[p.CurrentToken]
 }
 
+// Parse is the main method of the parser. Parses a yolol-program into an AST.
 func (p *Parser) Parse(prog string) (*Programm, error) {
 	errors := make(ParserErrors, 0)
 	p.Tokenizer.Load(prog)
@@ -113,6 +121,7 @@ func (p *Parser) Parse(prog string) (*Programm, error) {
 	return parsed, nil
 }
 
+// ParseProgram parses a programm-node
 func (p *Parser) ParseProgram() (*Programm, ParserErrors) {
 	p.Log()
 	errors := make(ParserErrors, 0)
@@ -130,12 +139,14 @@ func (p *Parser) ParseProgram() (*Programm, ParserErrors) {
 	return &ret, errors
 }
 
+// SkipLine skips tokens up to the next newline
 func (p *Parser) SkipLine() {
 	for p.Current().Type != TypeNewline && p.Current().Type != TypeEOF {
 		p.Advance()
 	}
 }
 
+// ParseLine parses a line-node
 func (p *Parser) ParseLine() (*Line, *ParserError) {
 	p.Log()
 	ret := Line{
@@ -161,6 +172,7 @@ func (p *Parser) ParseLine() (*Line, *ParserError) {
 	return nil, p.NewError("Missing newline", true, ret.Start(), ret.End())
 }
 
+// ParseStatement parses a statement-node
 func (p *Parser) ParseStatement() (Statement, *ParserError) {
 	p.Log()
 
@@ -204,6 +216,7 @@ func (p *Parser) ParseStatement() (Statement, *ParserError) {
 	return nil, p.NewError("Expected assignment, if-statement or goto", false, p.Current().Position, p.Current().Position)
 }
 
+// ParsePreOrPostOperation parses a pre-/post operation (x++, ++x) as a statement
 func (p *Parser) ParsePreOrPostOperation() (Statement, *ParserError) {
 	p.Log()
 	preOpVarDeref, err := p.This.ParsePreOpExpression()
@@ -226,6 +239,7 @@ func (p *Parser) ParsePreOrPostOperation() (Statement, *ParserError) {
 	return nil, p.NewError("No Pre- or Post expression-statement found", false, p.Current().Position, p.Current().Position)
 }
 
+// ParseGoto parse parses a goto-node
 func (p *Parser) ParseGoto() (Statement, *ParserError) {
 	if p.Current().Type == TypeKeyword && p.Current().Value == "goto" {
 		stmt := GoToStatement{
@@ -246,6 +260,7 @@ func (p *Parser) ParseGoto() (Statement, *ParserError) {
 	return nil, p.NewError("Goto statements must start with 'goto'", false, p.Current().Position, p.Current().Position)
 }
 
+// ParseAssignment parses an assignment-node
 func (p *Parser) ParseAssignment() (Statement, *ParserError) {
 	p.Log()
 	assignmentOperators := []string{"=", "+=", "-=", "*=", "/=", "%="}
@@ -268,6 +283,7 @@ func (p *Parser) ParseAssignment() (Statement, *ParserError) {
 	return &ret, nil
 }
 
+// ParseIf parses an if-node
 func (p *Parser) ParseIf() (Statement, *ParserError) {
 	p.Log()
 	ret := IfStatement{
@@ -333,11 +349,13 @@ func (p *Parser) ParseIf() (Statement, *ParserError) {
 	return &ret, nil
 }
 
+// ParseExpression parses an expression
 func (p *Parser) ParseExpression() (Expression, *ParserError) {
 	p.Log()
 	return p.This.ParseLogicExpression()
 }
 
+// ParseLogicExpression parses a logical expression
 func (p *Parser) ParseLogicExpression() (Expression, *ParserError) {
 	p.Log()
 	var exp Expression
@@ -366,6 +384,7 @@ func (p *Parser) ParseLogicExpression() (Expression, *ParserError) {
 	return exp, nil
 }
 
+// ParseCompareExpression parses a compare expression
 func (p *Parser) ParseCompareExpression() (Expression, *ParserError) {
 	p.Log()
 	exp1, err := p.This.ParseSumExpression()
@@ -391,6 +410,7 @@ func (p *Parser) ParseCompareExpression() (Expression, *ParserError) {
 	return exp1, nil
 }
 
+// ParseSumExpression parses a sum-expression
 func (p *Parser) ParseSumExpression() (Expression, *ParserError) {
 	p.Log()
 	var exp Expression
@@ -419,6 +439,7 @@ func (p *Parser) ParseSumExpression() (Expression, *ParserError) {
 	return exp, nil
 }
 
+// ParseProdExpression parses a product expression
 func (p *Parser) ParseProdExpression() (Expression, *ParserError) {
 	p.Log()
 	var exp Expression
@@ -447,6 +468,7 @@ func (p *Parser) ParseProdExpression() (Expression, *ParserError) {
 	return exp, nil
 }
 
+// ParseUnaryExpression parses an unary expression
 func (p *Parser) ParseUnaryExpression() (Expression, *ParserError) {
 	p.Log()
 	preUnaryOps := []string{"not", "-"}
@@ -467,6 +489,7 @@ func (p *Parser) ParseUnaryExpression() (Expression, *ParserError) {
 	return p.This.ParseBracketExpression()
 }
 
+// ParseBracketExpression parses a racketed expression
 func (p *Parser) ParseBracketExpression() (Expression, *ParserError) {
 	p.Log()
 	if p.Current().Type == TypeSymbol && p.Current().Value == "(" {
@@ -485,6 +508,7 @@ func (p *Parser) ParseBracketExpression() (Expression, *ParserError) {
 	return p.This.ParseSingleExpression()
 }
 
+// ParseSingleExpression parses a single expression
 func (p *Parser) ParseSingleExpression() (Expression, *ParserError) {
 	p.Log()
 
@@ -536,6 +560,7 @@ func (p *Parser) ParseSingleExpression() (Expression, *ParserError) {
 	return nil, p.NewError("Expected constant, variable, func-call or pre/post operation", true, p.Current().Position, p.Current().Position)
 }
 
+// ParseFuncCall parse a function call
 func (p *Parser) ParseFuncCall() (Expression, *ParserError) {
 	p.Log()
 	if p.Current().Type != TypeID || p.Next().Type != TypeSymbol || p.Next().Value != "(" {
@@ -561,6 +586,7 @@ func (p *Parser) ParseFuncCall() (Expression, *ParserError) {
 	return fc, nil
 }
 
+// ParsePreOpExpression parse pre-expression
 func (p *Parser) ParsePreOpExpression() (Expression, *ParserError) {
 	p.Log()
 	if p.Current().Type == TypeSymbol && (p.Current().Value == "++" || p.Current().Value == "--") {
@@ -580,6 +606,7 @@ func (p *Parser) ParsePreOpExpression() (Expression, *ParserError) {
 	return nil, p.NewError("No Pre-Operator found", false, p.Current().Position, p.Current().Position)
 }
 
+// ParsePostOpExpression parse post-expression
 func (p *Parser) ParsePostOpExpression() (Expression, *ParserError) {
 	p.Log()
 	if p.Next().Type == TypeSymbol && (p.Next().Value == "++" || p.Next().Value == "--") && p.Current().Type == TypeID {
@@ -596,6 +623,7 @@ func (p *Parser) ParsePostOpExpression() (Expression, *ParserError) {
 	return nil, p.NewError("No Post-Operator found", false, p.Current().Position, p.Current().Position)
 }
 
+// NewError creates a new parser error
 func (p *Parser) NewError(msg string, terminal bool, start Position, end Position) *ParserError {
 	err := &ParserError{
 		Message:       msg + ". Found Token: '" + p.Current().Value + "'(" + p.Current().Type + ")",
@@ -641,6 +669,7 @@ func callingLineNumber() int {
 	return 0
 }
 
+// Log logs the visiting of a parsing function
 func (p *Parser) Log() {
 	if p.DebugLog {
 		// Print the name of the function
