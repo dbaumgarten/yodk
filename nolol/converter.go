@@ -8,6 +8,8 @@ import (
 	"github.com/dbaumgarten/yodk/parser"
 )
 
+var errInlineIfImpossible = fmt.Errorf("Can not convert to inline if")
+
 type NololConverter struct {
 	jumpLabels map[string]int
 	constants  map[string]interface{}
@@ -26,7 +28,7 @@ func (c *NololConverter) ConvertFromSource(prog string) (*parser.Programm, error
 }
 
 func (c *NololConverter) Convert(prog *NololProgramm) (*parser.Programm, error) {
-	err := c.convertMultilineIf(prog)
+	err := c.convertIf(prog)
 	if err != nil {
 		return nil, err
 	}
@@ -54,10 +56,11 @@ func (c *NololConverter) Convert(prog *NololProgramm) (*parser.Programm, error) 
 	if err != nil {
 		return nil, err
 	}
-	err = c.mergeLines(prog)
+	newlines, err := c.mergeNololLines(prog.Lines)
 	if err != nil {
 		return nil, err
 	}
+	prog.Lines = newlines
 	err = c.findJumpLabels(prog)
 	if err != nil {
 		return nil, err
@@ -192,77 +195,127 @@ func (c *NololConverter) convertLabelGoto(p parser.Node) error {
 	return p.Accept(parser.VisitorFunc(f))
 }
 
-func (c *NololConverter) convertMultilineIf(p parser.Node) error {
+func (c *NololConverter) convertIfInline(mlif *MultilineIf) error {
+	linelength := len("if  then  end")
+	mergedIfLines, _ := c.mergeExecutableLines(mlif.IfBlock)
+	var mergedElseLines []ExecutableLine
+	var elseBlock []parser.Statement
+
+	if len(mergedIfLines) > 1 || mergedIfLines[0].(*StatementLine).Label != "" {
+		return errInlineIfImpossible
+	}
+	linelength += getLengthOfLine(&mergedIfLines[0].(*StatementLine).Line)
+
+	if mlif.ElseBlock != nil {
+		mergedElseLines, _ = c.mergeExecutableLines(mlif.ElseBlock)
+		if len(mergedElseLines) > 1 || mergedElseLines[0].(*StatementLine).Label != "" {
+			return errInlineIfImpossible
+		}
+		linelength += len(" else ")
+		linelength += getLengthOfLine(&mergedElseLines[0].(*StatementLine).Line)
+		elseBlock = mergedElseLines[0].(*StatementLine).Line.Statements
+	}
+
+	if linelength > 70 {
+		return errInlineIfImpossible
+	}
+
+	repl := &StatementLine{
+		Position: mlif.Position,
+		Line: parser.Line{
+			Statements: []parser.Statement{
+				&parser.IfStatement{
+					Position:  mlif.Position,
+					Condition: mlif.Condition,
+					IfBlock:   mergedIfLines[0].(*StatementLine).Line.Statements,
+					ElseBlock: elseBlock,
+				},
+			},
+		},
+	}
+
+	return parser.NewNodeReplacement(repl)
+}
+
+func (c *NololConverter) convertIfMultiline(mlif *MultilineIf, counter *int) error {
+	skipIf := fmt.Sprintf("iflbl%d", *counter)
+	skipElse := fmt.Sprintf("elselbl%d", *counter)
+	repl := []parser.Node{
+		&StatementLine{
+			Position: mlif.Position,
+			Line: parser.Line{
+				Statements: []parser.Statement{
+					&parser.IfStatement{
+						Position: mlif.Position,
+						Condition: &parser.UnaryOperation{
+							Operator: "not",
+							Exp:      mlif.Condition,
+						},
+						IfBlock: []parser.Statement{
+							&GoToLabelStatement{
+								Position: mlif.Position,
+								Label:    skipIf,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, ifblling := range mlif.IfBlock {
+		repl = append(repl, ifblling)
+	}
+
+	if mlif.ElseBlock != nil {
+		repl = append(repl, &StatementLine{
+			Position: mlif.Position,
+			Line: parser.Line{
+				Statements: []parser.Statement{
+					&GoToLabelStatement{
+						Position: mlif.Position,
+						Label:    skipElse,
+					},
+				},
+			},
+		})
+	}
+
+	repl = append(repl, &StatementLine{
+		Position: mlif.Position,
+		Label:    skipIf,
+		Line: parser.Line{
+			Statements: []parser.Statement{},
+		},
+	})
+
+	if mlif.ElseBlock != nil {
+		for _, ifblling := range mlif.ElseBlock {
+			repl = append(repl, ifblling)
+		}
+	}
+
+	repl = append(repl, &StatementLine{
+		Position: mlif.Position,
+		Label:    skipElse,
+		Line: parser.Line{
+			Statements: []parser.Statement{},
+		},
+	})
+
+	*counter++
+	return parser.NewNodeReplacement(repl...)
+}
+
+func (c *NololConverter) convertIf(p parser.Node) error {
 	counter := 0
 	f := func(node parser.Node, visitType int) error {
 		if mlif, is := node.(*MultilineIf); is && visitType == parser.PostVisit {
-			skipIf := fmt.Sprintf("iflbl%d", counter)
-			skipElse := fmt.Sprintf("elselbl%d", counter)
-			repl := []parser.Node{
-				&StatementLine{
-					Position: mlif.Position,
-					Line: parser.Line{
-						Statements: []parser.Statement{
-							&parser.IfStatement{
-								Position: mlif.Position,
-								Condition: &parser.UnaryOperation{
-									Operator: "not",
-									Exp:      mlif.Condition,
-								},
-								IfBlock: []parser.Statement{
-									&GoToLabelStatement{
-										Position: mlif.Position,
-										Label:    skipIf,
-									},
-								},
-							},
-						},
-					},
-				},
+			result := c.convertIfInline(mlif)
+			if result != errInlineIfImpossible {
+				return result
 			}
-
-			for _, ifblling := range mlif.IfBlock {
-				repl = append(repl, ifblling)
-			}
-
-			if mlif.ElseBlock != nil {
-				repl = append(repl, &StatementLine{
-					Position: mlif.Position,
-					Line: parser.Line{
-						Statements: []parser.Statement{
-							&GoToLabelStatement{
-								Position: mlif.Position,
-								Label:    skipElse,
-							},
-						},
-					},
-				})
-			}
-
-			repl = append(repl, &StatementLine{
-				Position: mlif.Position,
-				Label:    skipIf,
-				Line: parser.Line{
-					Statements: []parser.Statement{},
-				},
-			})
-
-			if mlif.ElseBlock != nil {
-				for _, ifblling := range mlif.ElseBlock {
-					repl = append(repl, ifblling)
-				}
-			}
-
-			repl = append(repl, &StatementLine{
-				Position: mlif.Position,
-				Label:    skipElse,
-				Line: parser.Line{
-					Statements: []parser.Statement{},
-				},
-			})
-
-			counter++
-			return parser.NewNodeReplacement(repl...)
+			return c.convertIfMultiline(mlif, &counter)
 		}
 		return nil
 	}
@@ -346,38 +399,67 @@ func (c *NololConverter) filterLines(p parser.Node) error {
 	return p.Accept(parser.VisitorFunc(f))
 }
 
-func (c *NololConverter) mergeLines(p *NololProgramm) error {
-	maxlen := 70
-	newLines := make([]NololLine, 0, len(p.Lines))
-	i := 0
-	for i < len(p.Lines)-1 {
-		if current, is := p.Lines[i].(*StatementLine); is {
-			nextcounter := 1
-			for i+nextcounter < len(p.Lines) {
-				currlen := getLengthOfLine(&current.Line)
-				nextline := p.Lines[i+nextcounter].(*StatementLine)
-				nextlen := getLengthOfLine(&nextline.Line)
-				if nextline.Label != "" || currlen+nextlen > maxlen {
-					newLines = append(newLines, current)
-					current = nextline
-					i += nextcounter
-					nextcounter = 1
-					if i+nextcounter == len(p.Lines) {
-						//the next line has not been merged, but it is the last line in the programm
-						//append it to the list so it is not left out
-						newLines = append(newLines, current)
-					}
-					continue
-				}
-				current.Statements = append(current.Statements, nextline.Statements...)
-				nextcounter++
-			}
-		} else {
-			panic("mergeLines can only work with Statement-lines")
-		}
+func (c *NololConverter) mergeExecutableLines(lines []ExecutableLine) ([]ExecutableLine, error) {
+	inp := make([]*StatementLine, len(lines))
+	for i, elem := range lines {
+		inp[i] = elem.(*StatementLine)
 	}
-	p.Lines = newLines
-	return nil
+	interm, err := c.mergeStatementLines(inp)
+	if err != nil {
+		return nil, err
+	}
+	outp := make([]ExecutableLine, len(interm))
+	for i, elem := range interm {
+		outp[i] = elem
+	}
+	return outp, nil
+}
+
+func (c *NololConverter) mergeNololLines(lines []NololLine) ([]NololLine, error) {
+	inp := make([]*StatementLine, len(lines))
+	for i, elem := range lines {
+		inp[i] = elem.(*StatementLine)
+	}
+	interm, err := c.mergeStatementLines(inp)
+	if err != nil {
+		return nil, err
+	}
+	outp := make([]NololLine, len(interm))
+	for i, elem := range interm {
+		outp[i] = elem
+	}
+	return outp, nil
+}
+
+func (c *NololConverter) mergeStatementLines(lines []*StatementLine) ([]*StatementLine, error) {
+	maxlen := 70
+	newLines := make([]*StatementLine, 0, len(lines))
+	i := 0
+	for i < len(lines) {
+		current := &StatementLine{
+			Line: parser.Line{
+				Statements: []parser.Statement{},
+			},
+			Label:    lines[i].Label,
+			Position: lines[i].Position,
+		}
+		current.Statements = append(current.Statements, lines[i].Statements...)
+		newLines = append(newLines, current)
+		for i+1 < len(lines) {
+			currlen := getLengthOfLine(&current.Line)
+			nextline := lines[i+1]
+			nextlen := getLengthOfLine(&nextline.Line)
+
+			if nextline.Label == "" && currlen+nextlen <= maxlen {
+				current.Statements = append(current.Statements, nextline.Statements...)
+				i++
+			} else {
+				break
+			}
+		}
+		i++
+	}
+	return newLines, nil
 }
 
 func getLengthOfLine(line *parser.Line) int {
@@ -389,7 +471,7 @@ func getLengthOfLine(line *parser.Line) int {
 		return "", fmt.Errorf("Unknown node-type: %T", node)
 	}
 	generated, err := ygen.Generate(line)
-	if err != nil{
+	if err != nil {
 		panic(err)
 	}
 
