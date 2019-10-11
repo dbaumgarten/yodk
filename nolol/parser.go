@@ -66,7 +66,7 @@ func (p *NololParser) ParseProgram() (*NololProgramm, parser.ParserErrors) {
 func (p *NololParser) ParseStatementLine() (*StatementLine, *parser.ParserError) {
 	ret := StatementLine{
 		Line: parser.Line{
-			Statements: make([]parser.Statement, 0),
+			Statements: make([]parser.Statement, 0, 1),
 		},
 		Position: p.Current().Position,
 	}
@@ -78,23 +78,24 @@ func (p *NololParser) ParseStatementLine() (*StatementLine, *parser.ParserError)
 		p.Advance()
 	}
 
-	for p.HasNext() {
-		if p.Current().Type == parser.TypeNewline || p.Current().Type == parser.TypeEOF {
-			p.Advance()
-			return &ret, nil
-		}
-		stmt, err := p.This.ParseStatement()
-		if err != nil {
-			return nil, err
-		}
-		ret.Statements = append(ret.Statements, stmt)
-	}
-
-	if p.Current().Type == parser.TypeEOF {
+	// the line has no statements
+	if p.Current().Type == parser.TypeEOF || p.Current().Type == parser.TypeNewline {
+		p.Advance()
 		return &ret, nil
 	}
 
-	return nil, p.NewError("Missing newline", true, ret.Start(), ret.End())
+	stmt, err := p.This.ParseStatement()
+	if err != nil {
+		return nil, err
+	}
+	ret.Statements = append(ret.Statements, stmt)
+
+	if p.Current().Type == parser.TypeEOF || p.Current().Type == parser.TypeNewline {
+		p.Advance()
+		return &ret, nil
+	}
+
+	return nil, p.NewError("Expected newline after statement", true, ret.Start(), ret.End())
 }
 
 func (p *NololParser) ParseExecutableLine() (ExecutableLine, *parser.ParserError) {
@@ -120,6 +121,11 @@ func (p *NololParser) ParseExecutableLine() (ExecutableLine, *parser.ParserError
 
 func (p *NololParser) ParseLine() (NololLine, *parser.ParserError) {
 	p.Log()
+
+	// skip empty lines and stray newlines
+	for p.Current().Type == parser.TypeNewline {
+		p.Advance()
+	}
 
 	constDecl, err := p.ParseConstantDeclaration()
 	if err != nil && err.Fatal {
@@ -224,6 +230,12 @@ func (p *NololParser) ParseIfLine() (NololLine, *parser.ParserError) {
 		return nil, p.NewError("Expected 'end' after if statement", true, mlif.Start(), mlif.Start())
 	}
 	p.Advance()
+
+	if p.Current().Type != parser.TypeNewline && p.Current().Type != parser.TypeEOF {
+		return nil, p.NewError("End must be followed by newline or EOF", true, p.Current().Position, p.Current().Position)
+	}
+	p.Advance()
+
 	return &mlif, nil
 }
 
@@ -265,13 +277,19 @@ func (p *NololParser) ParseWhileLine() (NololLine, *parser.ParserError) {
 		return nil, p.NewError("Expected 'end' after if statement", true, loop.Start(), loop.Start())
 	}
 	p.Advance()
+
+	if p.Current().Type != parser.TypeNewline && p.Current().Type != parser.TypeEOF {
+		return nil, p.NewError("End must be followed by newline or EOF", true, p.Current().Position, p.Current().Position)
+	}
+	p.Advance()
+
 	return &loop, nil
 
 }
 
 func (p *NololParser) ParseIf() (parser.Statement, *parser.ParserError) {
 	p.Log()
-	return nil, p.NewError("Inline if is not supported.", false, p.Current().Position, p.Current().Position)
+	return nil, p.NewError("Inline if is not supported by nolol.", false, p.Current().Position, p.Current().Position)
 }
 
 func (p *NololParser) ParseGoto() (parser.Statement, *parser.ParserError) {

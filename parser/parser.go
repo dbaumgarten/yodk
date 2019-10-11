@@ -53,11 +53,11 @@ func (p *Parser) HasNext() bool {
 
 // Advance advances the current token to the next (non whitespace) token in the list
 func (p *Parser) Advance() *Token {
-	if p.CurrentToken < len(p.Tokens) {
+	if p.CurrentToken < len(p.Tokens)-1 {
 		p.CurrentToken++
 	}
 	// skip whitespace
-	for p.CurrentToken < len(p.Tokens) && p.Tokens[p.CurrentToken].Type == TypeWhitespace {
+	for p.CurrentToken < len(p.Tokens)-1 && p.Tokens[p.CurrentToken].Type == TypeWhitespace {
 		p.CurrentToken++
 	}
 	return p.Tokens[p.CurrentToken]
