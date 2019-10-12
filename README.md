@@ -118,14 +118,11 @@ yodk compile fizzbuz.nolol
 fizzbuzz.yolol:
 ```
 :out="" a=0
-if not (a<=100) then goto 9 end
-if not (a%3==0 and a%5==0) then goto 5 end :out+="fizz"+"buzz"+" "
-goto 8
-if not (a%3==0) then goto 6 end :out+="fizz"+" " goto 8
-if not (a%5==0) then goto 7 end :out+="buzz"+" " goto 8
-:out+=a+" "
+if not (a<=100) then goto 7 end
+if a%3==0 and a%5==0 then :out+="fizz"+"buzz"+" " goto 6 end
+if a%3==0 then :out+="fizz"+" " goto 6 end
+if a%5==0 then :out+="buzz"+" " goto 6 end :out+=a+" "
 a++ goto 2
-
 ```
 
 # Upcoming features
