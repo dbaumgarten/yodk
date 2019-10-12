@@ -34,47 +34,58 @@ func (c *Converter) ConvertFromSource(prog string) (*parser.Program, error) {
 
 // Convert converts a nolol-program to a yolol-program
 func (c *Converter) Convert(prog *Program) (*parser.Program, error) {
-	err := c.convertIf(prog)
+	// optimize static expressions
+	err := optimizers.NewStaticExpressionOptimizer().Optimize(prog)
 	if err != nil {
 		return nil, err
 	}
-	err = c.convertWhileLoops(prog)
-	if err != nil {
-		return nil, err
-	}
-	err = optimizers.NewStaticExpressionOptimizer().Optimize(prog)
-	if err != nil {
-		return nil, err
-	}
+	// get all constant declarations
 	err = c.findConstantDeclarations(prog)
 	if err != nil {
 		return nil, err
 	}
+	// fill all constants with the declared values
 	err = c.insertConstants(prog)
 	if err != nil {
 		return nil, err
 	}
+	// remove useless lines
 	err = c.filterLines(prog)
 	if err != nil {
 		return nil, err
 	}
+	// shorten variable names
 	err = optimizers.NewVariableNameOptimizer().Optimize(prog)
 	if err != nil {
 		return nil, err
 	}
+	// convert nolol ifs to yolol code
+	err = c.convertIf(prog)
+	if err != nil {
+		return nil, err
+	}
+	// convert while to yolol code
+	err = c.convertWhileLoops(prog)
+	if err != nil {
+		return nil, err
+	}
+	// merge lines if possible
 	newlines, err := c.mergeNololLines(prog.Lines)
 	if err != nil {
 		return nil, err
 	}
 	prog.Lines = newlines
+	// find all line-labels
 	err = c.findJumpLabels(prog)
 	if err != nil {
 		return nil, err
 	}
+	// resolve jump-labels
 	err = c.convertLabelGoto(prog)
 	if err != nil {
 		return nil, err
 	}
+	// convert remaining nolol-types to yolol types
 	newprog := c.convertLineTypes(prog)
 
 	return newprog, nil
