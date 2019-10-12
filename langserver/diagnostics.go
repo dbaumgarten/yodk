@@ -50,11 +50,11 @@ func (s *LangServer) Diagnose(ctx context.Context, uri lsp.DocumentURI, text str
 				Range: lsp.Range{
 					Start: lsp.Position{
 						Line:      float64(err.StartPosition.Line) - 1,
-						Character: float64(err.StartPosition.Coloumn),
+						Character: float64(err.StartPosition.Coloumn) - 1,
 					},
 					End: lsp.Position{
 						Line:      float64(err.EndPosition.Line) - 1,
-						Character: float64(err.EndPosition.Coloumn),
+						Character: float64(err.EndPosition.Coloumn) - 1,
 					},
 				},
 			}
