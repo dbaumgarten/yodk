@@ -37,11 +37,11 @@ func TestParserMultipleErrors(t *testing.T) {
 
 	result, errs := p.Parse(prog)
 
-	if errs != nil && len(errs.(parser.ParserErrors)) != 3 {
-		for _, err := range errs.(parser.ParserErrors) {
+	if errs != nil && len(errs.(parser.Errors)) != 3 {
+		for _, err := range errs.(parser.Errors) {
 			t.Log(err)
 		}
-		t.Fatalf("Found %d errors instead of %d", len(errs.(parser.ParserErrors)), 3)
+		t.Fatalf("Found %d errors instead of %d", len(errs.(parser.Errors)), 3)
 	}
 
 	if result != nil && len(result.Lines) == 0 {

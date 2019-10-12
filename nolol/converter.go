@@ -8,17 +8,22 @@ import (
 	"github.com/dbaumgarten/yodk/parser"
 )
 
+// special error that is emitted if a nolol if can not be converted to an inline yolol-if
 var errInlineIfImpossible = fmt.Errorf("Can not convert to inline if")
 
-type NololConverter struct {
+// Converter can convert a nolol-ast to a yolol-ast
+type Converter struct {
 	jumpLabels map[string]int
 	constants  map[string]interface{}
 }
 
-func NewNololConverter() *NololConverter {
-	return &NololConverter{}
+// NewConverter creates a new converter
+func NewConverter() *Converter {
+	return &Converter{}
 }
-func (c *NololConverter) ConvertFromSource(prog string) (*parser.Programm, error) {
+
+// ConvertFromSource is a shortcut that parses and directly convertes a nolol program
+func (c *Converter) ConvertFromSource(prog string) (*parser.Program, error) {
 	p := NewNololParser()
 	parsed, err := p.Parse(prog)
 	if err != nil {
@@ -27,7 +32,8 @@ func (c *NololConverter) ConvertFromSource(prog string) (*parser.Programm, error
 	return c.Convert(parsed)
 }
 
-func (c *NololConverter) Convert(prog *NololProgramm) (*parser.Programm, error) {
+// Convert converts a nolol-program to a yolol-program
+func (c *Converter) Convert(prog *Program) (*parser.Program, error) {
 	err := c.convertIf(prog)
 	if err != nil {
 		return nil, err
@@ -69,19 +75,20 @@ func (c *NololConverter) Convert(prog *NololProgramm) (*parser.Programm, error) 
 	if err != nil {
 		return nil, err
 	}
-	newprog := c.convertToYololLines(prog)
+	newprog := c.convertLineTypes(prog)
 
 	return newprog, nil
 }
 
-func (c *NololConverter) findConstantDeclarations(p parser.Node) error {
+// findConstantDeclarations searches the programm for constant declarations and stores them for later use
+func (c *Converter) findConstantDeclarations(p parser.Node) error {
 	c.constants = make(map[string]interface{}, 0)
 	f := func(node parser.Node, visitType int) error {
 		if visitType == parser.PreVisit {
 			if constDecl, is := node.(*ConstDeclaration); is {
 				_, exists := c.constants[constDecl.Name]
 				if exists {
-					return &parser.ParserError{
+					return &parser.Error{
 						Message:       fmt.Sprintf("Duplicate declaration of constant: %s", constDecl.Name),
 						Fatal:         true,
 						StartPosition: constDecl.Start(),
@@ -96,7 +103,7 @@ func (c *NololConverter) findConstantDeclarations(p parser.Node) error {
 					c.constants[constDecl.Name] = val
 					break
 				default:
-					return &parser.ParserError{
+					return &parser.Error{
 						Message:       "Only constant values can be the value of a constant declaration",
 						Fatal:         true,
 						StartPosition: constDecl.Start(),
@@ -110,7 +117,8 @@ func (c *NololConverter) findConstantDeclarations(p parser.Node) error {
 	return p.Accept(parser.VisitorFunc(f))
 }
 
-func (c *NololConverter) insertConstants(p parser.Node) error {
+// insertConstants fills in the values of defined constants
+func (c *Converter) insertConstants(p parser.Node) error {
 	f := func(node parser.Node, visitType int) error {
 		if visitType == parser.SingleVisit {
 			if deref, is := node.(*parser.Dereference); is {
@@ -141,7 +149,8 @@ func (c *NololConverter) insertConstants(p parser.Node) error {
 	return p.Accept(parser.VisitorFunc(f))
 }
 
-func (c *NololConverter) findJumpLabels(p parser.Node) error {
+// findJumpLabels finds all line-labels in the program
+func (c *Converter) findJumpLabels(p parser.Node) error {
 	c.jumpLabels = make(map[string]int)
 	linecounter := 0
 	f := func(node parser.Node, visitType int) error {
@@ -151,7 +160,7 @@ func (c *NololConverter) findJumpLabels(p parser.Node) error {
 				if line.Label != "" {
 					_, exists := c.jumpLabels[line.Label]
 					if exists {
-						return &parser.ParserError{
+						return &parser.Error{
 							Message:       fmt.Sprintf("Duplicate declaration of jump-label: %s", line.Label),
 							Fatal:         true,
 							StartPosition: line.Start(),
@@ -172,12 +181,13 @@ func (c *NololConverter) findJumpLabels(p parser.Node) error {
 	return p.Accept(parser.VisitorFunc(f))
 }
 
-func (c *NololConverter) convertLabelGoto(p parser.Node) error {
+// convertLabelGoto converts a nolol-style label-goto to a plain yolol-goto
+func (c *Converter) convertLabelGoto(p parser.Node) error {
 	f := func(node parser.Node, visitType int) error {
 		if gotostmt, is := node.(*GoToLabelStatement); is {
 			line, exists := c.jumpLabels[gotostmt.Label]
 			if !exists {
-				return &parser.ParserError{
+				return &parser.Error{
 					Message:       "Unknown jump-label: " + gotostmt.Label,
 					Fatal:         true,
 					StartPosition: gotostmt.Start(),
@@ -195,7 +205,26 @@ func (c *NololConverter) convertLabelGoto(p parser.Node) error {
 	return p.Accept(parser.VisitorFunc(f))
 }
 
-func (c *NololConverter) convertIfInline(mlif *MultilineIf) error {
+// convertIf converts nolol's multiline-ifs to yolol ifs
+func (c *Converter) convertIf(p parser.Node) error {
+	counter := 0
+	f := func(node parser.Node, visitType int) error {
+		if mlif, is := node.(*MultilineIf); is && visitType == parser.PostVisit {
+			// first, try to convert to inline if
+			result := c.convertIfInline(mlif)
+			if result != errInlineIfImpossible {
+				return result
+			}
+			// inline if is not possible. Do a multiline if instead
+			return c.convertIfMultiline(mlif, &counter)
+		}
+		return nil
+	}
+	return p.Accept(parser.VisitorFunc(f))
+}
+
+// convertIfInline converts a nolol-if directly to a yolol-if, if possible
+func (c *Converter) convertIfInline(mlif *MultilineIf) error {
 	linelength := len("if  then  end")
 	mergedIfLines, _ := c.mergeExecutableLines(mlif.IfBlock)
 	var mergedElseLines []ExecutableLine
@@ -237,7 +266,8 @@ func (c *NololConverter) convertIfInline(mlif *MultilineIf) error {
 	return parser.NewNodeReplacement(repl)
 }
 
-func (c *NololConverter) convertIfMultiline(mlif *MultilineIf, counter *int) error {
+// convertIfMultiline combines if, lables and gotos to implement multiline ifs with yolol
+func (c *Converter) convertIfMultiline(mlif *MultilineIf, counter *int) error {
 	skipIf := fmt.Sprintf("iflbl%d", *counter)
 	skipElse := fmt.Sprintf("elselbl%d", *counter)
 	repl := []parser.Node{
@@ -307,22 +337,8 @@ func (c *NololConverter) convertIfMultiline(mlif *MultilineIf, counter *int) err
 	return parser.NewNodeReplacement(repl...)
 }
 
-func (c *NololConverter) convertIf(p parser.Node) error {
-	counter := 0
-	f := func(node parser.Node, visitType int) error {
-		if mlif, is := node.(*MultilineIf); is && visitType == parser.PostVisit {
-			result := c.convertIfInline(mlif)
-			if result != errInlineIfImpossible {
-				return result
-			}
-			return c.convertIfMultiline(mlif, &counter)
-		}
-		return nil
-	}
-	return p.Accept(parser.VisitorFunc(f))
-}
-
-func (c *NololConverter) convertWhileLoops(p parser.Node) error {
+// convertWhileLoops converts while loops into yolol-code
+func (c *Converter) convertWhileLoops(p parser.Node) error {
 	counter := 0
 	f := func(node parser.Node, visitType int) error {
 		if loop, is := node.(*WhileLoop); is && visitType == parser.PostVisit {
@@ -383,7 +399,8 @@ func (c *NololConverter) convertWhileLoops(p parser.Node) error {
 	return p.Accept(parser.VisitorFunc(f))
 }
 
-func (c *NololConverter) filterLines(p parser.Node) error {
+// filterLines removes empty lines and constant declarations from the program
+func (c *Converter) filterLines(p parser.Node) error {
 	f := func(node parser.Node, visitType int) error {
 		switch n := node.(type) {
 		case *StatementLine:
@@ -399,7 +416,8 @@ func (c *NololConverter) filterLines(p parser.Node) error {
 	return p.Accept(parser.VisitorFunc(f))
 }
 
-func (c *NololConverter) mergeExecutableLines(lines []ExecutableLine) ([]ExecutableLine, error) {
+// mergeExecutableLines is a type-wrapper for mergeStatementLines
+func (c *Converter) mergeExecutableLines(lines []ExecutableLine) ([]ExecutableLine, error) {
 	inp := make([]*StatementLine, len(lines))
 	for i, elem := range lines {
 		inp[i] = elem.(*StatementLine)
@@ -415,7 +433,8 @@ func (c *NololConverter) mergeExecutableLines(lines []ExecutableLine) ([]Executa
 	return outp, nil
 }
 
-func (c *NololConverter) mergeNololLines(lines []NololLine) ([]NololLine, error) {
+// mergeNololLines is a type-wrapper for mergeStatementLines
+func (c *Converter) mergeNololLines(lines []Line) ([]Line, error) {
 	inp := make([]*StatementLine, len(lines))
 	for i, elem := range lines {
 		inp[i] = elem.(*StatementLine)
@@ -424,14 +443,15 @@ func (c *NololConverter) mergeNololLines(lines []NololLine) ([]NololLine, error)
 	if err != nil {
 		return nil, err
 	}
-	outp := make([]NololLine, len(interm))
+	outp := make([]Line, len(interm))
 	for i, elem := range interm {
 		outp[i] = elem
 	}
 	return outp, nil
 }
 
-func (c *NololConverter) mergeStatementLines(lines []*StatementLine) ([]*StatementLine, error) {
+// mergeStatementLines merges consectuive statementlines into as few lines as possible
+func (c *Converter) mergeStatementLines(lines []*StatementLine) ([]*StatementLine, error) {
 	maxlen := 70
 	newLines := make([]*StatementLine, 0, len(lines))
 	i := 0
@@ -462,6 +482,7 @@ func (c *NololConverter) mergeStatementLines(lines []*StatementLine) ([]*Stateme
 	return newLines, nil
 }
 
+// getLengthOfLine returns the amount of characters needed to represent the given line as yolol-code
 func getLengthOfLine(line *parser.Line) int {
 	ygen := parser.YololGenerator{}
 	ygen.UnknownHandlerFunc = func(node parser.Node) (string, error) {
@@ -478,8 +499,9 @@ func getLengthOfLine(line *parser.Line) int {
 	return len(generated)
 }
 
-func (c *NololConverter) convertToYololLines(p *NololProgramm) *parser.Programm {
-	newprog := parser.Programm{
+// convertLineTypes converts nolol line-types to yolol-types
+func (c *Converter) convertLineTypes(p *Program) *parser.Program {
+	newprog := parser.Program{
 		Lines: make([]*parser.Line, 0),
 	}
 	for _, rawline := range p.Lines {

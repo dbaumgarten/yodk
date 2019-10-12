@@ -20,7 +20,7 @@ func (s *LangServer) Diagnose(ctx context.Context, uri lsp.DocumentURI, text str
 			p := parser.NewParser()
 			_, errs = p.Parse(text)
 		} else if strings.HasSuffix(string(uri), ".nolol") {
-			conv := nolol.NewNololConverter()
+			conv := nolol.NewConverter()
 			_, errs = conv.ConvertFromSource(text)
 		} else {
 			return
@@ -29,20 +29,20 @@ func (s *LangServer) Diagnose(ctx context.Context, uri lsp.DocumentURI, text str
 		diags := make([]lsp.Diagnostic, 0)
 
 		if errs == nil {
-			errs = make(parser.ParserErrors, 0)
+			errs = make(parser.Errors, 0)
 		}
 		switch e := errs.(type) {
-		case parser.ParserErrors:
+		case parser.Errors:
 			break
-		case *parser.ParserError:
+		case *parser.Error:
 			// if it is a single error, convert it to a one-element list
-			errlist := make(parser.ParserErrors, 1)
+			errlist := make(parser.Errors, 1)
 			errlist[0] = e
 			errs = errlist
 		default:
 			log.Printf("Unknown error type: %T\n", errs)
 		}
-		for _, err := range errs.(parser.ParserErrors) {
+		for _, err := range errs.(parser.Errors) {
 			diag := lsp.Diagnostic{
 				Source:   "parser",
 				Message:  err.Message,

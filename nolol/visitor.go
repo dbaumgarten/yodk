@@ -4,11 +4,13 @@ import (
 	"github.com/dbaumgarten/yodk/parser"
 )
 
+// Accept is used to implement Acceptor
 func (g *GoToLabelStatement) Accept(v parser.Visitor) error {
 	return v.Visit(g, parser.SingleVisit)
 }
 
-func (p *NololProgramm) Accept(v parser.Visitor) error {
+// Accept is used to implement Acceptor
+func (p *Program) Accept(v parser.Visitor) error {
 	err := v.Visit(p, parser.PreVisit)
 	if err != nil {
 		return err
@@ -31,6 +33,7 @@ func (p *NololProgramm) Accept(v parser.Visitor) error {
 	return v.Visit(p, parser.PostVisit)
 }
 
+// Accept is used to implement Acceptor
 func (l *StatementLine) Accept(v parser.Visitor) error {
 	err := v.Visit(l, parser.PreVisit)
 	if err != nil {
@@ -54,6 +57,7 @@ func (l *StatementLine) Accept(v parser.Visitor) error {
 	return v.Visit(l, parser.PostVisit)
 }
 
+// Accept is used to implement Acceptor
 func (l *ConstDeclaration) Accept(v parser.Visitor) error {
 	err := v.Visit(l, parser.PreVisit)
 	if err != nil {
@@ -70,6 +74,7 @@ func (l *ConstDeclaration) Accept(v parser.Visitor) error {
 	return v.Visit(l, parser.PostVisit)
 }
 
+// Accept is used to implement Acceptor
 func (s *MultilineIf) Accept(v parser.Visitor) error {
 	err := v.Visit(s, parser.PreVisit)
 	if err != nil {
@@ -129,6 +134,7 @@ func (s *MultilineIf) Accept(v parser.Visitor) error {
 	return v.Visit(s, parser.PostVisit)
 }
 
+// Accept is used to implement Acceptor
 func (s *WhileLoop) Accept(v parser.Visitor) error {
 	err := v.Visit(s, parser.PreVisit)
 	if err != nil {
@@ -164,11 +170,11 @@ func (s *WhileLoop) Accept(v parser.Visitor) error {
 	return v.Visit(s, parser.PostVisit)
 }
 
-func patchLines(old []NololLine, position int, repl parser.NodeReplacement) []NololLine {
-	newv := make([]NololLine, 0, len(old)+len(repl.Replacement)-1)
+func patchLines(old []Line, position int, repl parser.NodeReplacement) []Line {
+	newv := make([]Line, 0, len(old)+len(repl.Replacement)-1)
 	newv = append(newv, old[:position]...)
 	for _, elem := range repl.Replacement {
-		if line, is := elem.(NololLine); is {
+		if line, is := elem.(Line); is {
 			newv = append(newv, line)
 		} else {
 			panic("Could not patch slice. Wrong type.")

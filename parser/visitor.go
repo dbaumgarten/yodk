@@ -66,7 +66,7 @@ func (e NodeReplacement) Error() string {
 }
 
 // Accept is used to implement Acceptor
-func (p *Programm) Accept(v Visitor) error {
+func (p *Program) Accept(v Visitor) error {
 	err := v.Visit(p, PreVisit)
 	if err != nil {
 		return err

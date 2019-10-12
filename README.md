@@ -130,7 +130,6 @@ a++ goto 2
 
 # Upcoming features
 - Automated testing: Define test-cases for your yolol code
-- continue, break, elseif and variable aliases for NOLOL
 - Implement debug adapter protocoll to enable debugging with vscode
 
 # Compatibility guarantees

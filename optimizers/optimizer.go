@@ -5,7 +5,7 @@ import "github.com/dbaumgarten/yodk/parser"
 // Optimizer is the common interface for all optimizers
 type Optimizer interface {
 	// Optimize optimizes the given ast. The ast is mutated (obviously)
-	Optimize(prog *parser.Programm) error
+	Optimize(prog *parser.Program) error
 }
 
 // CompoundOptimizer wraps all other optimizers and executes them
@@ -23,7 +23,7 @@ func NewCompoundOptimizer() *CompoundOptimizer {
 }
 
 // Optimize is required to implement Optimizer
-func (co *CompoundOptimizer) Optimize(prog *parser.Programm) error {
+func (co *CompoundOptimizer) Optimize(prog *parser.Program) error {
 	err := co.seopt.Optimize(prog)
 	if err != nil {
 		return err

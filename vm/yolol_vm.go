@@ -62,7 +62,7 @@ type YololVM struct {
 	// list of active breakpoints
 	breakpoints map[int]bool
 	// the parsed program
-	program *parser.Programm
+	program *parser.Program
 	// a lock to synchronize acces to the vms state
 	lock *sync.Mutex
 	// needed to resume after hitting a breakpoint

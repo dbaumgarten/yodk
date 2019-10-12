@@ -19,22 +19,22 @@ type Parser struct {
 
 // YololParserFunctions is used together with Parser.This to allow 'subclasses' to override 'virtual functions'
 type YololParserFunctions interface {
-	ParseStatement() (Statement, *ParserError)
-	ParsePreOrPostOperation() (Statement, *ParserError)
-	ParseGoto() (Statement, *ParserError)
-	ParseAssignment() (Statement, *ParserError)
-	ParseIf() (Statement, *ParserError)
-	ParseExpression() (Expression, *ParserError)
-	ParseLogicExpression() (Expression, *ParserError)
-	ParseCompareExpression() (Expression, *ParserError)
-	ParseSumExpression() (Expression, *ParserError)
-	ParseProdExpression() (Expression, *ParserError)
-	ParseUnaryExpression() (Expression, *ParserError)
-	ParseBracketExpression() (Expression, *ParserError)
-	ParseSingleExpression() (Expression, *ParserError)
-	ParseFuncCall() (Expression, *ParserError)
-	ParsePreOpExpression() (Expression, *ParserError)
-	ParsePostOpExpression() (Expression, *ParserError)
+	ParseStatement() (Statement, *Error)
+	ParsePreOrPostOperation() (Statement, *Error)
+	ParseGoto() (Statement, *Error)
+	ParseAssignment() (Statement, *Error)
+	ParseIf() (Statement, *Error)
+	ParseExpression() (Expression, *Error)
+	ParseLogicExpression() (Expression, *Error)
+	ParseCompareExpression() (Expression, *Error)
+	ParseSumExpression() (Expression, *Error)
+	ParseProdExpression() (Expression, *Error)
+	ParseUnaryExpression() (Expression, *Error)
+	ParseBracketExpression() (Expression, *Error)
+	ParseSingleExpression() (Expression, *Error)
+	ParseFuncCall() (Expression, *Error)
+	ParsePreOpExpression() (Expression, *Error)
+	ParsePostOpExpression() (Expression, *Error)
 }
 
 // NewParser creates a new parser
@@ -94,14 +94,14 @@ func (p *Parser) Next() *Token {
 }
 
 // Parse is the main method of the parser. Parses a yolol-program into an AST.
-func (p *Parser) Parse(prog string) (*Programm, error) {
-	errors := make(ParserErrors, 0)
+func (p *Parser) Parse(prog string) (*Program, error) {
+	errors := make(Errors, 0)
 	p.Tokenizer.Load(prog)
 	p.Tokens = make([]*Token, 0, 1000)
 	for {
 		token, err := p.Tokenizer.Next()
 		if err != nil {
-			errors = append(errors, err.(*ParserError))
+			errors = append(errors, err.(*Error))
 		} else {
 			if p.DebugLog {
 				fmt.Print(token)
@@ -122,10 +122,10 @@ func (p *Parser) Parse(prog string) (*Programm, error) {
 }
 
 // ParseProgram parses a programm-node
-func (p *Parser) ParseProgram() (*Programm, ParserErrors) {
+func (p *Parser) ParseProgram() (*Program, Errors) {
 	p.Log()
-	errors := make(ParserErrors, 0)
-	ret := Programm{
+	errors := make(Errors, 0)
+	ret := Program{
 		Lines: make([]*Line, 0),
 	}
 	for p.HasNext() {
@@ -147,7 +147,7 @@ func (p *Parser) SkipLine() {
 }
 
 // ParseLine parses a line-node
-func (p *Parser) ParseLine() (*Line, *ParserError) {
+func (p *Parser) ParseLine() (*Line, *Error) {
 	p.Log()
 	ret := Line{
 		Statements: make([]Statement, 0),
@@ -173,7 +173,7 @@ func (p *Parser) ParseLine() (*Line, *ParserError) {
 }
 
 // ParseStatement parses a statement-node
-func (p *Parser) ParseStatement() (Statement, *ParserError) {
+func (p *Parser) ParseStatement() (Statement, *Error) {
 	p.Log()
 
 	// the only place where whitespace can not be ignored
@@ -217,7 +217,7 @@ func (p *Parser) ParseStatement() (Statement, *ParserError) {
 }
 
 // ParsePreOrPostOperation parses a pre-/post operation (x++, ++x) as a statement
-func (p *Parser) ParsePreOrPostOperation() (Statement, *ParserError) {
+func (p *Parser) ParsePreOrPostOperation() (Statement, *Error) {
 	p.Log()
 	preOpVarDeref, err := p.This.ParsePreOpExpression()
 	if err != nil && err.Fatal {
@@ -240,7 +240,7 @@ func (p *Parser) ParsePreOrPostOperation() (Statement, *ParserError) {
 }
 
 // ParseGoto parse parses a goto-node
-func (p *Parser) ParseGoto() (Statement, *ParserError) {
+func (p *Parser) ParseGoto() (Statement, *Error) {
 	if p.Current().Type == TypeKeyword && p.Current().Value == "goto" {
 		stmt := GoToStatement{
 			Position: p.Current().Position,
@@ -261,7 +261,7 @@ func (p *Parser) ParseGoto() (Statement, *ParserError) {
 }
 
 // ParseAssignment parses an assignment-node
-func (p *Parser) ParseAssignment() (Statement, *ParserError) {
+func (p *Parser) ParseAssignment() (Statement, *Error) {
 	p.Log()
 	assignmentOperators := []string{"=", "+=", "-=", "*=", "/=", "%="}
 	ret := Assignment{
@@ -284,7 +284,7 @@ func (p *Parser) ParseAssignment() (Statement, *ParserError) {
 }
 
 // ParseIf parses an if-node
-func (p *Parser) ParseIf() (Statement, *ParserError) {
+func (p *Parser) ParseIf() (Statement, *Error) {
 	p.Log()
 	ret := IfStatement{
 		Position: p.Current().Position,
@@ -294,7 +294,7 @@ func (p *Parser) ParseIf() (Statement, *ParserError) {
 	}
 	p.Advance()
 
-	var err *ParserError
+	var err *Error
 	ret.Condition, err = p.This.ParseExpression()
 	if err != nil {
 		err.Fatal = true
@@ -350,16 +350,16 @@ func (p *Parser) ParseIf() (Statement, *ParserError) {
 }
 
 // ParseExpression parses an expression
-func (p *Parser) ParseExpression() (Expression, *ParserError) {
+func (p *Parser) ParseExpression() (Expression, *Error) {
 	p.Log()
 	return p.This.ParseLogicExpression()
 }
 
 // ParseLogicExpression parses a logical expression
-func (p *Parser) ParseLogicExpression() (Expression, *ParserError) {
+func (p *Parser) ParseLogicExpression() (Expression, *Error) {
 	p.Log()
 	var exp Expression
-	var err *ParserError
+	var err *Error
 
 	exp, err = p.This.ParseCompareExpression()
 	if err != nil {
@@ -373,7 +373,7 @@ func (p *Parser) ParseLogicExpression() (Expression, *ParserError) {
 			Exp1:     exp,
 		}
 		p.Advance()
-		var err *ParserError
+		var err *Error
 		binexp.Exp2, err = p.This.ParseCompareExpression()
 		if err != nil {
 			err.Fatal = true
@@ -385,7 +385,7 @@ func (p *Parser) ParseLogicExpression() (Expression, *ParserError) {
 }
 
 // ParseCompareExpression parses a compare expression
-func (p *Parser) ParseCompareExpression() (Expression, *ParserError) {
+func (p *Parser) ParseCompareExpression() (Expression, *Error) {
 	p.Log()
 	exp1, err := p.This.ParseSumExpression()
 	if err != nil {
@@ -399,7 +399,7 @@ func (p *Parser) ParseCompareExpression() (Expression, *ParserError) {
 			Exp1:     exp1,
 		}
 		p.Advance()
-		var err *ParserError
+		var err *Error
 		binexp.Exp2, err = p.This.ParseSumExpression()
 		if err != nil {
 			err.Fatal = true
@@ -411,10 +411,10 @@ func (p *Parser) ParseCompareExpression() (Expression, *ParserError) {
 }
 
 // ParseSumExpression parses a sum-expression
-func (p *Parser) ParseSumExpression() (Expression, *ParserError) {
+func (p *Parser) ParseSumExpression() (Expression, *Error) {
 	p.Log()
 	var exp Expression
-	var err *ParserError
+	var err *Error
 
 	exp, err = p.This.ParseProdExpression()
 	if err != nil {
@@ -428,7 +428,7 @@ func (p *Parser) ParseSumExpression() (Expression, *ParserError) {
 			Exp1:     exp,
 		}
 		p.Advance()
-		var err *ParserError
+		var err *Error
 		binexp.Exp2, err = p.This.ParseProdExpression()
 		if err != nil {
 			err.Fatal = true
@@ -440,10 +440,10 @@ func (p *Parser) ParseSumExpression() (Expression, *ParserError) {
 }
 
 // ParseProdExpression parses a product expression
-func (p *Parser) ParseProdExpression() (Expression, *ParserError) {
+func (p *Parser) ParseProdExpression() (Expression, *Error) {
 	p.Log()
 	var exp Expression
-	var err *ParserError
+	var err *Error
 
 	exp, err = p.This.ParseUnaryExpression()
 	if err != nil {
@@ -457,7 +457,7 @@ func (p *Parser) ParseProdExpression() (Expression, *ParserError) {
 			Exp1:     exp,
 		}
 		p.Advance()
-		var err *ParserError
+		var err *Error
 		binexp.Exp2, err = p.This.ParseUnaryExpression()
 		if err != nil {
 			err.Fatal = true
@@ -469,7 +469,7 @@ func (p *Parser) ParseProdExpression() (Expression, *ParserError) {
 }
 
 // ParseUnaryExpression parses an unary expression
-func (p *Parser) ParseUnaryExpression() (Expression, *ParserError) {
+func (p *Parser) ParseUnaryExpression() (Expression, *Error) {
 	p.Log()
 	preUnaryOps := []string{"not", "-"}
 	if contains(preUnaryOps, p.Current().Value) {
@@ -490,7 +490,7 @@ func (p *Parser) ParseUnaryExpression() (Expression, *ParserError) {
 }
 
 // ParseBracketExpression parses a racketed expression
-func (p *Parser) ParseBracketExpression() (Expression, *ParserError) {
+func (p *Parser) ParseBracketExpression() (Expression, *Error) {
 	p.Log()
 	if p.Current().Type == TypeSymbol && p.Current().Value == "(" {
 		p.Advance()
@@ -509,7 +509,7 @@ func (p *Parser) ParseBracketExpression() (Expression, *ParserError) {
 }
 
 // ParseSingleExpression parses a single expression
-func (p *Parser) ParseSingleExpression() (Expression, *ParserError) {
+func (p *Parser) ParseSingleExpression() (Expression, *Error) {
 	p.Log()
 
 	preOpVarDeref, err := p.This.ParsePreOpExpression()
@@ -561,7 +561,7 @@ func (p *Parser) ParseSingleExpression() (Expression, *ParserError) {
 }
 
 // ParseFuncCall parse a function call
-func (p *Parser) ParseFuncCall() (Expression, *ParserError) {
+func (p *Parser) ParseFuncCall() (Expression, *Error) {
 	p.Log()
 	if p.Current().Type != TypeID || p.Next().Type != TypeSymbol || p.Next().Value != "(" {
 		return nil, p.NewError("No function call detected", false, p.Current().Position, p.Current().Position)
@@ -587,7 +587,7 @@ func (p *Parser) ParseFuncCall() (Expression, *ParserError) {
 }
 
 // ParsePreOpExpression parse pre-expression
-func (p *Parser) ParsePreOpExpression() (Expression, *ParserError) {
+func (p *Parser) ParsePreOpExpression() (Expression, *Error) {
 	p.Log()
 	if p.Current().Type == TypeSymbol && (p.Current().Value == "++" || p.Current().Value == "--") {
 		exp := Dereference{
@@ -607,7 +607,7 @@ func (p *Parser) ParsePreOpExpression() (Expression, *ParserError) {
 }
 
 // ParsePostOpExpression parse post-expression
-func (p *Parser) ParsePostOpExpression() (Expression, *ParserError) {
+func (p *Parser) ParsePostOpExpression() (Expression, *Error) {
 	p.Log()
 	if p.Next().Type == TypeSymbol && (p.Next().Value == "++" || p.Next().Value == "--") && p.Current().Type == TypeID {
 		exp := Dereference{
@@ -624,8 +624,8 @@ func (p *Parser) ParsePostOpExpression() (Expression, *ParserError) {
 }
 
 // NewError creates a new parser error
-func (p *Parser) NewError(msg string, terminal bool, start Position, end Position) *ParserError {
-	err := &ParserError{
+func (p *Parser) NewError(msg string, terminal bool, start Position, end Position) *Error {
+	err := &Error{
 		Message:       msg + ". Found Token: '" + p.Current().Value + "'(" + p.Current().Type + ")",
 		Fatal:         terminal,
 		StartPosition: start,

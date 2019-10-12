@@ -97,7 +97,7 @@ func (y *YololGenerator) Visit(node Node, visitType int) error {
 			y.programm += ")"
 		}
 		break
-	case *Programm:
+	case *Program:
 		//do noting
 		break
 	default:

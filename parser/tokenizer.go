@@ -171,7 +171,7 @@ func (t *Tokenizer) Next() (*Token, error) {
 		return token, nil
 	}
 
-	err := ParserError{
+	err := Error{
 		Message:       fmt.Sprintf("Unknown token '%s'", string(t.remaining[0])),
 		StartPosition: NewPosition(t.line, t.column),
 		EndPosition:   NewPosition(t.line, t.column),

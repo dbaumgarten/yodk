@@ -3,7 +3,6 @@ features:
 
 
 nolol features:
-    one-line ifs if possible
     remove static ifs
         (attention with mulitline ifs)
         line numbers!!!
@@ -19,5 +18,6 @@ nolol features:
     macros:
         c-style or inline functions?
         expression or statement?
-    loops
+    continue, break, 
+    elseif
        

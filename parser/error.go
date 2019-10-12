@@ -2,8 +2,8 @@ package parser
 
 import "fmt"
 
-// ParserError represents an error encountered during parsing
-type ParserError struct {
+// Error represents an error encountered during parsing
+type Error struct {
 	Message       string
 	StartPosition Position
 	EndPosition   Position
@@ -12,7 +12,7 @@ type ParserError struct {
 }
 
 // Append adds a follow-up error to the error to make the displayed error-message more helpful
-func (e *ParserError) Append(err error) *ParserError {
+func (e *Error) Append(err error) *Error {
 	if e.ErrorStack == nil {
 		e.ErrorStack = make([]error, 0)
 	}
@@ -20,7 +20,7 @@ func (e *ParserError) Append(err error) *ParserError {
 	return e
 }
 
-func (e ParserError) Error() string {
+func (e Error) Error() string {
 	txt := fmt.Sprintf("Parser error at %s (up to %s): %s", e.StartPosition.String(), e.EndPosition.String(), e.Message)
 	if e.ErrorStack != nil {
 		txt += "\n" + "Following errors:\n"
@@ -31,10 +31,10 @@ func (e ParserError) Error() string {
 	return txt
 }
 
-// ParserErrors represents multiple ParserErrors
-type ParserErrors []*ParserError
+// Errors represents multiple Errors
+type Errors []*Error
 
-func (e ParserErrors) Error() string {
+func (e Errors) Error() string {
 	str := ""
 	for _, err := range e {
 		str += err.Error() + "\n"

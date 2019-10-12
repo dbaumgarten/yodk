@@ -18,7 +18,7 @@ var compileCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		outfile := strings.Replace(args[0], path.Ext(args[0]), ".yolol", -1)
 		file := loadInputFile(args[0])
-		converter := nolol.NewNololConverter()
+		converter := nolol.NewConverter()
 		converted, err := converter.ConvertFromSource(file)
 		exitOnError(err, "converting to yolol")
 		gen := parser.YololGenerator{}

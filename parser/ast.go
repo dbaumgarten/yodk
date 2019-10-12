@@ -13,18 +13,18 @@ type Node interface {
 	End() Position
 }
 
-// Programm represents the whole yolol-programm
-type Programm struct {
+// Program represents the whole yolol-programm
+type Program struct {
 	Lines []*Line
 }
 
 // Start is needed to implement Node
-func (n *Programm) Start() Position {
+func (n *Program) Start() Position {
 	return n.Lines[0].Start()
 }
 
 // End is needed to implement Node
-func (n *Programm) End() Position {
+func (n *Program) End() Position {
 	return n.Lines[len(n.Lines)-1].End()
 }
 

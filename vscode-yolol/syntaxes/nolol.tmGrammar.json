@@ -38,7 +38,7 @@
 			]
 		},
 		"keyword": {
-			"match": "\\b(if|then|else|end|const)\\b",
+			"match": "\\b(if|then|else|end|const|while)\\b",
 			"name": "keyword.control"
 		},
 		"label": {

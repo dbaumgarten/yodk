@@ -6,12 +6,14 @@ import (
 	"github.com/dbaumgarten/yodk/parser"
 )
 
-type NololParser struct {
+// Parser pasres a nolol-program
+type Parser struct {
 	*parser.Parser
 }
 
-func NewNololParser() *NololParser {
-	ep := &NololParser{
+// NewNololParser creates and returns a nolol parser
+func NewNololParser() *Parser {
+	ep := &Parser{
 		Parser: parser.NewParser(),
 	}
 	ep.Tokenizer = NewNololTokenizer()
@@ -19,14 +21,15 @@ func NewNololParser() *NololParser {
 	return ep
 }
 
-func (p *NololParser) Parse(prog string) (*NololProgramm, error) {
-	errors := make(parser.ParserErrors, 0)
+// Parse is the entry point for parsing
+func (p *Parser) Parse(prog string) (*Program, error) {
+	errors := make(parser.Errors, 0)
 	p.Tokenizer.Load(prog)
 	p.Tokens = make([]*parser.Token, 0, 1000)
 	for {
 		token, err := p.Tokenizer.Next()
 		if err != nil {
-			errors = append(errors, err.(*parser.ParserError))
+			errors = append(errors, err.(*parser.Error))
 		} else {
 			if p.DebugLog {
 				fmt.Print(token)
@@ -46,11 +49,12 @@ func (p *NololParser) Parse(prog string) (*NololProgramm, error) {
 	return parsed, nil
 }
 
-func (p *NololParser) ParseProgram() (*NololProgramm, parser.ParserErrors) {
+// ParseProgram parses the program
+func (p *Parser) ParseProgram() (*Program, parser.Errors) {
 	p.Log()
-	errors := make(parser.ParserErrors, 0)
-	ret := NololProgramm{
-		Lines: make([]NololLine, 0),
+	errors := make(parser.Errors, 0)
+	ret := Program{
+		Lines: make([]Line, 0),
 	}
 	for p.HasNext() {
 		line, err := p.ParseLine()
@@ -63,7 +67,8 @@ func (p *NololParser) ParseProgram() (*NololProgramm, parser.ParserErrors) {
 	return &ret, errors
 }
 
-func (p *NololParser) ParseStatementLine() (*StatementLine, *parser.ParserError) {
+// ParseStatementLine parses a statement line
+func (p *Parser) ParseStatementLine() (*StatementLine, *parser.Error) {
 	ret := StatementLine{
 		Line: parser.Line{
 			Statements: make([]parser.Statement, 0, 1),
@@ -98,9 +103,10 @@ func (p *NololParser) ParseStatementLine() (*StatementLine, *parser.ParserError)
 	return nil, p.NewError("Expected newline after statement", true, ret.Start(), ret.End())
 }
 
-func (p *NololParser) ParseExecutableLine() (ExecutableLine, *parser.ParserError) {
+// ParseExecutableLine parses an if, while or statement-line
+func (p *Parser) ParseExecutableLine() (ExecutableLine, *parser.Error) {
 
-	ifline, err := p.ParseIfLine()
+	ifline, err := p.ParseMultilineIf()
 	if err != nil && err.Fatal {
 		return nil, err
 	}
@@ -108,7 +114,7 @@ func (p *NololParser) ParseExecutableLine() (ExecutableLine, *parser.ParserError
 		return ifline, nil
 	}
 
-	whileline, err := p.ParseWhileLine()
+	whileline, err := p.ParseWhile()
 	if err != nil && err.Fatal {
 		return nil, err
 	}
@@ -119,7 +125,8 @@ func (p *NololParser) ParseExecutableLine() (ExecutableLine, *parser.ParserError
 	return p.ParseStatementLine()
 }
 
-func (p *NololParser) ParseLine() (NololLine, *parser.ParserError) {
+// ParseLine parses any kind of line
+func (p *Parser) ParseLine() (Line, *parser.Error) {
 	p.Log()
 
 	// skip empty lines and stray newlines
@@ -138,7 +145,8 @@ func (p *NololParser) ParseLine() (NololLine, *parser.ParserError) {
 	return p.ParseExecutableLine()
 }
 
-func (p *NololParser) ParseConstantDeclaration() (*ConstDeclaration, *parser.ParserError) {
+// ParseConstantDeclaration parses a constant declaration
+func (p *Parser) ParseConstantDeclaration() (*ConstDeclaration, *parser.Error) {
 	if p.Current().Type != parser.TypeKeyword || p.Current().Value != "const" {
 		return nil, p.NewError("Const declaration must start with const", false, p.Current().Position, p.Current().Position)
 	}
@@ -169,7 +177,8 @@ func (p *NololParser) ParseConstantDeclaration() (*ConstDeclaration, *parser.Par
 	return decl, nil
 }
 
-func (p *NololParser) ParseLinesUntil(stop func() bool) ([]ExecutableLine, *parser.ParserError) {
+// ParseLinesUntil parse lines until stop() returns true
+func (p *Parser) ParseLinesUntil(stop func() bool) ([]ExecutableLine, *parser.Error) {
 	lines := make([]ExecutableLine, 0)
 	for p.HasNext() && !stop() {
 		line, err := p.ParseExecutableLine()
@@ -181,7 +190,8 @@ func (p *NololParser) ParseLinesUntil(stop func() bool) ([]ExecutableLine, *pars
 	return lines, nil
 }
 
-func (p *NololParser) ParseIfLine() (NololLine, *parser.ParserError) {
+// ParseMultilineIf parses a nolol-style multiline if
+func (p *Parser) ParseMultilineIf() (Line, *parser.Error) {
 	p.Log()
 	mlif := MultilineIf{
 		Position: p.Current().Position,
@@ -191,7 +201,7 @@ func (p *NololParser) ParseIfLine() (NololLine, *parser.ParserError) {
 	}
 	p.Advance()
 
-	var err *parser.ParserError
+	var err *parser.Error
 	mlif.Condition, err = p.This.ParseExpression()
 	if err != nil {
 		err.Fatal = true
@@ -239,7 +249,8 @@ func (p *NololParser) ParseIfLine() (NololLine, *parser.ParserError) {
 	return &mlif, nil
 }
 
-func (p *NololParser) ParseWhileLine() (NololLine, *parser.ParserError) {
+// ParseWhile pasres a nolol while
+func (p *Parser) ParseWhile() (Line, *parser.Error) {
 	p.Log()
 	loop := WhileLoop{
 		Position: p.Current().Position,
@@ -249,7 +260,7 @@ func (p *NololParser) ParseWhileLine() (NololLine, *parser.ParserError) {
 	}
 	p.Advance()
 
-	var err *parser.ParserError
+	var err *parser.Error
 	loop.Condition, err = p.This.ParseExpression()
 	if err != nil {
 		err.Fatal = true
@@ -287,12 +298,14 @@ func (p *NololParser) ParseWhileLine() (NololLine, *parser.ParserError) {
 
 }
 
-func (p *NololParser) ParseIf() (parser.Statement, *parser.ParserError) {
+// ParseIf overrides and disables the old yolol-style inline ifs
+func (p *Parser) ParseIf() (parser.Statement, *parser.Error) {
 	p.Log()
 	return nil, p.NewError("Inline if is not supported by nolol.", false, p.Current().Position, p.Current().Position)
 }
 
-func (p *NololParser) ParseGoto() (parser.Statement, *parser.ParserError) {
+// ParseGoto allows labeled-gotos and forbids line-based gotos
+func (p *Parser) ParseGoto() (parser.Statement, *parser.Error) {
 	if p.Current().Type == parser.TypeKeyword && p.Current().Value == "goto" {
 		p.Advance()
 
