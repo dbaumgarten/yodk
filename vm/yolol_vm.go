@@ -114,8 +114,8 @@ func (v *YololVM) PrintVariables() string {
 	return txt
 }
 
-// Run compiles and runs the given programm code
-func (v *YololVM) Run(prog string) error {
+// RunSource compiles and runs the given programm code
+func (v *YololVM) RunSource(prog string) error {
 	ast, err := v.parser.Parse(prog)
 	if err != nil {
 		if v.errorHandler != nil {

@@ -61,7 +61,7 @@ func init() {
 		Help:    "run programm from start",
 		Func: func(c *ishell.Context) {
 			debugShell.Println("--Started--")
-			go yvm.Run(inputProg)
+			go yvm.RunSource(inputProg)
 		},
 	})
 	debugShell.AddCmd(&ishell.Cmd{
