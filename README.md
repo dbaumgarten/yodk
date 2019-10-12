@@ -119,9 +119,9 @@ fizzbuzz.yolol:
 ```
 :out="" a=0
 if not (a<=100) then goto 7 end
-if a%3==0 and a%5==0 then :out+="fizz"+"buzz"+" " goto 6 end
-if a%3==0 then :out+="fizz"+" " goto 6 end
-if a%5==0 then :out+="buzz"+" " goto 6 end :out+=a+" "
+if a%3==0 and a%5==0 then :out+="fizzbuzz " goto 6 end
+if a%3==0 then :out+="fizz " goto 6 end
+if a%5==0 then :out+="buzz " goto 6 end :out+=a+" "
 a++ goto 2
 ```
 

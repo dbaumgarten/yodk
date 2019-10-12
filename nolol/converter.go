@@ -34,18 +34,18 @@ func (c *Converter) ConvertFromSource(prog string) (*parser.Program, error) {
 
 // Convert converts a nolol-program to a yolol-program
 func (c *Converter) Convert(prog *Program) (*parser.Program, error) {
-	// optimize static expressions
-	err := optimizers.NewStaticExpressionOptimizer().Optimize(prog)
-	if err != nil {
-		return nil, err
-	}
 	// get all constant declarations
-	err = c.findConstantDeclarations(prog)
+	err := c.findConstantDeclarations(prog)
 	if err != nil {
 		return nil, err
 	}
 	// fill all constants with the declared values
 	err = c.insertConstants(prog)
+	if err != nil {
+		return nil, err
+	}
+	// optimize static expressions
+	err = optimizers.NewStaticExpressionOptimizer().Optimize(prog)
 	if err != nil {
 		return nil, err
 	}
