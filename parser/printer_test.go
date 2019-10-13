@@ -9,12 +9,12 @@ import (
 
 func TestGenerator(t *testing.T) {
 	p := parser.NewParser()
-	gen := parser.YololGenerator{}
+	gen := parser.Printer{}
 	parsed, err := p.Parse(testdata.TestProgram)
 	if err != nil {
 		t.Fatal(err)
 	}
-	generated, err := gen.Generate(parsed)
+	generated, err := gen.Print(parsed)
 	if err != nil {
 		t.Fatal(err)
 	}

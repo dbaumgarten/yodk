@@ -74,8 +74,8 @@ func TestVarOpt(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	gen := parser.YololGenerator{}
-	generated, err := gen.Generate(parsed)
+	gen := parser.Printer{}
+	generated, err := gen.Print(parsed)
 	if err != nil {
 		t.Fatal(err)
 	}

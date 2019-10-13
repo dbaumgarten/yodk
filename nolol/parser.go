@@ -11,8 +11,8 @@ type Parser struct {
 	*parser.Parser
 }
 
-// NewNololParser creates and returns a nolol parser
-func NewNololParser() *Parser {
+// NewParser creates and returns a nolol parser
+func NewParser() *Parser {
 	ep := &Parser{
 		Parser: parser.NewParser(),
 	}

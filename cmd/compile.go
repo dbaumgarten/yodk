@@ -21,8 +21,8 @@ var compileCmd = &cobra.Command{
 		converter := nolol.NewConverter()
 		converted, err := converter.ConvertFromSource(file)
 		exitOnError(err, "converting to yolol")
-		gen := parser.YololGenerator{}
-		generated, err := gen.Generate(converted)
+		gen := parser.Printer{}
+		generated, err := gen.Print(converted)
 		exitOnError(err, "generating code")
 		ioutil.WriteFile(outfile, []byte(generated), 0700)
 	},

@@ -24,7 +24,7 @@ func NewConverter() *Converter {
 
 // ConvertFromSource is a shortcut that parses and directly convertes a nolol program
 func (c *Converter) ConvertFromSource(prog string) (*parser.Program, error) {
-	p := NewNololParser()
+	p := NewParser()
 	parsed, err := p.Parse(prog)
 	if err != nil {
 		return nil, err
@@ -495,14 +495,14 @@ func (c *Converter) mergeStatementLines(lines []*StatementLine) ([]*StatementLin
 
 // getLengthOfLine returns the amount of characters needed to represent the given line as yolol-code
 func getLengthOfLine(line *parser.Line) int {
-	ygen := parser.YololGenerator{}
-	ygen.UnknownHandlerFunc = func(node parser.Node) (string, error) {
+	ygen := parser.Printer{}
+	ygen.UnknownHandlerFunc = func(node parser.Node, visitType int) (string, error) {
 		if _, is := node.(*GoToLabelStatement); is {
 			return "goto XX", nil
 		}
 		return "", fmt.Errorf("Unknown node-type: %T", node)
 	}
-	generated, err := ygen.Generate(line)
+	generated, err := ygen.Print(line)
 	if err != nil {
 		panic(err)
 	}

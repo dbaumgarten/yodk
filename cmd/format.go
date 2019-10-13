@@ -15,9 +15,12 @@
 package cmd
 
 import (
+	"fmt"
 	"io/ioutil"
 	"path"
 	"strings"
+
+	"github.com/dbaumgarten/yodk/nolol"
 
 	"github.com/dbaumgarten/yodk/parser"
 	"github.com/spf13/cobra"
@@ -30,15 +33,30 @@ var formatCmd = &cobra.Command{
 
 	Run: func(cmd *cobra.Command, args []string) {
 		outfile := strings.Replace(args[0], path.Ext(args[0]), "", -1) + "-fmt" + path.Ext(args[0])
-		p := parser.NewParser()
 		file := loadInputFile(args[0])
-		parsed, errs := p.Parse(file)
-		if errs != nil {
-			exitOnError(errs, "parsing file")
+		generated := ""
+		var err error
+		if strings.HasSuffix(args[0], ".yolol") {
+			p := parser.NewParser()
+			parsed, errs := p.Parse(file)
+			if errs != nil {
+				exitOnError(errs, "parsing file")
+			}
+			gen := parser.Printer{}
+			generated, err = gen.Print(parsed)
+			exitOnError(err, "generating code")
+		} else if strings.HasSuffix(args[0], ".nolol") {
+			p := nolol.NewParser()
+			parsed, errs := p.Parse(file)
+			if errs != nil {
+				exitOnError(errs, "parsing file")
+			}
+			printer := nolol.NewPrinter()
+			generated, err = printer.Print(parsed)
+			exitOnError(err, "generating code")
+		} else {
+			exitOnError(fmt.Errorf("Unsupported file-type"), "opening file")
 		}
-		gen := parser.YololGenerator{}
-		generated, err := gen.Generate(parsed)
-		exitOnError(err, "generating code")
 		ioutil.WriteFile(outfile, []byte(generated), 0700)
 	},
 }

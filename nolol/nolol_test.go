@@ -41,8 +41,8 @@ func TestNolol(t *testing.T) {
 		t.Error(err)
 	}
 
-	gen := parser.YololGenerator{}
-	code, err := gen.Generate(prog)
+	gen := parser.Printer{}
+	code, err := gen.Print(prog)
 	if err != nil {
 		t.Error(err)
 	}
