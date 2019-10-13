@@ -16,6 +16,8 @@ type Node interface {
 // Program represents the whole yolol-programm
 type Program struct {
 	Lines []*Line
+	// Contains all the comments that were found while parsing the program. MUST be ordered.
+	Comments []*Token
 }
 
 // Start is needed to implement Node
@@ -30,16 +32,20 @@ func (n *Program) End() Position {
 
 // Line represents a line in the yolol programm
 type Line struct {
+	Position   Position
 	Statements []Statement
 }
 
 // Start is needed to implement Node
 func (n *Line) Start() Position {
-	return n.Statements[0].Start()
+	return n.Position
 }
 
 // End is needed to implement Node
 func (n *Line) End() Position {
+	if len(n.Statements) == 0 {
+		return n.Position
+	}
 	return n.Statements[len(n.Statements)-1].End()
 }
 
@@ -149,7 +155,7 @@ type FuncCall struct {
 
 // Start is needed to implement Node
 func (n *FuncCall) Start() Position {
-	return n.Argument.Start().Sub(len(n.Function) + 1)
+	return n.Argument.Start().Add((len(n.Function) + 1) * -1)
 }
 
 // End is needed to implement Node

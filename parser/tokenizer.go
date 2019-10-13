@@ -45,10 +45,15 @@ func (p Position) Add(col int) Position {
 	return p
 }
 
-// Sub creates a new position from the old one and substracts the given amount of coloumns
-func (p Position) Sub(col int) Position {
-	p.Coloumn -= col
-	return p
+// Before returns true if p represents a position in the file before the position of other
+func (p Position) Before(other Position) bool {
+	if p.Line < other.Line {
+		return true
+	}
+	if p.Line == other.Line && p.Coloumn < other.Coloumn {
+		return true
+	}
+	return false
 }
 
 var symbols = []string{"++", "--", ">=", "<=", "!=", "==", "==", "+=", "-=", "*=", "/=", "%=",

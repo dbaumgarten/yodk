@@ -8,7 +8,11 @@ import (
 
 // YololGenerator generates yolol-code from an AST
 type YololGenerator struct {
+	// the current source-code
 	programm string
+	// the curren index into the comment-list of the program
+	commentIndex int
+	commentList  []*Token
 	// This function is called whenever an unknown node-type is encountered.
 	// It can be used to add support for additional types to the generator
 	// returns the yolol-code for the giben node or an error
@@ -34,9 +38,23 @@ var operatorPriority = map[string]int{
 
 // Visit is needed to implement the Visitor interface
 func (y *YololGenerator) Visit(node Node, visitType int) error {
+	// add the original comments to the output
+	if y.commentList != nil && len(y.commentList) > y.commentIndex {
+		if y.commentList[y.commentIndex].Position.Before(node.Start()) {
+			y.programm += y.commentList[y.commentIndex].Value
+			y.commentIndex++
+		}
+	}
 	switch n := node.(type) {
+	case *Program:
+		y.commentList = n.Comments
+		break
 	case *Line:
 		if visitType == PostVisit {
+			if y.commentList != nil && len(y.commentList) > y.commentIndex && y.commentList[y.commentIndex].Position.Line == n.End().Line {
+				y.programm += y.commentList[y.commentIndex].Value
+				y.commentIndex++
+			}
 			y.programm += "\n"
 		}
 		if visitType > 0 {
@@ -96,9 +114,6 @@ func (y *YololGenerator) Visit(node Node, visitType int) error {
 		} else {
 			y.programm += ")"
 		}
-		break
-	case *Program:
-		//do noting
 		break
 	default:
 		if y.UnknownHandlerFunc == nil {

@@ -19,7 +19,8 @@ type Parser struct {
 	// if true, current token was preceeded by whitespace
 	SkippedWhitespace bool
 	// using an interface of ourself to call the parsing-methods allows them to be overridden by 'subclasses'
-	This YololParserFunctions
+	This     YololParserFunctions
+	Comments []*Token
 }
 
 // YololParserFunctions is used together with Parser.This to allow 'subclasses' to override 'virtual functions'
@@ -65,7 +66,12 @@ func (p *Parser) Advance() *Token {
 		p.SkippedWhitespace = p.NextWouldBeWhitespace
 		p.NextWouldBeWhitespace = false
 		for p.NextToken.Type != TypeEOF && (p.NextToken.Type == TypeWhitespace || p.NextToken.Type == TypeComment) {
-			p.NextWouldBeWhitespace = true
+			if p.NextToken.Type == TypeWhitespace {
+				p.NextWouldBeWhitespace = true
+			} else {
+				// next token is a comment. Store it.
+				p.Comments = append(p.Comments, p.NextToken)
+			}
 			p.NextToken = p.Tokenizer.Next()
 		}
 
@@ -76,11 +82,13 @@ func (p *Parser) Advance() *Token {
 // Parse is the main method of the parser. Parses a yolol-program into an AST.
 func (p *Parser) Parse(prog string) (*Program, error) {
 	errors := make(Errors, 0)
+	p.Comments = make([]*Token, 0)
 	p.Tokenizer.Load(prog)
 	// Advance twice to fill CurrentToken and NextToken
 	p.Advance()
 	p.Advance()
 	parsed, err := p.ParseProgram()
+	parsed.Comments = p.Comments
 	errors = append(errors, err...)
 	if len(errors) > 0 {
 		return nil, errors
@@ -117,6 +125,7 @@ func (p *Parser) SkipLine() {
 func (p *Parser) ParseLine() (*Line, *Error) {
 	p.Log()
 	ret := Line{
+		Position:   p.CurrentToken.Position,
 		Statements: make([]Statement, 0),
 	}
 

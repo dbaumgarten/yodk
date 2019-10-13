@@ -13,6 +13,7 @@ var TestProgram = `:testsum = 1 + 2 == 3
 :testmul = 2*5 == 10
 :testdiv = 20 / 10 == 2
 :testmod = 11 % 10 == 1
+// comment1
 :testexp = 10^2 == 100
 :testeq = 42 == 42 and not (41 == 24)
 :testneq = 1 != 42 and not (1!=1)
@@ -24,7 +25,7 @@ i = 0 j = i++ k = ++i
 :testi = i == 2 and j == 0 and  k == 2
 hw = "hello" hw++
 hw += "world"
-:testhw = hw == "hello world"
+:testhw = hw == "hello world" //comment2
 abc = "abc"
 :testssub = hw - "world" == "hello " and abc-- == "abc" and abc == "ab" and --abc == "a" and abc == "a"
 pi = 3.141
@@ -44,7 +45,7 @@ if pi > 3 then :testif=1 else :testif = 0 end
 if :testif != 1000 then if 1==1 then :testnestedif = 1 end end
 counter=0
 counter++
-if counter < 20 then goto 36 end
+if counter < 20 then goto 37 end
 :testgoto = counter == 20
 :testnested = 3+(1+1)*5 == 13
 k = 2
