@@ -46,6 +46,7 @@ func (ls *LangServer) Initialize(ctx context.Context, params *lsp.InitializePara
 				Change:    float64(lsp.Full), // full contents of file sent on each update
 				OpenClose: true,
 			},
+			DocumentFormattingProvider: true,
 		},
 	}, nil
 }
@@ -150,7 +151,7 @@ func (ls *LangServer) ColorPresentation(ctx context.Context, params *lsp.ColorPr
 	return nil, unsupported()
 }
 func (ls *LangServer) Formatting(ctx context.Context, params *lsp.DocumentFormattingParams) ([]lsp.TextEdit, error) {
-	return nil, unsupported()
+	return format(params)
 }
 func (ls *LangServer) RangeFormatting(ctx context.Context, params *lsp.DocumentRangeFormattingParams) ([]lsp.TextEdit, error) {
 	return nil, unsupported()
