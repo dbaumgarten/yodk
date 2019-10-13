@@ -6,6 +6,8 @@ import "github.com/dbaumgarten/yodk/parser"
 type Program struct {
 	// The 'lines' of the program a line can also be multiple lines (if, while)
 	Lines []Line
+	// Ordered list of comments found while parsing this program
+	Comments []*parser.Token
 }
 
 // Start is needed to implement parser.Node

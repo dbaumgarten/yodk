@@ -6,17 +6,20 @@ import (
 	"github.com/dbaumgarten/yodk/parser"
 )
 
+// Printer can generate the nolol-code corresponding to a nolol ast
 type Printer struct {
 	yololPrinter parser.Printer
 	Indentation  string
 }
 
+// NewPrinter creates a new Printer
 func NewPrinter() *Printer {
 	return &Printer{
 		Indentation: "\t",
 	}
 }
 
+// Print returns the nolol-code for the given ast
 func (p *Printer) Print(prog *Program) (string, error) {
 	indentLevel := 0
 
@@ -72,8 +75,6 @@ func (p *Printer) Print(prog *Program) (string, error) {
 					out += n.Label + "> "
 				}
 				return out, nil
-			case parser.PostVisit:
-				return "\n", nil
 			default:
 				return "", nil
 			}
@@ -89,5 +90,6 @@ func (p *Printer) Print(prog *Program) (string, error) {
 		}
 		return "", fmt.Errorf("Unknown node-type: %T", node)
 	}
-	return p.yololPrinter.Print(prog)
+
+	return p.yololPrinter.PrintCommented(prog, prog.Comments)
 }

@@ -33,8 +33,13 @@ var operatorPriority = map[string]int{
 
 // Print returns the yolol-code the ast-node and it's children represent
 func (y *Printer) Print(prog Node) (string, error) {
+	return y.PrintCommented(prog, nil)
+}
+
+// PrintCommented returns the yolol-code the ast-node and it's children represent
+// If you are not printing a parser.Program, you can use this to enable printing of comments for ither node-types
+func (y *Printer) PrintCommented(prog Node, commentList []*Token) (string, error) {
 	commentIndex := 0
-	var commentList []*Token
 	output := ""
 	err := prog.Accept(VisitorFunc(func(node Node, visitType int) error {
 		// add the original comments to the output

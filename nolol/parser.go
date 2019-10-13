@@ -51,6 +51,7 @@ func (p *Parser) ParseProgram() (*Program, parser.Errors) {
 		}
 		ret.Lines = append(ret.Lines, line)
 	}
+	ret.Comments = p.Comments
 	return &ret, errors
 }
 
@@ -115,11 +116,6 @@ func (p *Parser) ParseExecutableLine() (ExecutableLine, *parser.Error) {
 // ParseLine parses any kind of line
 func (p *Parser) ParseLine() (Line, *parser.Error) {
 	p.Log()
-
-	// skip empty lines and stray newlines
-	for p.CurrentToken.Type == parser.TypeNewline {
-		p.Advance()
-	}
 
 	constDecl, err := p.ParseConstantDeclaration()
 	if err != nil && err.Fatal {
