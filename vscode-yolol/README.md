@@ -5,6 +5,7 @@ Adds support for YOLOL to vscode.
 # Features
 - Syntax highlighting
 - Syntax validation
+- Automatic formatting
 - Commands for optimizing yolol
 - Also supports nolol
 

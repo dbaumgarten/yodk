@@ -75,8 +75,11 @@ if x == 4 then y=5
 Error when parsing file: Parser error at Line: 2, Coloumn: 1 (up to Line: 2, Coloumn: 22): Expected 'end' after if statement. Found Token: ''(Newline)
 ```
 
+## Formatter
+Automatically format your yolol and nolol-code via cli or directly in your IDE.
+
 ## vscode Extension
-Extension for visual studio code. Adds syntax highlighting and validation. [More information](vscode-yolol/README.md)
+Extension for visual studio code. Adds syntax highlighting, validation, formatting and commands for compiling and optimizing code. [More information](vscode-yolol/README.md)
 
 ![VSCODE-Extension](images/vscode-screenshot.png)
 
