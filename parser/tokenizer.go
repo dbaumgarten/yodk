@@ -18,6 +18,7 @@ const (
 	TypeEOF        = "EOF"
 	TypeComment    = "Comment"
 	TypeWhitespace = "Whitespace"
+	TypeUnknown    = "Unknown"
 )
 
 // Position represents the starting-position of a token in the source-code
@@ -127,59 +128,57 @@ func (t *Tokenizer) Load(input string) {
 }
 
 // Next returns the next token from the source document
-func (t *Tokenizer) Next() (*Token, error) {
+func (t *Tokenizer) Next() *Token {
 
-	t.getComment()
+	token := t.getComment()
+	if token != nil {
+		return token
+	}
 
 	// no need to tokenize an empty string
 	if len(t.remaining) == 0 {
-		return t.newToken(TypeEOF, ""), nil
+		return t.newToken(TypeEOF, "")
 	}
 
-	token := t.getWhitespace()
+	token = t.getWhitespace()
 	if token != nil {
-		return token, nil
+		return token
 	}
 
 	token = t.getKeyword()
 	if token != nil {
-		return token, nil
+		return token
 	}
 
 	token = t.getNewline()
 	if token != nil {
-		return token, nil
+		return token
 	}
 
 	token = t.getSymbol()
 	if token != nil {
-		return token, nil
+		return token
 	}
 
 	token = t.getIdentifier()
 	if token != nil {
-		return token, nil
+		return token
 	}
 
 	token = t.getStringConstant()
 	if token != nil {
-		return token, nil
+		return token
 	}
 
 	token = t.getNumberConstant()
 	if token != nil {
-		return token, nil
+		return token
 	}
 
-	err := Error{
-		Message:       fmt.Sprintf("Unknown token '%s'", string(t.remaining[0])),
-		StartPosition: NewPosition(t.line, t.column),
-		EndPosition:   NewPosition(t.line, t.column),
-	}
-
+	token = t.newToken(TypeUnknown, string(t.remaining[0]))
 	t.advance(1)
 
-	return nil, &err
+	return token
 }
 
 func (t *Tokenizer) advance(amount int) {

@@ -11,8 +11,13 @@ import (
 type Parser struct {
 	DebugLog     bool
 	Tokenizer    *Tokenizer
-	Tokens       []*Token
-	CurrentToken int
+	CurrentToken *Token
+	NextToken    *Token
+	PrevToken    *Token
+	// if true, there was whitespace between CurrentToken and NextToken
+	NextWouldBeWhitespace bool
+	// if true, current token was preceeded by whitespace
+	SkippedWhitespace bool
 	// using an interface of ourself to call the parsing-methods allows them to be overridden by 'subclasses'
 	This YololParserFunctions
 }
@@ -48,71 +53,33 @@ func NewParser() *Parser {
 
 // HasNext returns true if there is a next token
 func (p *Parser) HasNext() bool {
-	return p.CurrentToken < len(p.Tokens)-1
+	return p.CurrentToken.Type != TypeEOF
 }
 
 // Advance advances the current token to the next (non whitespace) token in the list
 func (p *Parser) Advance() *Token {
-	if p.CurrentToken < len(p.Tokens)-1 {
-		p.CurrentToken++
-	}
-	// skip whitespace
-	for p.CurrentToken < len(p.Tokens)-1 && p.Tokens[p.CurrentToken].Type == TypeWhitespace {
-		p.CurrentToken++
-	}
-	return p.Tokens[p.CurrentToken]
-}
+	if p.CurrentToken == nil || p.HasNext() {
+		p.PrevToken = p.CurrentToken
+		p.CurrentToken = p.NextToken
+		p.NextToken = p.Tokenizer.Next()
+		p.SkippedWhitespace = p.NextWouldBeWhitespace
+		p.NextWouldBeWhitespace = false
+		for p.NextToken.Type != TypeEOF && (p.NextToken.Type == TypeWhitespace || p.NextToken.Type == TypeComment) {
+			p.NextWouldBeWhitespace = true
+			p.NextToken = p.Tokenizer.Next()
+		}
 
-func (p *Parser) prevWithWhitespace() *Token {
-	if p.CurrentToken-1 > 0 {
-		return p.Tokens[p.CurrentToken-1]
 	}
-	return p.Tokens[p.CurrentToken]
-}
-
-// Current returns the current token
-func (p *Parser) Current() *Token {
-	offset := 0
-	// skip whitespace
-	for p.CurrentToken+offset < len(p.Tokens) && p.Tokens[p.CurrentToken+offset].Type == TypeWhitespace {
-		offset++
-	}
-	return p.Tokens[p.CurrentToken+offset]
-}
-
-// Next returns the next token
-func (p *Parser) Next() *Token {
-	offset := 1
-	// skip whitespace
-	for p.CurrentToken+offset < len(p.Tokens) && p.Tokens[p.CurrentToken+offset].Type == TypeWhitespace {
-		offset++
-	}
-	if p.CurrentToken+offset < len(p.Tokens) {
-		return p.Tokens[p.CurrentToken+offset]
-	}
-	return p.Tokens[p.CurrentToken]
+	return p.CurrentToken
 }
 
 // Parse is the main method of the parser. Parses a yolol-program into an AST.
 func (p *Parser) Parse(prog string) (*Program, error) {
 	errors := make(Errors, 0)
 	p.Tokenizer.Load(prog)
-	p.Tokens = make([]*Token, 0, 1000)
-	for {
-		token, err := p.Tokenizer.Next()
-		if err != nil {
-			errors = append(errors, err.(*Error))
-		} else {
-			if p.DebugLog {
-				fmt.Print(token)
-			}
-			p.Tokens = append(p.Tokens, token)
-			if token.Type == TypeEOF {
-				break
-			}
-		}
-	}
-	p.CurrentToken = 0
+	// Advance twice to fill CurrentToken and NextToken
+	p.Advance()
+	p.Advance()
 	parsed, err := p.ParseProgram()
 	errors = append(errors, err...)
 	if len(errors) > 0 {
@@ -141,7 +108,7 @@ func (p *Parser) ParseProgram() (*Program, Errors) {
 
 // SkipLine skips tokens up to the next newline
 func (p *Parser) SkipLine() {
-	for p.Current().Type != TypeNewline && p.Current().Type != TypeEOF {
+	for p.CurrentToken.Type != TypeNewline && p.CurrentToken.Type != TypeEOF {
 		p.Advance()
 	}
 }
@@ -153,19 +120,34 @@ func (p *Parser) ParseLine() (*Line, *Error) {
 		Statements: make([]Statement, 0),
 	}
 
+	// empty line
+	if p.CurrentToken.Type == TypeNewline || p.CurrentToken.Type == TypeEOF {
+		p.Advance()
+		return &ret, nil
+	}
+
 	for p.HasNext() {
-		if p.Current().Type == TypeNewline || p.Current().Type == TypeEOF {
-			p.Advance()
-			return &ret, nil
-		}
+
 		stmt, err := p.This.ParseStatement()
 		if err != nil {
 			return nil, err
 		}
 		ret.Statements = append(ret.Statements, stmt)
+
+		// line ends after statement
+		if p.CurrentToken.Type == TypeNewline || p.CurrentToken.Type == TypeEOF {
+			p.Advance()
+			return &ret, nil
+		}
+
+		// more statements on this line?
+		if !p.SkippedWhitespace {
+			return nil, p.NewError("Statements on one line must be seperated by whitespace", true, p.CurrentToken.Position, p.CurrentToken.Position)
+		}
+
 	}
 
-	if p.Current().Type == TypeEOF {
+	if p.CurrentToken.Type == TypeEOF {
 		return &ret, nil
 	}
 
@@ -175,11 +157,6 @@ func (p *Parser) ParseLine() (*Line, *Error) {
 // ParseStatement parses a statement-node
 func (p *Parser) ParseStatement() (Statement, *Error) {
 	p.Log()
-
-	// the only place where whitespace can not be ignored
-	if p.Current().Position.Coloumn != 1 && p.prevWithWhitespace().Type != TypeWhitespace {
-		return nil, p.NewError("Statements on same line must be seperated by space", true, p.Current().Position, p.Current().Position)
-	}
 
 	stmt, err := p.This.ParseAssignment()
 	if err != nil && err.Fatal {
@@ -213,7 +190,7 @@ func (p *Parser) ParseStatement() (Statement, *Error) {
 		return stmt4, nil
 	}
 
-	return nil, p.NewError("Expected assignment, if-statement or goto", false, p.Current().Position, p.Current().Position)
+	return nil, p.NewError("Expected assignment, if-statement or goto", false, p.CurrentToken.Position, p.CurrentToken.Position)
 }
 
 // ParsePreOrPostOperation parses a pre-/post operation (x++, ++x) as a statement
@@ -236,20 +213,20 @@ func (p *Parser) ParsePreOrPostOperation() (Statement, *Error) {
 		postOpVarDeref.(*Dereference).IsStatement = true
 		return postOpVarDeref, nil
 	}
-	return nil, p.NewError("No Pre- or Post expression-statement found", false, p.Current().Position, p.Current().Position)
+	return nil, p.NewError("No Pre- or Post expression-statement found", false, p.CurrentToken.Position, p.CurrentToken.Position)
 }
 
 // ParseGoto parse parses a goto-node
 func (p *Parser) ParseGoto() (Statement, *Error) {
-	if p.Current().Type == TypeKeyword && p.Current().Value == "goto" {
+	if p.CurrentToken.Type == TypeKeyword && p.CurrentToken.Value == "goto" {
 		stmt := GoToStatement{
-			Position: p.Current().Position,
+			Position: p.CurrentToken.Position,
 		}
 		p.Advance()
-		if p.Current().Type != TypeNumber {
+		if p.CurrentToken.Type != TypeNumber {
 			return nil, p.NewError("Goto must be followed by a line number", true, stmt.Start(), stmt.Start())
 		}
-		line, err := strconv.Atoi(p.Current().Value)
+		line, err := strconv.Atoi(p.CurrentToken.Value)
 		stmt.Line = line
 		if err != nil {
 			return nil, p.NewError("Goto must be followed by a line number", true, stmt.Start(), stmt.End())
@@ -257,7 +234,7 @@ func (p *Parser) ParseGoto() (Statement, *Error) {
 		p.Advance()
 		return &stmt, nil
 	}
-	return nil, p.NewError("Goto statements must start with 'goto'", false, p.Current().Position, p.Current().Position)
+	return nil, p.NewError("Goto statements must start with 'goto'", false, p.CurrentToken.Position, p.CurrentToken.Position)
 }
 
 // ParseAssignment parses an assignment-node
@@ -265,14 +242,14 @@ func (p *Parser) ParseAssignment() (Statement, *Error) {
 	p.Log()
 	assignmentOperators := []string{"=", "+=", "-=", "*=", "/=", "%="}
 	ret := Assignment{
-		Position: p.Current().Position,
+		Position: p.CurrentToken.Position,
 	}
-	if p.Current().Type != TypeID || !contains(assignmentOperators, p.Next().Value) {
-		return nil, p.NewError("Expected identifier and assignment operator", false, p.Current().Position, p.Next().Position)
+	if p.CurrentToken.Type != TypeID || !contains(assignmentOperators, p.NextToken.Value) {
+		return nil, p.NewError("Expected identifier and assignment operator", false, p.CurrentToken.Position, p.NextToken.Position)
 	}
-	ret.Variable = p.Current().Value
+	ret.Variable = p.CurrentToken.Value
 	p.Advance()
-	ret.Operator = p.Current().Value
+	ret.Operator = p.CurrentToken.Value
 	p.Advance()
 	exp, err := p.This.ParseExpression()
 	if err != nil {
@@ -287,10 +264,10 @@ func (p *Parser) ParseAssignment() (Statement, *Error) {
 func (p *Parser) ParseIf() (Statement, *Error) {
 	p.Log()
 	ret := IfStatement{
-		Position: p.Current().Position,
+		Position: p.CurrentToken.Position,
 	}
-	if p.Current().Type != TypeKeyword || p.Current().Value != "if" {
-		return nil, p.NewError("If-statements have to start with 'if'", false, p.Current().Position, p.Current().Position)
+	if p.CurrentToken.Type != TypeKeyword || p.CurrentToken.Value != "if" {
+		return nil, p.NewError("If-statements have to start with 'if'", false, p.CurrentToken.Position, p.CurrentToken.Position)
 	}
 	p.Advance()
 
@@ -301,8 +278,8 @@ func (p *Parser) ParseIf() (Statement, *Error) {
 		return nil, err.Append(fmt.Errorf("No expression found as if-condition"))
 	}
 
-	if p.Current().Type != TypeKeyword || p.Current().Value != "then" {
-		return nil, p.NewError("Expected 'then' after condition", true, p.Current().Position, p.Current().Position)
+	if p.CurrentToken.Type != TypeKeyword || p.CurrentToken.Value != "then" {
+		return nil, p.NewError("Expected 'then' after condition", true, p.CurrentToken.Position, p.CurrentToken.Position)
 	}
 	p.Advance()
 
@@ -322,7 +299,7 @@ func (p *Parser) ParseIf() (Statement, *Error) {
 		ret.IfBlock = append(ret.IfBlock, stmt2)
 	}
 
-	if p.Current().Type == TypeKeyword && p.Current().Value == "else" {
+	if p.CurrentToken.Type == TypeKeyword && p.CurrentToken.Value == "else" {
 		p.Advance()
 		stmt, err := p.This.ParseStatement()
 		if err != nil {
@@ -341,7 +318,7 @@ func (p *Parser) ParseIf() (Statement, *Error) {
 		}
 	}
 
-	if p.Current().Type != TypeKeyword || p.Current().Value != "end" {
+	if p.CurrentToken.Type != TypeKeyword || p.CurrentToken.Value != "end" {
 		return nil, p.NewError("Expected 'end' after if statement", true, ret.Start(), ret.End())
 	}
 	p.Advance()
@@ -367,9 +344,9 @@ func (p *Parser) ParseLogicExpression() (Expression, *Error) {
 	}
 	logOps := []string{"or", "and"}
 
-	for p.Current().Type == TypeKeyword && contains(logOps, p.Current().Value) {
+	for p.CurrentToken.Type == TypeKeyword && contains(logOps, p.CurrentToken.Value) {
 		binexp := &BinaryOperation{
-			Operator: p.Current().Value,
+			Operator: p.CurrentToken.Value,
 			Exp1:     exp,
 		}
 		p.Advance()
@@ -393,9 +370,9 @@ func (p *Parser) ParseCompareExpression() (Expression, *Error) {
 	}
 	logOps := []string{"==", "!=", "<=", ">=", "<", ">"}
 
-	if p.Current().Type == TypeSymbol && contains(logOps, p.Current().Value) {
+	if p.CurrentToken.Type == TypeSymbol && contains(logOps, p.CurrentToken.Value) {
 		binexp := &BinaryOperation{
-			Operator: p.Current().Value,
+			Operator: p.CurrentToken.Value,
 			Exp1:     exp1,
 		}
 		p.Advance()
@@ -422,9 +399,9 @@ func (p *Parser) ParseSumExpression() (Expression, *Error) {
 	}
 	logOps := []string{"+", "-"}
 
-	for p.Current().Type == TypeSymbol && contains(logOps, p.Current().Value) {
+	for p.CurrentToken.Type == TypeSymbol && contains(logOps, p.CurrentToken.Value) {
 		binexp := &BinaryOperation{
-			Operator: p.Current().Value,
+			Operator: p.CurrentToken.Value,
 			Exp1:     exp,
 		}
 		p.Advance()
@@ -451,9 +428,9 @@ func (p *Parser) ParseProdExpression() (Expression, *Error) {
 	}
 	logOps := []string{"*", "/", "%", "^"}
 
-	for p.Current().Type == TypeSymbol && contains(logOps, p.Current().Value) {
+	for p.CurrentToken.Type == TypeSymbol && contains(logOps, p.CurrentToken.Value) {
 		binexp := &BinaryOperation{
-			Operator: p.Current().Value,
+			Operator: p.CurrentToken.Value,
 			Exp1:     exp,
 		}
 		p.Advance()
@@ -472,10 +449,10 @@ func (p *Parser) ParseProdExpression() (Expression, *Error) {
 func (p *Parser) ParseUnaryExpression() (Expression, *Error) {
 	p.Log()
 	preUnaryOps := []string{"not", "-"}
-	if contains(preUnaryOps, p.Current().Value) {
+	if contains(preUnaryOps, p.CurrentToken.Value) {
 		unaryExp := &UnaryOperation{
-			Operator: p.Current().Value,
-			Position: p.Current().Position,
+			Operator: p.CurrentToken.Value,
+			Position: p.CurrentToken.Position,
 		}
 		p.Advance()
 		subexp, err := p.This.ParseUnaryExpression()
@@ -492,14 +469,14 @@ func (p *Parser) ParseUnaryExpression() (Expression, *Error) {
 // ParseBracketExpression parses a racketed expression
 func (p *Parser) ParseBracketExpression() (Expression, *Error) {
 	p.Log()
-	if p.Current().Type == TypeSymbol && p.Current().Value == "(" {
+	if p.CurrentToken.Type == TypeSymbol && p.CurrentToken.Value == "(" {
 		p.Advance()
 		innerExp, err := p.This.ParseExpression()
 		if err != nil {
 			err.Fatal = true
 			return nil, err.Append(fmt.Errorf("Expected expression after '('"))
 		}
-		if p.Current().Type == TypeSymbol && p.Current().Value == ")" {
+		if p.CurrentToken.Type == TypeSymbol && p.CurrentToken.Value == ")" {
 			p.Advance()
 			return innerExp, nil
 		}
@@ -536,38 +513,38 @@ func (p *Parser) ParseSingleExpression() (Expression, *Error) {
 		return funccall, nil
 	}
 
-	if p.Current().Type == TypeID {
+	if p.CurrentToken.Type == TypeID {
 		defer p.Advance()
 		return &Dereference{
-			Variable: p.Current().Value,
-			Position: p.Current().Position,
+			Variable: p.CurrentToken.Value,
+			Position: p.CurrentToken.Position,
 		}, nil
 	}
-	if p.Current().Type == TypeString {
+	if p.CurrentToken.Type == TypeString {
 		defer p.Advance()
 		return &StringConstant{
-			Value:    p.Current().Value,
-			Position: p.Current().Position,
+			Value:    p.CurrentToken.Value,
+			Position: p.CurrentToken.Position,
 		}, nil
 	}
-	if p.Current().Type == TypeNumber {
+	if p.CurrentToken.Type == TypeNumber {
 		defer p.Advance()
 		return &NumberConstant{
-			Value:    p.Current().Value,
-			Position: p.Current().Position,
+			Value:    p.CurrentToken.Value,
+			Position: p.CurrentToken.Position,
 		}, nil
 	}
-	return nil, p.NewError("Expected constant, variable, func-call or pre/post operation", true, p.Current().Position, p.Current().Position)
+	return nil, p.NewError("Expected constant, variable, func-call or pre/post operation", true, p.CurrentToken.Position, p.CurrentToken.Position)
 }
 
 // ParseFuncCall parse a function call
 func (p *Parser) ParseFuncCall() (Expression, *Error) {
 	p.Log()
-	if p.Current().Type != TypeID || p.Next().Type != TypeSymbol || p.Next().Value != "(" {
-		return nil, p.NewError("No function call detected", false, p.Current().Position, p.Current().Position)
+	if p.CurrentToken.Type != TypeID || p.NextToken.Type != TypeSymbol || p.NextToken.Value != "(" {
+		return nil, p.NewError("No function call detected", false, p.CurrentToken.Position, p.CurrentToken.Position)
 	}
 	fc := &FuncCall{
-		Function: p.Current().Value,
+		Function: p.CurrentToken.Value,
 	}
 	p.Advance()
 	p.Advance()
@@ -578,7 +555,7 @@ func (p *Parser) ParseFuncCall() (Expression, *Error) {
 		return nil, err.Append(fmt.Errorf("Expected expression as function argument"))
 	}
 
-	if p.Current().Type != TypeSymbol || p.Current().Value != ")" {
+	if p.CurrentToken.Type != TypeSymbol || p.CurrentToken.Value != ")" {
 		return nil, p.NewError("Missing ')' on function call", true, fc.Start(), fc.End())
 	}
 	p.Advance()
@@ -589,44 +566,44 @@ func (p *Parser) ParseFuncCall() (Expression, *Error) {
 // ParsePreOpExpression parse pre-expression
 func (p *Parser) ParsePreOpExpression() (Expression, *Error) {
 	p.Log()
-	if p.Current().Type == TypeSymbol && (p.Current().Value == "++" || p.Current().Value == "--") {
+	if p.CurrentToken.Type == TypeSymbol && (p.CurrentToken.Value == "++" || p.CurrentToken.Value == "--") {
 		exp := Dereference{
-			Operator: p.Current().Value,
+			Operator: p.CurrentToken.Value,
 			PrePost:  "Pre",
-			Position: p.Current().Position,
+			Position: p.CurrentToken.Position,
 		}
 		p.Advance()
-		if p.Current().Type != TypeID {
+		if p.CurrentToken.Type != TypeID {
 			return nil, p.NewError("Pre- Increment/Decrement must be followed by a variable", true, exp.Start(), exp.Start())
 		}
-		exp.Variable = p.Current().Value
+		exp.Variable = p.CurrentToken.Value
 		p.Advance()
 		return &exp, nil
 	}
-	return nil, p.NewError("No Pre-Operator found", false, p.Current().Position, p.Current().Position)
+	return nil, p.NewError("No Pre-Operator found", false, p.CurrentToken.Position, p.CurrentToken.Position)
 }
 
 // ParsePostOpExpression parse post-expression
 func (p *Parser) ParsePostOpExpression() (Expression, *Error) {
 	p.Log()
-	if p.Next().Type == TypeSymbol && (p.Next().Value == "++" || p.Next().Value == "--") && p.Current().Type == TypeID {
+	if p.NextToken.Type == TypeSymbol && (p.NextToken.Value == "++" || p.NextToken.Value == "--") && p.CurrentToken.Type == TypeID {
 		exp := Dereference{
-			Variable: p.Current().Value,
-			Operator: p.Next().Value,
+			Variable: p.CurrentToken.Value,
+			Operator: p.NextToken.Value,
 			PrePost:  "Post",
-			Position: p.Current().Position,
+			Position: p.CurrentToken.Position,
 		}
 		p.Advance()
 		p.Advance()
 		return &exp, nil
 	}
-	return nil, p.NewError("No Post-Operator found", false, p.Current().Position, p.Current().Position)
+	return nil, p.NewError("No Post-Operator found", false, p.CurrentToken.Position, p.CurrentToken.Position)
 }
 
 // NewError creates a new parser error
 func (p *Parser) NewError(msg string, terminal bool, start Position, end Position) *Error {
 	err := &Error{
-		Message:       msg + ". Found Token: '" + p.Current().Value + "'(" + p.Current().Type + ")",
+		Message:       msg + ". Found Token: '" + p.CurrentToken.Value + "'(" + p.CurrentToken.Type + ")",
 		Fatal:         terminal,
 		StartPosition: start,
 		EndPosition:   end,
@@ -673,6 +650,6 @@ func callingLineNumber() int {
 func (p *Parser) Log() {
 	if p.DebugLog {
 		// Print the name of the function
-		fmt.Println("Called:", callingFunctionName(), "from line", callingLineNumber(), "with", p.Current().String())
+		fmt.Println("Called:", callingFunctionName(), "from line", callingLineNumber(), "with", p.CurrentToken.String())
 	}
 }
