@@ -2,9 +2,13 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/dbaumgarten/yodk/nolol"
+	"github.com/dbaumgarten/yodk/parser"
 
 	"github.com/abiosoft/ishell"
 	"github.com/dbaumgarten/yodk/vm"
@@ -14,19 +18,44 @@ import (
 var yvm *vm.YololVM
 var debugShell *ishell.Shell
 var inputProg string
+var inputFileName string
 
 // debugCmd represents the debug command
 var debugCmd = &cobra.Command{
 	Use:   "debug [file]",
-	Short: "Debug a yolol program",
+	Short: "Debug a yolol/nolol program",
 	Long:  `Execute program interactively in debugger`,
 	Run: func(cmd *cobra.Command, args []string) {
+		inputFileName = args[0]
 		inputProg = loadInputFile(args[0])
+
+		if !strings.HasSuffix(inputFileName, ".yolol") && !strings.HasSuffix(inputFileName, ".nolol") {
+			fmt.Println("Unknown file-extension for file: ", inputFileName)
+			os.Exit(1)
+		}
 
 		debugShell.Println("Loaded and paused programm. Enter 'run' to execute")
 		debugShell.Run()
 	},
 	Args: cobra.MinimumNArgs(1),
+}
+
+func run() {
+	if strings.HasSuffix(inputFileName, ".yolol") {
+		debugShell.Println("--Started--")
+		go yvm.RunSource(inputProg)
+		return
+	}
+	if strings.HasSuffix(inputFileName, ".nolol") {
+		debugShell.Println("--Started--")
+		converter := nolol.NewConverter()
+		yololcode, err := converter.ConvertFromSource(inputProg)
+		if err != nil {
+			exitOnError(err, "pasrsing nolol code")
+		}
+		go yvm.Run(yololcode, inputProg)
+		return
+	}
 }
 
 func init() {
@@ -38,7 +67,7 @@ func init() {
 	yvm.Pause()
 
 	yvm.SetBreakpointHandler(func(x *vm.YololVM) bool {
-		debugShell.Println("--Hit Breakpoint at line: ", x.CurrentLine(), "--")
+		debugShell.Println("--Hit Breakpoint at line: ", x.CurrentSourceLine(), "--")
 		return false
 	})
 
@@ -46,8 +75,7 @@ func init() {
 		debugShell.Println("--A runtime error occured--")
 		debugShell.Println(err)
 		debugShell.Println("--Execution paused--")
-		x.Pause()
-		return true
+		return false
 	})
 
 	yvm.SetFinishHandler(func(x *vm.YololVM) {
@@ -60,8 +88,7 @@ func init() {
 		Aliases: []string{"r"},
 		Help:    "run programm from start",
 		Func: func(c *ishell.Context) {
-			debugShell.Println("--Started--")
-			go yvm.RunSource(inputProg)
+			run()
 		},
 	})
 	debugShell.AddCmd(&ishell.Cmd{
@@ -78,8 +105,12 @@ func init() {
 		Aliases: []string{"c"},
 		Help:    "continue paused execution",
 		Func: func(c *ishell.Context) {
-			go yvm.Resume()
-			debugShell.Println("--Resumed--")
+			err := yvm.Resume()
+			if err == nil {
+				debugShell.Println("--Resumed--")
+			} else {
+				debugShell.Println(err)
+			}
 		},
 	})
 	debugShell.AddCmd(&ishell.Cmd{
@@ -160,7 +191,7 @@ func init() {
 		Aliases: []string{"l"},
 		Help:    "show programm source code",
 		Func: func(c *ishell.Context) {
-			current := yvm.CurrentLine()
+			current := yvm.CurrentSourceLine()
 			bps := yvm.ListBreakpoints()
 			progLines := strings.Split(inputProg, "\n")
 			debugShell.Println("--Programm--")
@@ -175,6 +206,32 @@ func init() {
 					pfx += "x"
 				} else {
 					pfx += " "
+				}
+				pfx += fmt.Sprintf("%3d ", i+1)
+				debugShell.Println(pfx + line)
+			}
+		},
+	})
+	debugShell.AddCmd(&ishell.Cmd{
+		Name:    "disas",
+		Aliases: []string{"d"},
+		Help:    "show yolol code for nolol source",
+		Func: func(c *ishell.Context) {
+			if !strings.HasSuffix(inputFileName, ".nolol") {
+				debugShell.Print("Disas is only available when debugging nolol code")
+			}
+			current := yvm.CurrentAstLine()
+			conv := nolol.NewConverter()
+			ast, _ := conv.ConvertFromSource(inputProg)
+			yolol, _ := (&parser.Printer{}).Print(ast)
+			progLines := strings.Split(yolol, "\n")
+			debugShell.Println("--Programm--")
+			pfx := ""
+			for i, line := range progLines {
+				if i+1 == current {
+					pfx = ">"
+				} else {
+					pfx = " "
 				}
 				pfx += fmt.Sprintf("%3d ", i+1)
 				debugShell.Println(pfx + line)

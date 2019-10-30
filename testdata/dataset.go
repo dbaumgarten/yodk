@@ -65,8 +65,17 @@ constexp = 1 + (2*5) + sin(3.141*2/2)
 `
 
 func ExecuteTestProgram(prog string) error {
+	var err error
+
 	v := vm.NewYololVM()
-	err := v.RunSource(prog)
+	v.SetErrorHandler(vm.ErrorHandlerFunc(func(v *vm.YololVM, e error) bool {
+		err = e
+		return true
+	}))
+
+	go v.RunSource(prog)
+	v.WaitForTermination()
+
 	if err != nil {
 		return err
 	}
