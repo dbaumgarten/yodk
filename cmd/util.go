@@ -10,7 +10,7 @@ var inputFile string
 
 func exitOnError(err error, operation string) {
 	if err != nil {
-		fmt.Printf("Error when %s: %s\n", operation, err.Error())
+		fmt.Printf("Error when %s:\n\n%s\n", operation, err.Error())
 		os.Exit(1)
 	}
 }

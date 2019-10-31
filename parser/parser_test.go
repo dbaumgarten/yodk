@@ -37,7 +37,7 @@ func TestParserMultipleErrors(t *testing.T) {
 
 	result, errs := p.Parse(prog)
 
-	if errs != nil && len(errs.(parser.Errors)) != 3 {
+	if errs != nil && len(errs.(parser.Errors)) != 9 {
 		for _, err := range errs.(parser.Errors) {
 			t.Log(err)
 		}

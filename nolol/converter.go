@@ -101,7 +101,6 @@ func (c *Converter) findConstantDeclarations(p parser.Node) error {
 				if exists {
 					return &parser.Error{
 						Message:       fmt.Sprintf("Duplicate declaration of constant: %s", constDecl.Name),
-						Fatal:         true,
 						StartPosition: constDecl.Start(),
 						EndPosition:   constDecl.End(),
 					}
@@ -116,7 +115,6 @@ func (c *Converter) findConstantDeclarations(p parser.Node) error {
 				default:
 					return &parser.Error{
 						Message:       "Only constant values can be the value of a constant declaration",
-						Fatal:         true,
 						StartPosition: constDecl.Start(),
 						EndPosition:   constDecl.End(),
 					}
@@ -173,7 +171,6 @@ func (c *Converter) findJumpLabels(p parser.Node) error {
 					if exists {
 						return &parser.Error{
 							Message:       fmt.Sprintf("Duplicate declaration of jump-label: %s", line.Label),
-							Fatal:         true,
 							StartPosition: line.Start(),
 							EndPosition:   line.Start(),
 						}
@@ -200,7 +197,6 @@ func (c *Converter) convertLabelGoto(p parser.Node) error {
 			if !exists {
 				return &parser.Error{
 					Message:       "Unknown jump-label: " + gotostmt.Label,
-					Fatal:         true,
 					StartPosition: gotostmt.Start(),
 					EndPosition:   gotostmt.End(),
 				}
