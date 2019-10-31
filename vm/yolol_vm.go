@@ -269,7 +269,7 @@ func (v *YololVM) SetVariable(name string, value interface{}) error {
 // Terminate the vm goroutine (if running)
 func (v *YololVM) Terminate() {
 	v.lock.Lock()
-	if v.state != StateDone && v.state != StateIdle {
+	if v.state == StateRunning {
 		v.state = StateKill
 		v.waitCondition.Signal()
 		for v.state != StateDone {
