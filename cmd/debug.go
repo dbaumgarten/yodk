@@ -183,7 +183,22 @@ func init() {
 		Func: func(c *ishell.Context) {
 			c.ShowPrompt(false)
 			defer c.ShowPrompt(true)
-			debugShell.Printf("--State: %d\n", yvm.State())
+			statestr := ""
+			switch yvm.State() {
+			case vm.StateIdle:
+				statestr = "READY"
+			case vm.StateRunning:
+				statestr = "RUNNING"
+			case vm.StatePaused:
+				statestr = "PAUSED"
+			case vm.StateStep:
+				statestr = "STEPPING"
+			case vm.StateDone:
+				statestr = "DONE"
+			case vm.StateKill:
+				statestr = "TERMINATING"
+			}
+			debugShell.Printf("--State: %s\n", statestr)
 		},
 	})
 	debugShell.AddCmd(&ishell.Cmd{
