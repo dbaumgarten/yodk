@@ -158,6 +158,7 @@ func (v *YololVM) Step() error {
 		return err
 	}
 	v.state = StateStep
+	v.waitCondition.Signal()
 	v.lock.Unlock()
 	return nil
 }
