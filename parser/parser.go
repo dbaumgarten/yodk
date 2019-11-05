@@ -66,10 +66,8 @@ type YololParserFunctions interface {
 
 // NewParser creates a new parser
 func NewParser() *Parser {
-	p := &Parser{
-		Tokenizer: NewTokenizer(),
-		Errors:    make(Errors, 0),
-	}
+	p := &Parser{}
+	p.init()
 	p.This = p
 	return p
 }
@@ -136,12 +134,23 @@ func (p *Parser) Expect(tokenType string, tokenValue string) Position {
 	return pos
 }
 
+// init prepares all internal fields for a new parsing run
+func (p *Parser) init() {
+	p.Tokenizer = NewTokenizer()
+	p.Errors = make(Errors, 0)
+	p.Comments = make([]*Token, 0)
+	p.CurrentToken = nil
+	p.PrevToken = nil
+	p.NextToken = nil
+	p.NextWouldBeWhitespace = false
+	p.SkippedWhitespace = false
+}
+
 // ---------------------------------------------
 
 // Parse is the main method of the parser. Parses a yolol-program into an AST.
 func (p *Parser) Parse(prog string) (*Program, error) {
-	p.Errors = make(Errors, 0)
-	p.Comments = make([]*Token, 0)
+	p.init()
 	p.Tokenizer.Load(prog)
 	// Advance twice to fill CurrentToken and NextToken
 	p.Advance()

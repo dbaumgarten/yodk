@@ -41,9 +41,29 @@ var debugCmd = &cobra.Command{
 }
 
 func run() {
+
+	if yvm.Running() {
+		debugShell.Println("VM is already running. Do you want to restart it (y/n)? \n(Hint: you can continue the current execution with 'continue'/c)")
+		for {
+			answer := debugShell.ReadLine()
+			if answer == "n" {
+				return
+			}
+			if answer == "y" {
+				break
+			}
+			if answer == "c" {
+				debugShell.Println("--Resumed--")
+				yvm.Resume()
+				return
+			}
+			debugShell.Println("Valid answers are y, n or c.")
+		}
+	}
+
 	if strings.HasSuffix(inputFileName, ".yolol") {
 		debugShell.Println("--Started--")
-		go yvm.RunSource(inputProg)
+		yvm.RunSource(inputProg)
 		return
 	}
 	if strings.HasSuffix(inputFileName, ".nolol") {
@@ -53,7 +73,7 @@ func run() {
 		if err != nil {
 			exitOnError(err, "pasrsing nolol code")
 		}
-		go yvm.Run(yololcode, inputProg)
+		yvm.Run(yololcode)
 		return
 	}
 }

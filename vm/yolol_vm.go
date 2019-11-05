@@ -57,8 +57,6 @@ type YololVM struct {
 	errorHandler      ErrorHandlerFunc
 	finishHandler     FinishHandlerFunc
 
-	// the parser to use
-	parser *parser.Parser
 	// current line in the ast is 1-indexed
 	currentAstLine int
 	// current line in the source code
@@ -75,6 +73,8 @@ type YololVM struct {
 	skipBp int
 	// condition to wait on while VM is paused
 	waitCondition *sync.Cond
+	// true while there is a gorouting executing for this vm
+	running bool
 }
 
 // NewYololVM creates a new VM
@@ -85,7 +85,6 @@ func NewYololVM() *YololVM {
 		state:             StateIdle,
 		loop:              false,
 		breakpoints:       make(map[int]bool),
-		parser:            parser.NewParser(),
 		lock:              &sync.Mutex{},
 		currentAstLine:    1,
 		currentSourceLine: 1,
@@ -129,10 +128,17 @@ func (v *YololVM) PrintVariables() string {
 	return txt
 }
 
+// Running returns true if there is a running goroutine for this vm
+func (v *YololVM) Running() bool {
+	v.lock.Lock()
+	defer v.lock.Unlock()
+	return v.running
+}
+
 // Resume resumes execution after a breakpoint or pause()
 func (v *YololVM) Resume() error {
 	v.lock.Lock()
-	if v.program == nil {
+	if !v.running {
 		v.lock.Unlock()
 		err := fmt.Errorf("can not resume. Execution has not been started")
 		if v.errorHandler != nil {
@@ -149,7 +155,7 @@ func (v *YololVM) Resume() error {
 // Step executes the next line and stops the execution again
 func (v *YololVM) Step() error {
 	v.lock.Lock()
-	if v.program == nil {
+	if !v.running {
 		v.lock.Unlock()
 		err := fmt.Errorf("can not resume. Execution has not been started")
 		if v.errorHandler != nil {
@@ -270,12 +276,13 @@ func (v *YololVM) SetVariable(name string, value interface{}) error {
 // Terminate the vm goroutine (if running)
 func (v *YololVM) Terminate() {
 	v.lock.Lock()
-	if v.state == StateRunning {
+	if v.running {
 		v.state = StateKill
 		v.waitCondition.Signal()
 		for v.state != StateDone {
 			v.waitCondition.Wait()
 		}
+		v.running = false
 	}
 	v.lock.Unlock()
 }
@@ -291,10 +298,11 @@ func (v *YololVM) WaitForTermination() {
 
 // Begin main section ------------------------------------------
 
-// Run runs the compiled program prog. The current go-routine will be used permanently for the vm.
-func (v *YololVM) Run(prog *parser.Program, source string) {
+// Run runs the compiled program prog in a new go-routine
+func (v *YololVM) Run(prog *parser.Program) {
 	v.Terminate()
 	v.lock.Lock()
+	v.running = true
 	v.currentAstLine = 1
 	v.currentSourceLine = 1
 	v.program = prog
@@ -302,19 +310,20 @@ func (v *YololVM) Run(prog *parser.Program, source string) {
 	v.state = StateRunning
 	v.variables = make(map[string]*Variable)
 	v.lock.Unlock()
-	v.run()
+	go v.run()
 }
 
 // RunSource compiles and runs the given YOLOL code
 func (v *YololVM) RunSource(prog string) {
-	ast, err := v.parser.Parse(prog)
+	ast, err := parser.NewParser().Parse(prog)
 	if err != nil {
 		if v.errorHandler != nil {
 			v.errorHandler(v, err)
 		}
 		return
 	}
-	v.Run(ast, prog)
+
+	v.Run(ast)
 }
 
 func (v *YololVM) wait() {
@@ -338,6 +347,7 @@ func (v *YololVM) run() {
 			panic(err)
 		}
 		v.state = StateDone
+		v.running = false
 		v.waitCondition.Signal()
 	}()
 
@@ -351,9 +361,7 @@ func (v *YololVM) run() {
 
 		// the vm should terminate
 		if v.state == StateKill {
-			v.state = StateDone
-			v.waitCondition.Signal()
-			return
+			panic(errKillVM)
 		}
 
 		// the vm should pause now
@@ -371,9 +379,7 @@ func (v *YololVM) run() {
 					v.finishHandler(v)
 					v.lock.Lock()
 				}
-				v.state = StateDone
-				v.waitCondition.Signal()
-				return
+				panic(errKillVM)
 			}
 		}
 
@@ -392,14 +398,16 @@ func (v *YololVM) run() {
 			}
 		}
 		v.currentAstLine++
-		if v.state == StateStep {
-			v.wait()
-		}
 	}
 }
 
 func (v *YololVM) runLine(line *parser.Line) error {
 	for _, stmt := range line.Statements {
+		statementLine := stmt.Start().Line
+		v.currentSourceLine = statementLine
+		if v.state == StateStep {
+			v.wait()
+		}
 		err := v.runStmt(stmt)
 		if err != nil {
 			//errAbortLine is returned when the line is aborted due to an if. It is not really an 'error'
@@ -415,10 +423,8 @@ func (v *YololVM) runLine(line *parser.Line) error {
 func (v *YololVM) runStmt(stmt parser.Statement) error {
 
 	// did we hit a breakpoint?
-	statementLine := stmt.Start().Line
-	v.currentSourceLine = statementLine
-	if _, exists := v.breakpoints[statementLine]; exists && v.skipBp != statementLine {
-		v.skipBp = statementLine
+	if _, exists := v.breakpoints[v.currentSourceLine]; exists && v.skipBp != v.currentSourceLine {
+		v.skipBp = v.currentSourceLine
 		if v.breakpointHandler != nil {
 			v.lock.Unlock()
 			continueExecution := v.breakpointHandler(v)
@@ -430,7 +436,7 @@ func (v *YololVM) runStmt(stmt parser.Statement) error {
 	}
 
 	// reached the end of the breakpoint-line. Reset skipBp.
-	if statementLine != v.skipBp {
+	if v.currentSourceLine != v.skipBp {
 		v.skipBp = -1
 	}
 
