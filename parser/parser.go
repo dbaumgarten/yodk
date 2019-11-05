@@ -339,7 +339,7 @@ func (p *Parser) ParseIf() Statement {
 			p.ErrorCurrent("Else-block needs at least one statement")
 		}
 		ret.ElseBlock = make([]Statement, 0, 1)
-		ret.ElseBlock = append(ret.IfBlock, stmt)
+		ret.ElseBlock = append(ret.ElseBlock, stmt)
 
 		for {
 			stmt2 := p.This.ParseStatement()
