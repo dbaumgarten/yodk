@@ -1,4 +1,5 @@
 # YODK - YOLOL Development Kit
+[![Build Status](https://travis-ci.org/dbaumgarten/yodk.svg?branch=master)](https://travis-ci.org/dbaumgarten/yodk)
 
 # What is YOLOL?
 YOLOL is the ingame programming language for the upcoming game starbase.
@@ -7,6 +8,12 @@ YOLOL is the ingame programming language for the upcoming game starbase.
 The yodk aims to be a toolkit that helps with the development of YOLOL-Scripts. YOLOL is a pretty limmited language and the lack of common features is really annoying for experienced programmers. The yodk (and in the future especially nolol) will try to mitigate this.
 
 # Installation
+
+## Binaries
+You can find pre-build versions of the binaries [here](https://github.com/dbaumgarten/yodk/releases).
+Just download them, unpack the zip file and place the binary somewhere in your PATH.
+
+## From source
 You will need to have the go-toolchain installed.  
 ```go install github.com/dbaumgarten/yodk```  
 Binary releases will be provided later.  

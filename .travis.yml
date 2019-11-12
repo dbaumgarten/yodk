@@ -1,0 +1,30 @@
+language: go
+branches:
+  - master
+script:
+  - go get ./...
+  - go get github.com/inconshreveable/mousetrap
+  - go test ./...
+before_deploy:
+  - git tag -f latest
+  - git remote add gh https://${TRAVIS_REPO_SLUG%/*}:${GITHUB_TOKEN}@github.com/${TRAVIS_REPO_SLUG}.git
+  - git push -f gh latest
+  - git remote remove gh
+  - go build
+  - GOOS=windows go build
+  - zip yodk-latest-win.zip yodk.exe
+  - zip yodk-latest-linux.zip yodk
+
+deploy:
+  provider: releases
+  api-key: $GITHUB_TOKEN
+  file: 
+    - yodk-latest-win.zip
+    - yodk-latest-linux.zip
+  skip_cleanup: true
+  name: Automated build of master
+  body: This release contains the most current version of yodk automatically compiled on every push
+  overwrite: true
+  target_commitish: $TRAVIS_COMMIT
+  on:
+    branch: master
