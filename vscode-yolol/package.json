@@ -1,81 +1,83 @@
 {
-	"name": "vscode-yolol",
-	"description": "A language server extension for yolol",
-	"author": "dbaumgarten",
-	"license": "MIT",
-	"version": "1.0.0",
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/dbaumgarten/yodk"
-	},
-	"keywords": [
-		"yolol",
-		"nolol",
-		"starbase",
-		"dev-kit"
-	],
-	"main": "./out/extension",
-	"activationEvents": [
-		"onLanguage:yolol",
-		"onLanguage:nolol"
-	],
-	"contributes": {
-		"languages": [
-			{
-				"id": "yolol",
-				"extensions": [
-					".yolol"
-				]
-			},
-			{
-				"id": "nolol",
-				"extensions": [
-					".nolol"
-				]
-			}
-		],
-		"grammars": [
-			{
-				"language": "yolol",
-				"scopeName": "yolol",
-				"path": "./syntaxes/yolol.tmGrammar.json"
-			},
-			{
-				"language": "nolol",
-				"scopeName": "nolol",
-				"path": "./syntaxes/nolol.tmGrammar.json"
-			}
-		],
-		"commands": [
-			{
-				"command": "yodk.compileNolol",
-				"title": "Compile NOLOL-Code"
-			},
-			{
-				"command": "yodk.optimizeYolol",
-				"title": "Optimize YOLOL-Code"
-			}
-		]
-	},
-	"publisher": "dbaumgarten",
-	"engines": {
-		"vscode": "^1.33.0"
-	},
-	"dependencies": {
-		"vscode-languageclient": "^5.2.1"
-	},
-	"devDependencies": {
-		"vscode": "^1.1.35",
-		"@types/mocha": "^5.2.0",
-		"@types/node": "^8.0.0",
-		"tslint": "^5.16.0",
-		"typescript": "^3.5.1"
-	},
-	"scripts": {
-		"vscode:prepublish": "npm run update-vscode && npm run compile",
-		"compile": "tsc -b",
-		"watch": "tsc -b -w",
-		"update-vscode": "vscode-install",
-		"postinstall": "vscode-install"
-	}
+  "name": "vscode-yolol",
+  "description": "A language server extension for yolol",
+  "author": "dbaumgarten",
+  "license": "MIT",
+  "version": "0.0.0",
+  "icon": "logo.png",
+  "galleryBanner.color": "1a2541",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dbaumgarten/yodk/tree/master/vscode-yolol"
+  },
+  "keywords": [
+    "yolol",
+    "nolol",
+    "starbase",
+    "dev-kit"
+  ],
+  "main": "./out/extension",
+  "activationEvents": [
+    "onLanguage:yolol",
+    "onLanguage:nolol"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "yolol",
+        "extensions": [
+          ".yolol"
+        ]
+      },
+      {
+        "id": "nolol",
+        "extensions": [
+          ".nolol"
+        ]
+      }
+    ],
+    "grammars": [
+      {
+        "language": "yolol",
+        "scopeName": "yolol",
+        "path": "./syntaxes/yolol.tmGrammar.json"
+      },
+      {
+        "language": "nolol",
+        "scopeName": "nolol",
+        "path": "./syntaxes/nolol.tmGrammar.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "yodk.compileNolol",
+        "title": "Compile NOLOL-Code"
+      },
+      {
+        "command": "yodk.optimizeYolol",
+        "title": "Optimize YOLOL-Code"
+      }
+    ]
+  },
+  "publisher": "dbaumgarten",
+  "engines": {
+    "vscode": "^1.33.0"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^5.2.1"
+  },
+  "devDependencies": {
+    "vscode": "^1.1.35",
+    "@types/mocha": "^5.2.0",
+    "@types/node": "^8.0.0",
+    "tslint": "^5.16.0",
+    "typescript": "^3.5.1"
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run update-vscode && npm run compile && cd .. && go build && GOOS=windows go build && cp yodk* vscode-yolol/bin/",
+    "compile": "tsc -b",
+    "watch": "tsc -b -w",
+    "update-vscode": "vscode-install",
+    "postinstall": "vscode-install"
+  }
 }

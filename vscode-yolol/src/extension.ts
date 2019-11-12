@@ -14,7 +14,14 @@ let client: LanguageClient;
 
 function runYodkCommand(cmd) {
 	const cp = require('child_process')
-	let java = cp.spawn("yodk", cmd);
+
+	let executable = "./bin/yodk"
+
+	if (process.platform == "win32") {
+		executable += ".exe"
+	}
+
+	let java = cp.spawn(executable, cmd);
 
 	let buffer = "";
 	java.stdout.on("data", (data) => {

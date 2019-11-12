@@ -2,7 +2,7 @@
 [![Build Status](https://travis-ci.org/dbaumgarten/yodk.svg?branch=master)](https://travis-ci.org/dbaumgarten/yodk)
 
 # What is YOLOL?
-YOLOL is the ingame programming language for the upcoming game starbase.
+[YOLOL](https://wiki.starbasegame.com/index.php/YOLOL) is the ingame programming language for the upcoming game starbase.
 
 # What is the YODK?
 The yodk aims to be a toolkit that helps with the development of YOLOL-Scripts. YOLOL is a pretty limmited language and the lack of common features is really annoying for experienced programmers. The yodk (and in the future especially nolol) will try to mitigate this.

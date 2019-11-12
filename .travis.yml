@@ -1,9 +1,17 @@
+sudo: required
 language: go
 branches:
   - master
-script:
+env:
+  - NODE_VERSION="8.10"
+
+before_install:
+  - nvm install $NODE_VERSION
+install:
   - go get ./...
   - go get github.com/inconshreveable/mousetrap
+  - cd vscode-yolol && npm install && npm install -g vsce && cd ..
+script:
   - go test ./...
 before_deploy:
   - git tag -f latest
@@ -14,13 +22,14 @@ before_deploy:
   - GOOS=windows go build
   - zip yodk-latest-win.zip yodk.exe
   - zip yodk-latest-linux.zip yodk
-
+  - cd vscode-yolol && vsce package && cp *.vsix ../vscode-yolol-latest.vsix && cd ..
 deploy:
   provider: releases
   api-key: $GITHUB_TOKEN
   file: 
     - yodk-latest-win.zip
     - yodk-latest-linux.zip
+    - vscode-yolol-latest.vsix
   skip_cleanup: true
   name: Automated build of master
   body: This release contains the most current version of yodk automatically compiled on every push

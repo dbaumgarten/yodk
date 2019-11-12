@@ -3,5 +3,7 @@
 *.yolol
 *.nolol
 yodk
+yodk.exe
 lslog
 !vscode-yolol/.vscode
+*.vsix
