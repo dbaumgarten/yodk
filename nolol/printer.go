@@ -83,7 +83,7 @@ func (p *Printer) Print(prog *Program) (string, error) {
 			case parser.PreVisit:
 				return "const " + n.Name + " = ", nil
 			case parser.PostVisit:
-				return "\n", nil
+				return "", nil
 			}
 		case *Program:
 			return "", nil
