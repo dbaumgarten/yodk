@@ -12,16 +12,18 @@ import * as vscode from 'vscode';
 
 let client: LanguageClient;
 
-function runYodkCommand(cmd) {
-	const cp = require('child_process')
-
-	let executable = "./bin/yodk"
-
+function getExePath(){
+	let executable = path.join(".","bin","yodk")
 	if (process.platform == "win32") {
 		executable += ".exe"
 	}
+	return executable
+}
 
-	let java = cp.spawn(executable, cmd);
+function runYodkCommand(cmd) {
+	const cp = require('child_process')
+
+	let java = cp.spawn(getExePath(), cmd);
 
 	let buffer = "";
 	java.stdout.on("data", (data) => {
@@ -52,7 +54,7 @@ export function activate(context: ExtensionContext) {
 	context.subscriptions.push(vscode.commands.registerCommand('yodk.optimizeYolol', optimizeCommandHandler));
 
 	// The server is implemented in node
-	let serverModule = path.join('yodk');
+	let serverModule = context.asAbsolutePath(getExePath());
 
 	// If the extension is launched in debug mode then the debug server options are used
 	// Otherwise the run options are used
