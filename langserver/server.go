@@ -94,7 +94,9 @@ func (ls *LangServer) WillSaveWaitUntil(ctx context.Context, params *lsp.WillSav
 	return nil, unsupported()
 }
 func (ls *LangServer) DidSave(ctx context.Context, params *lsp.DidSaveTextDocumentParams) error {
-	return unsupported()
+	// vscode does not care if the server supports this or not
+	// ignore it instead of logging an error
+	return nil
 }
 func (ls *LangServer) DidClose(ctx context.Context, params *lsp.DidCloseTextDocumentParams) error {
 	return unsupported()
