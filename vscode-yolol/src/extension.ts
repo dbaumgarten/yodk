@@ -20,10 +20,10 @@ function getExePath(){
 	return executable
 }
 
-function runYodkCommand(cmd) {
+function runYodkCommand(cmd, context: ExtensionContext) {
 	const cp = require('child_process')
 
-	let java = cp.spawn(getExePath(), cmd);
+	let java = cp.spawn(context.asAbsolutePath(getExePath()), cmd);
 
 	let buffer = "";
 	java.stdout.on("data", (data) => {
@@ -43,11 +43,11 @@ function runYodkCommand(cmd) {
 export function activate(context: ExtensionContext) {
 
 	const compileCommandHandler = () => {
-		runYodkCommand(["compile", vscode.window.activeTextEditor.document.fileName])
+		runYodkCommand(["compile", vscode.window.activeTextEditor.document.fileName],context)
 	};
 
 	const optimizeCommandHandler = () => {
-		runYodkCommand(["optimize", vscode.window.activeTextEditor.document.fileName])
+		runYodkCommand(["optimize", vscode.window.activeTextEditor.document.fileName],context)
 	};
 
 	context.subscriptions.push(vscode.commands.registerCommand('yodk.compileNolol', compileCommandHandler));

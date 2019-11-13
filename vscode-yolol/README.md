@@ -20,10 +20,10 @@ If installed via the marketplace, the extension comes bundled with the necessary
 You can find the latest version (automatically build for every push) [here](https://github.com/dbaumgarten/yodk/releases).
 
 ## From Source / For Devs
-Copy this directory to your vscode extension directory.  
+Clone repository.
+Copy the directory vscode-yolol to your vscode extension directory.  
 Run ```npm install``` in the copied directory.  
-You will also need to have the yodk executable in your path.  
-Will also be released to the vscode extension store in the future.
+Place the yodk executable (or a symlink to it) in the bin folder.
 
 # ATTENTION
 This extension is still work-in-progress, does contain bugs and may break any time.
