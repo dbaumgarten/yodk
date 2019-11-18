@@ -9,7 +9,6 @@ import (
 
 // Parser parses a yolol programm into an AST
 type Parser struct {
-	DebugLog     bool
 	Tokenizer    *Tokenizer
 	CurrentToken *Token
 	NextToken    *Token
@@ -24,6 +23,10 @@ type Parser struct {
 	Comments []*Token
 	// Contains all errors encountered during parsing
 	Errors Errors
+	// If true, return all found errors, not only one per line
+	AllErrors bool
+	// If true, print debug logs
+	DebugLog bool
 }
 
 /*
@@ -102,7 +105,19 @@ func (p *Parser) Advance() *Token {
 }
 
 // Error appends an error to the list of errors encountered during parsing
+// if p.AllErrors is false, only the first error per line is appended to the list of errors
 func (p *Parser) Error(msg string, start Position, end Position) {
+
+	// if not disabled, only log the first error for each line and discard the rest
+	if !p.AllErrors {
+		if len(p.Errors) > 0 {
+			prevError := p.Errors[len(p.Errors)-1]
+			if prevError.StartPosition.Line == start.Line {
+				return
+			}
+		}
+	}
+
 	err := &Error{
 		Message:       msg + ". Found Token: '" + p.CurrentToken.Value + "'(" + p.CurrentToken.Type + ")",
 		StartPosition: start,
