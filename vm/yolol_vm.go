@@ -586,7 +586,10 @@ func (v *YololVM) runFuncCall(d *parser.FuncCall) (*Variable, error) {
 func (v *YololVM) runDeref(d *parser.Dereference) (*Variable, error) {
 	oldval, exists := v.getVariable(d.Variable)
 	if !exists {
-		return nil, RuntimeError{fmt.Errorf("Variable %s used before assignment", d.Variable), d}
+		// uninitialized variables have a default value of 0
+		oldval = &Variable{
+			decimal.Zero,
+		}
 	}
 	var newval Variable
 	if oldval.IsNumber() {

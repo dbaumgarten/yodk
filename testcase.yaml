@@ -1,0 +1,8 @@
+scripts: 
+  - name: fizbuzz.yolol
+    loops: 1
+tests:
+  input:
+    a: 0
+  output:
+    out: fizzbuzz

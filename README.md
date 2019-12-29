@@ -101,24 +101,25 @@ fizzbuzz.nolol:
 const fizz = "fizz"
 const buzz = "buzz"
 const sep = " "
-:out = ""
-number = 0
-while number<=100 do
-    if number%3==0 and number%5==0 then
-        :out+=fizz+buzz+sep
-        goto next
-    end
-    if number%3==0 then
-        :out+=fizz+sep
-        goto next
-    end
-    if number%5==0 then
-        :out+=buzz+sep
-        goto next
-    end
-    :out += number + sep
-    next>
-    number++
+const upto = 100
+
+if :out == 0 then
+	:out = ""
+end
+// main loop
+while number<=upto do
+	if number%3==0 and number%5==0 then
+		:out += fizz+buzz+sep
+		goto next //skip other cases
+	end
+	if number%3==0 then
+		:out+=fizz+sep
+	end
+	if number%5==0 then
+	:out+=buzz+sep
+	end
+	next> 
+	number++ 
 end
 ```
 ```
@@ -127,11 +128,10 @@ yodk compile fizzbuz.nolol
 
 fizzbuzz.yolol:
 ```
-:out="" a=0
-if not (a<=100) then goto 7 end
-if a%3==0 and a%5==0 then :out+="fizzbuzz " goto 6 end
-if a%3==0 then :out+="fizz " goto 6 end
-if a%5==0 then :out+="buzz " goto 6 end :out+=a+" "
+if :out==0 then :out="" end
+if not (a<=100) then goto 6 end
+if a%3==0 and a%5==0 then :out+="fizzbuzz " goto 5 end
+if a%3==0 then :out+="fizz " end if a%5==0 then :out+="buzz " end
 a++ goto 2
 ```
 
