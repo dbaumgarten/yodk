@@ -15,100 +15,136 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var yvm *vm.YololVM
+// index of the current script (the script targeted by commands)
+// used to index into vms, inputProgs and inputFileNames
+var currentScript int
+
+// the coordinater to coordinate the running vms
+var coordinator *vm.Coordinator
 var debugShell *ishell.Shell
-var inputProg string
-var inputFileName string
+
+// source code of the running scripts
+var inputProgs []string
+
+// names of the running scripts
+var inputFileNames []string
+
+// list of vms for the running scripts
+var vms []*vm.YololVM
 
 // debugCmd represents the debug command
 var debugCmd = &cobra.Command{
-	Use:   "debug [file]",
-	Short: "Debug a yolol/nolol program",
-	Long:  `Execute program interactively in debugger`,
+	Use:   "debug [file] [file] [file]",
+	Short: "Debug yolol/nolol programs",
+	Long:  `Execute programs interactively in debugger`,
 	Run: func(cmd *cobra.Command, args []string) {
-		inputFileName = args[0]
-		inputProg = loadInputFile(args[0])
-
-		if !strings.HasSuffix(inputFileName, ".yolol") && !strings.HasSuffix(inputFileName, ".nolol") {
-			fmt.Println("Unknown file-extension for file: ", inputFileName)
-			os.Exit(1)
+		inputFileNames = args
+		inputProgs = make([]string, len(inputFileNames))
+		vms = make([]*vm.YololVM, len(inputFileNames))
+		for i, filename := range inputFileNames {
+			if !strings.HasSuffix(filename, ".yolol") && !strings.HasSuffix(filename, ".nolol") {
+				fmt.Println("Unknown file-extension for file: ", filename)
+				os.Exit(1)
+			}
+			inputProgs[i] = loadInputFile(args[i])
 		}
 
-		debugShell.Println("Loaded and paused programm. Enter 'run' to execute")
+		load()
 		debugShell.Run()
 	},
 	Args: cobra.MinimumNArgs(1),
 }
 
-func run() {
+// create a VM for every script
+func load() {
+	coordinator = vm.NewCoordinator()
 
-	if yvm.Running() {
-		debugShell.Println("VM is already running. Do you want to restart it (y/n)? \n(Hint: you can continue the current execution with 'continue'/c)")
-		for {
-			answer := debugShell.ReadLine()
-			if answer == "n" {
-				return
-			}
-			if answer == "y" {
-				break
-			}
-			if answer == "c" {
-				debugShell.Println("--Resumed--")
-				yvm.Resume()
-				return
-			}
-			debugShell.Println("Valid answers are y, n or c.")
+	for i := 0; i < len(inputFileNames); i++ {
+		inputFileName := inputFileNames[i]
+		inputProg := inputProgs[i]
+		thisVM := vm.NewYololVMCoordinated(coordinator)
+		vms[i] = thisVM
+		thisVM.EnableLoop(true)
+		if i == 0 {
+			thisVM.Pause()
+			currentScript = 0
 		}
-	}
+		thisVM.SetBreakpointHandler(func(x *vm.YololVM) bool {
+			debugShell.Printf("--Hit Breakpoint at %s:%d--\n", inputFileName, x.CurrentSourceLine())
+			return false
+		})
+		thisVM.SetErrorHandler(func(x *vm.YololVM, err error) bool {
+			debugShell.Printf("--A runtime error occured at %s:%d--\n", inputFileName, x.CurrentSourceLine())
+			debugShell.Println(err)
+			debugShell.Println("--Execution paused--")
+			return false
+		})
+		thisVM.SetFinishHandler(func(x *vm.YololVM) {
+			debugShell.Printf("--Program %s finished--\n", inputFileName)
+		})
+		if strings.HasSuffix(inputFileName, ".yolol") {
 
-	if strings.HasSuffix(inputFileName, ".yolol") {
-		debugShell.Println("--Started--")
-		yvm.RunSource(inputProg)
-		return
-	}
-	if strings.HasSuffix(inputFileName, ".nolol") {
-		debugShell.Println("--Started--")
-		converter := nolol.NewConverter()
-		yololcode, err := converter.ConvertFromSource(inputProg)
-		if err != nil {
-			exitOnError(err, "pasrsing nolol code")
+			thisVM.RunSource(inputProg)
+		} else if strings.HasSuffix(inputFileName, ".nolol") {
+			converter := nolol.NewConverter()
+			yololcode, err := converter.ConvertFromSource(inputProg)
+			if err != nil {
+				exitOnError(err, "parsing nolol code")
+			}
+			thisVM.Run(yololcode)
 		}
-		yvm.Run(yololcode)
-		return
+		debugShell.Printf("--Loaded %s--\n", inputFileName)
 	}
+	coordinator.Run()
+	debugShell.Println("Loaded and paused programs. Enter 'c' to resume execution.")
 }
 
+// initialize the shell
 func init() {
 	rootCmd.AddCommand(debugCmd)
 
 	debugShell = ishell.New()
 
-	yvm = vm.NewYololVM()
-	yvm.Pause()
-
-	yvm.SetBreakpointHandler(func(x *vm.YololVM) bool {
-		debugShell.Println("--Hit Breakpoint at line: ", x.CurrentSourceLine(), "--")
-		return false
-	})
-
-	yvm.SetErrorHandler(func(x *vm.YololVM, err error) bool {
-		debugShell.Println("--A runtime error occured--")
-		debugShell.Println(err)
-		debugShell.Println("--Execution paused--")
-		return false
-	})
-
-	yvm.SetFinishHandler(func(x *vm.YololVM) {
-		debugShell.Println("--Program finished--")
-		debugShell.Println("--Enter r to restart--")
-	})
-
 	debugShell.AddCmd(&ishell.Cmd{
-		Name:    "run",
+		Name:    "reset",
 		Aliases: []string{"r"},
-		Help:    "run programm from start",
+		Help:    "reset debugger",
 		Func: func(c *ishell.Context) {
-			run()
+			load()
+		},
+	})
+	debugShell.AddCmd(&ishell.Cmd{
+		Name:    "scripts",
+		Aliases: []string{"p"},
+		Help:    "list scripts",
+		Func: func(c *ishell.Context) {
+			for i, file := range inputFileNames {
+				line := "  "
+				if i == currentScript {
+					line = "> "
+				}
+				line += file
+				debugShell.Println(line)
+			}
+		},
+	})
+	debugShell.AddCmd(&ishell.Cmd{
+		Name:    "choose",
+		Aliases: []string{"p"},
+		Help:    "change currently viewed script",
+		Func: func(c *ishell.Context) {
+			if len(c.Args) != 1 {
+				debugShell.Println("You must enter a script name (run scripts to list them).")
+				return
+			}
+			for i, file := range inputFileNames {
+				if file == c.Args[0] {
+					currentScript = i
+					debugShell.Printf("--Changed to %s--\n", file)
+					return
+				}
+			}
+			debugShell.Printf("--Unknown script %s--", c.Args[0])
 		},
 	})
 	debugShell.AddCmd(&ishell.Cmd{
@@ -116,7 +152,7 @@ func init() {
 		Aliases: []string{"p"},
 		Help:    "pause execution",
 		Func: func(c *ishell.Context) {
-			yvm.Pause()
+			vms[currentScript].Pause()
 			debugShell.Println("--Paused--")
 		},
 	})
@@ -125,7 +161,11 @@ func init() {
 		Aliases: []string{"c"},
 		Help:    "continue paused execution",
 		Func: func(c *ishell.Context) {
-			err := yvm.Resume()
+			if vms[currentScript].State() != vm.StatePaused {
+				debugShell.Println("The current script is not paused.")
+				return
+			}
+			err := vms[currentScript].Resume()
 			if err == nil {
 				debugShell.Println("--Resumed--")
 			} else {
@@ -138,7 +178,7 @@ func init() {
 		Aliases: []string{"s"},
 		Help:    "execute the next line and pause again",
 		Func: func(c *ishell.Context) {
-			if yvm.Step() == nil {
+			if vms[currentScript].Step() == nil {
 				debugShell.Println("--Line executed. Paused again--")
 			}
 		},
@@ -157,7 +197,7 @@ func init() {
 				debugShell.Println("Error parsing line-number: ", err)
 				return
 			}
-			yvm.AddBreakpoint(line)
+			vms[currentScript].AddBreakpoint(line)
 			debugShell.Println("--Breakpoint added--")
 		},
 	})
@@ -175,7 +215,7 @@ func init() {
 				debugShell.Println("Error parsing line-number: ", err)
 				return
 			}
-			yvm.RemoveBreakpoint(line)
+			vms[currentScript].RemoveBreakpoint(line)
 			debugShell.Println("--Breakpoint removed--")
 		},
 	})
@@ -185,7 +225,7 @@ func init() {
 		Help:    "print all current variables",
 		Func: func(c *ishell.Context) {
 			debugShell.Println("--Variables--")
-			vars := sortVariables(yvm.GetVariables())
+			vars := sortVariables(vms[currentScript].GetVariables())
 			for _, variable := range vars {
 				if variable.val.IsString() {
 					debugShell.Println(variable.name, "'"+variable.val.String()+"'")
@@ -204,7 +244,7 @@ func init() {
 			c.ShowPrompt(false)
 			defer c.ShowPrompt(true)
 			statestr := ""
-			switch yvm.State() {
+			switch vms[currentScript].State() {
 			case vm.StateIdle:
 				statestr = "READY"
 			case vm.StateRunning:
@@ -226,9 +266,9 @@ func init() {
 		Aliases: []string{"l"},
 		Help:    "show programm source code",
 		Func: func(c *ishell.Context) {
-			current := yvm.CurrentSourceLine()
-			bps := yvm.ListBreakpoints()
-			progLines := strings.Split(inputProg, "\n")
+			current := vms[currentScript].CurrentSourceLine()
+			bps := vms[currentScript].ListBreakpoints()
+			progLines := strings.Split(inputProgs[currentScript], "\n")
 			debugShell.Println("--Programm--")
 			pfx := ""
 			for i, line := range progLines {
@@ -252,12 +292,12 @@ func init() {
 		Aliases: []string{"d"},
 		Help:    "show yolol code for nolol source",
 		Func: func(c *ishell.Context) {
-			if !strings.HasSuffix(inputFileName, ".nolol") {
+			if !strings.HasSuffix(inputFileNames[currentScript], ".nolol") {
 				debugShell.Print("Disas is only available when debugging nolol code")
 			}
-			current := yvm.CurrentAstLine()
+			current := vms[currentScript].CurrentAstLine()
 			conv := nolol.NewConverter()
-			ast, _ := conv.ConvertFromSource(inputProg)
+			ast, _ := conv.ConvertFromSource(inputProgs[currentScript])
 			yolol, _ := (&parser.Printer{}).Print(ast)
 			progLines := strings.Split(yolol, "\n")
 			debugShell.Println("--Programm--")

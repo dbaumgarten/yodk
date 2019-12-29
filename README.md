@@ -26,7 +26,7 @@ Run YOLOL-Code, set breakpoints, step through execution and inspect variables.
 
 ```
 #yodk debug fizbuzz.yolol 
-Loaded and paused programm. Enter 'run' to execute
+Loaded and paused programm. Enter 'c' to execute
 >>> l
 --Programm--
 >   1 :out="" a=0

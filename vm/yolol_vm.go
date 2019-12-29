@@ -75,10 +75,17 @@ type YololVM struct {
 	waitCondition *sync.Cond
 	// true while there is a gorouting executing for this vm
 	running bool
+	// the coordinator to use for coordinating execution with other VMs
+	coordinator *Coordinator
 }
 
-// NewYololVM creates a new VM
+// NewYololVM creates a new standalone VM
 func NewYololVM() *YololVM {
+	return NewYololVMCoordinated(nil)
+}
+
+// NewYololVMCoordinated creates a new VM that is coordinated with other VMs using the given coordinator
+func NewYololVMCoordinated(coordinator *Coordinator) *YololVM {
 	decimal.DivisionPrecision = 3
 	vm := &YololVM{
 		variables:         make(map[string]*Variable),
@@ -89,8 +96,12 @@ func NewYololVM() *YololVM {
 		currentAstLine:    1,
 		currentSourceLine: 1,
 		skipBp:            -1,
+		coordinator:       coordinator,
 	}
 	vm.waitCondition = sync.NewCond(vm.lock)
+	if coordinator != nil {
+		coordinator.registerVM(vm)
+	}
 	return vm
 }
 
@@ -236,19 +247,6 @@ func (v *YololVM) ListBreakpoints() []int {
 	return li
 }
 
-// GetVariable gets the current state of a variable
-func (v *YololVM) GetVariable(name string) (*Variable, bool) {
-	v.lock.Lock()
-	defer v.lock.Unlock()
-	val, exists := v.variables[name]
-	if exists {
-		return &Variable{
-			Value: val.Value,
-		}, true
-	}
-	return nil, false
-}
-
 // GetVariables gets the current state of all variables
 func (v *YololVM) GetVariables() map[string]Variable {
 	v.lock.Lock()
@@ -259,17 +257,58 @@ func (v *YololVM) GetVariables() map[string]Variable {
 			Value: value.Value,
 		}
 	}
+	if v.coordinator != nil {
+		globals := v.coordinator.getVariables()
+		for key, value := range globals {
+			varlist[key] = Variable{
+				Value: value.Value,
+			}
+		}
+	}
 	return varlist
+}
+
+// GetVariable gets the current state of a variable
+func (v *YololVM) GetVariable(name string) (*Variable, bool) {
+	v.lock.Lock()
+	defer v.lock.Unlock()
+	val, exists := v.getVariable(name)
+	if exists {
+		return &Variable{
+			Value: val.Value,
+		}, true
+	}
+	return nil, false
 }
 
 // SetVariable sets the current state of a variable
 func (v *YololVM) SetVariable(name string, value interface{}) error {
 	v.lock.Lock()
 	defer v.lock.Unlock()
-	val := Variable{
+	// do return only a copy of the variable
+	val := &Variable{
 		value,
 	}
-	v.variables[name] = &val
+	return v.setVariable(name, val)
+}
+
+// getVariable gets the current state of a variable.
+// Does not use the lock. ONLY USE WHEN LOCK IS ALREADY HELD
+func (v *YololVM) getVariable(name string) (*Variable, bool) {
+	if v.coordinator != nil && strings.HasPrefix(name, ":") {
+		return v.coordinator.getVariable(name)
+	}
+	val, exists := v.variables[name]
+	return val, exists
+}
+
+// setVariable sets the current state of a variable
+// Does not use the lock. ONLY USE WHEN LOCK IS ALREADY HELD
+func (v *YololVM) setVariable(name string, value *Variable) error {
+	if v.coordinator != nil && strings.HasPrefix(name, ":") {
+		return v.coordinator.setVariable(name, value)
+	}
+	v.variables[name] = value
 	return nil
 }
 
@@ -307,7 +346,8 @@ func (v *YololVM) Run(prog *parser.Program) {
 	v.currentSourceLine = 1
 	v.program = prog
 	v.skipBp = -1
-	v.state = StateRunning
+	// do not reset to running so we can start paused
+	//v.state = StateRunning
 	v.variables = make(map[string]*Variable)
 	v.lock.Unlock()
 	go v.run()
@@ -402,6 +442,17 @@ func (v *YololVM) run() {
 }
 
 func (v *YololVM) runLine(line *parser.Line) error {
+
+	// wait until the coordinator allows this VM to run a line
+	if v.coordinator != nil {
+		// give up the lock while waiting for our turn to execute a line
+		// to allow the retrieval of variables while waiting
+		v.lock.Unlock()
+		v.coordinator.waitForTurn(v)
+		v.lock.Lock()
+		defer v.coordinator.finishTurn()
+	}
+
 	for _, stmt := range line.Statements {
 		statementLine := stmt.Start().Line
 		v.currentSourceLine = statementLine
@@ -497,8 +548,7 @@ func (v *YololVM) runAssignment(as *parser.Assignment) error {
 	if err != nil {
 		return err
 	}
-
-	v.variables[as.Variable] = newValue
+	v.setVariable(as.Variable, newValue)
 	return nil
 }
 
@@ -534,7 +584,7 @@ func (v *YololVM) runFuncCall(d *parser.FuncCall) (*Variable, error) {
 }
 
 func (v *YololVM) runDeref(d *parser.Dereference) (*Variable, error) {
-	oldval, exists := v.variables[d.Variable]
+	oldval, exists := v.getVariable(d.Variable)
 	if !exists {
 		return nil, RuntimeError{fmt.Errorf("Variable %s used before assignment", d.Variable), d}
 	}
@@ -552,7 +602,7 @@ func (v *YololVM) runDeref(d *parser.Dereference) (*Variable, error) {
 		default:
 			return nil, RuntimeError{fmt.Errorf("Unknown operator '%s'", d.Operator), d}
 		}
-		v.variables[d.Variable] = &newval
+		v.setVariable(d.Variable, &newval)
 	}
 	if oldval.IsString() {
 		switch d.Operator {
@@ -570,7 +620,7 @@ func (v *YololVM) runDeref(d *parser.Dereference) (*Variable, error) {
 		default:
 			return nil, RuntimeError{fmt.Errorf("Unknown operator '%s'", d.Operator), d}
 		}
-		v.variables[d.Variable] = &newval
+		v.setVariable(d.Variable, &newval)
 	}
 	if d.PrePost == "Pre" {
 		return &newval, nil
