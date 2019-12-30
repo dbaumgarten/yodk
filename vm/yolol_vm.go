@@ -51,8 +51,12 @@ var errKillVM = fmt.Errorf("Kill this vm")
 type YololVM struct {
 	// the current variables of the programm
 	variables map[string]*Variable
-	// if true, restart programm after executing line 20
-	loop              bool
+	// amount of loops to perform for the programm
+	// 0 means run forever, >0 means execute x times
+	iterations int
+	// if != 0 and in the current iteration more the x lines are run, terminate VM
+	maxExecutedLines int
+
 	breakpointHandler BreakpointFunc
 	errorHandler      ErrorHandlerFunc
 	finishHandler     FinishHandlerFunc
@@ -77,6 +81,10 @@ type YololVM struct {
 	running bool
 	// the coordinator to use for coordinating execution with other VMs
 	coordinator *Coordinator
+	// number of performed iterations since run()
+	executedIterations int
+	// number of lines executed in the current run
+	executedLines int
 }
 
 // NewYololVM creates a new standalone VM
@@ -90,22 +98,35 @@ func NewYololVMCoordinated(coordinator *Coordinator) *YololVM {
 	vm := &YololVM{
 		variables:         make(map[string]*Variable),
 		state:             StateIdle,
-		loop:              false,
 		breakpoints:       make(map[int]bool),
 		lock:              &sync.Mutex{},
 		currentAstLine:    1,
 		currentSourceLine: 1,
 		skipBp:            -1,
 		coordinator:       coordinator,
+		maxExecutedLines:  0,
+		iterations:        1,
 	}
 	vm.waitCondition = sync.NewCond(vm.lock)
-	if coordinator != nil {
-		coordinator.registerVM(vm)
-	}
 	return vm
 }
 
 // Getters and Setters ---------------------------------
+
+// SetIterations sets the number of iterations to perform for the script
+// 1 = run only once, <=0 run forever, >0 repeat x times
+// default is 1
+func (v *YololVM) SetIterations(reps int) {
+	v.iterations = reps
+}
+
+// SetMaxExecutedLines sets the maximum number of lines to run
+// if the amount is reached the VM terminates
+// Can be used to prevent blocking by endless loops
+// <= 0 disables this. Default is 0
+func (v *YololVM) SetMaxExecutedLines(lines int) {
+	v.maxExecutedLines = lines
+}
 
 // AddBreakpoint adds a breakpoint at the line. Breakpoint-lines always refer to the position recorded in the
 // ast nodes, not the position of the Line in the Line-Slice of parser.Program.
@@ -229,13 +250,6 @@ func (v *YololVM) SetFinishHandler(f FinishHandlerFunc) {
 	v.finishHandler = f
 }
 
-// EnableLoop wheter or not to loop from line 20 back to 1
-func (v *YololVM) EnableLoop(b bool) {
-	v.lock.Lock()
-	defer v.lock.Unlock()
-	v.loop = b
-}
-
 // ListBreakpoints returns the list of active breakpoints
 func (v *YololVM) ListBreakpoints() []int {
 	v.lock.Lock()
@@ -258,7 +272,7 @@ func (v *YololVM) GetVariables() map[string]Variable {
 		}
 	}
 	if v.coordinator != nil {
-		globals := v.coordinator.getVariables()
+		globals := v.coordinator.GetVariables()
 		for key, value := range globals {
 			varlist[key] = Variable{
 				Value: value.Value,
@@ -296,7 +310,7 @@ func (v *YololVM) SetVariable(name string, value interface{}) error {
 // Does not use the lock. ONLY USE WHEN LOCK IS ALREADY HELD
 func (v *YololVM) getVariable(name string) (*Variable, bool) {
 	if v.coordinator != nil && strings.HasPrefix(name, ":") {
-		return v.coordinator.getVariable(name)
+		return v.coordinator.GetVariable(name)
 	}
 	val, exists := v.variables[name]
 	return val, exists
@@ -306,7 +320,7 @@ func (v *YololVM) getVariable(name string) (*Variable, bool) {
 // Does not use the lock. ONLY USE WHEN LOCK IS ALREADY HELD
 func (v *YololVM) setVariable(name string, value *Variable) error {
 	if v.coordinator != nil && strings.HasPrefix(name, ":") {
-		return v.coordinator.setVariable(name, value)
+		return v.coordinator.SetVariable(name, value)
 	}
 	v.variables[name] = value
 	return nil
@@ -346,9 +360,13 @@ func (v *YololVM) Run(prog *parser.Program) {
 	v.currentSourceLine = 1
 	v.program = prog
 	v.skipBp = -1
-	// do not reset to running so we can start paused
-	//v.state = StateRunning
+	v.executedIterations = 0
+	v.executedLines = 0
+	v.state = StateRunning
 	v.variables = make(map[string]*Variable)
+	if v.coordinator != nil {
+		v.coordinator.registerVM(v)
+	}
 	v.lock.Unlock()
 	go v.run()
 }
@@ -388,6 +406,9 @@ func (v *YololVM) run() {
 		}
 		v.state = StateDone
 		v.running = false
+		if v.coordinator != nil {
+			v.coordinator.unRegisterVM(v)
+		}
 		v.waitCondition.Signal()
 	}()
 
@@ -411,7 +432,8 @@ func (v *YololVM) run() {
 
 		if v.currentAstLine > len(v.program.Lines) {
 			v.currentAstLine = 1
-			if v.loop {
+			v.executedIterations++
+			if v.iterations == 0 || v.iterations < v.executedIterations {
 				continue
 			} else {
 				if v.finishHandler != nil {
@@ -427,15 +449,26 @@ func (v *YololVM) run() {
 		line := v.program.Lines[v.currentAstLine-1]
 		err := v.runLine(line)
 		if err != nil {
-			cont := v.loop
 			if v.errorHandler != nil {
 				v.lock.Unlock()
-				cont = v.errorHandler(v, err)
+				cont := v.errorHandler(v, err)
+				v.lock.Lock()
+				if !cont {
+					v.wait()
+				}
+			} else {
+				// no error handler. Kill VM.
+				panic(errKillVM)
+			}
+		}
+		v.executedLines++
+		if v.maxExecutedLines > 0 && v.executedLines > v.maxExecutedLines {
+			if v.finishHandler != nil {
+				v.lock.Unlock()
+				v.finishHandler(v)
 				v.lock.Lock()
 			}
-			if !cont {
-				v.wait()
-			}
+			panic(errKillVM)
 		}
 		v.currentAstLine++
 	}

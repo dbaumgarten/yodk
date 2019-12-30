@@ -22,10 +22,10 @@ Note: It is helpfull to add the yodk-binary to your path.
 # Features
 
 ## Debugger
-Run YOLOL-Code, set breakpoints, step through execution and inspect variables.
+Run YOLOL-Code, set breakpoints, step through execution and inspect variables. Can run/debug multiple scripts in parallel.
 
 ```
-#yodk debug fizbuzz.yolol 
+# yodk debug fizbuzz.yolol 
 Loaded and paused programm. Enter 'c' to execute
 >>> l
 --Programm--
@@ -60,7 +60,7 @@ anotherVar = (2+3)^2 * 5
 :output = superVerboseVariable+anotherVar
 ```
 ```
-#yodk optimize input.yolol
+# yodk optimize input.yolol
 ```
 input-opt.yolol
 ```
@@ -78,12 +78,49 @@ x = 3
 if x == 4 then y=5
 ```
 ```
-#yodk verify unopt-opt.yolol 
+# yodk verify unopt-opt.yolol 
 Error when parsing file: Parser error at Line: 2, Coloumn: 1 (up to Line: 2, Coloumn: 22): Expected 'end' after if statement. Found Token: ''(Newline)
 ```
 
 ## Formatter
 Automatically format your yolol and nolol-code via cli or directly in your IDE.
+
+## Testing of YOLOL-Code
+Run custom testcases for your yolol scripts. Define testcases as yaml files (as seen below) and run them against your scripts.  
+testcase.yaml:
+```
+scripts: 
+  # list of scripts to run
+  - name: fizbuzz.yolol
+    # optional. Number of iterations for this script. Default: 1
+    iterations: 1
+    # optional. Number of lines to execute maximally for this script. Default: 0 = infinite
+    maxlines: 10000
+cases:
+  # list of testcases
+  - name: TestOutput
+    # global variables to set before running. ':' can be omitted
+    inputs:
+      number: 0
+    # expected value for global variables after running
+    outputs:
+      out: "fizzbuzz fizz buzz fizz fizz buzz fizz fizzbuzz fizz buzz fizz fizz buzz fizz fizzbuzz fizz buzz fizz fizz buzz fizz fizzbuzz fizz buzz fizz fizz buzz fizz fizzbuzz fizz buzz fizz fizz buzz fizz fizzbuzz fizz buzz fizz fizz buzz fizz fizzbuzz fizz buzz fizz fizz buzz "
+      number: 101
+  - name: TestOutput2
+    inputs:
+      number: 99
+    outputs:
+       out: "fizz buzz "
+```
+```
+# yodk test testcase.yaml 
+Running file: testcase.yaml
+  Running case: TestOutput
+  Running case: TestOutput2
+Tests OK
+
+```
+
 
 ## vscode Extension
 Extension for visual studio code. Adds syntax highlighting, validation, formatting and commands for compiling and optimizing code. [More information](vscode-yolol/README.md)

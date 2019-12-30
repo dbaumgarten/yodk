@@ -1,6 +1,10 @@
 package vm
 
-import "github.com/shopspring/decimal"
+import (
+	"fmt"
+
+	"github.com/shopspring/decimal"
+)
 
 // Variable represents a yolol-variable during the execution
 type Variable struct {
@@ -37,6 +41,9 @@ func (v *Variable) String() string {
 func (v *Variable) Itoa() string {
 	if val, isNum := v.Value.(decimal.Decimal); isNum {
 		return val.String()
+	}
+	if val, isInt := v.Value.(int); isInt {
+		return fmt.Sprint(val)
 	}
 	return v.Value.(string)
 }

@@ -57,6 +57,7 @@ var debugCmd = &cobra.Command{
 
 // create a VM for every script
 func load() {
+	currentScript = 0
 	coordinator = vm.NewCoordinator()
 
 	for i := 0; i < len(inputFileNames); i++ {
@@ -64,11 +65,9 @@ func load() {
 		inputProg := inputProgs[i]
 		thisVM := vm.NewYololVMCoordinated(coordinator)
 		vms[i] = thisVM
-		thisVM.EnableLoop(true)
-		if i == 0 {
-			thisVM.Pause()
-			currentScript = 0
-		}
+		thisVM.SetIterations(0)
+		currentScript = 0
+
 		thisVM.SetBreakpointHandler(func(x *vm.YololVM) bool {
 			debugShell.Printf("--Hit Breakpoint at %s:%d--\n", inputFileName, x.CurrentSourceLine())
 			return false
@@ -95,7 +94,6 @@ func load() {
 		}
 		debugShell.Printf("--Loaded %s--\n", inputFileName)
 	}
-	coordinator.Run()
 	debugShell.Println("Loaded and paused programs. Enter 'c' to resume execution.")
 }
 
@@ -110,12 +108,13 @@ func init() {
 		Aliases: []string{"r"},
 		Help:    "reset debugger",
 		Func: func(c *ishell.Context) {
+			coordinator.Terminate()
 			load()
 		},
 	})
 	debugShell.AddCmd(&ishell.Cmd{
 		Name:    "scripts",
-		Aliases: []string{"p"},
+		Aliases: []string{"ll"},
 		Help:    "list scripts",
 		Func: func(c *ishell.Context) {
 			for i, file := range inputFileNames {
@@ -130,7 +129,7 @@ func init() {
 	})
 	debugShell.AddCmd(&ishell.Cmd{
 		Name:    "choose",
-		Aliases: []string{"p"},
+		Aliases: []string{"cd"},
 		Help:    "change currently viewed script",
 		Func: func(c *ishell.Context) {
 			if len(c.Args) != 1 {
@@ -161,6 +160,10 @@ func init() {
 		Aliases: []string{"c"},
 		Help:    "continue paused execution",
 		Func: func(c *ishell.Context) {
+			if !coordinator.IsRunning() {
+				coordinator.Run()
+				return
+			}
 			if vms[currentScript].State() != vm.StatePaused {
 				debugShell.Println("The current script is not paused.")
 				return
