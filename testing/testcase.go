@@ -30,6 +30,8 @@ type Script struct {
 	Iterations int
 	// Maximum number of lines to run from the script (0=infinite)
 	MaxLines int
+	// the content of the script. If empty, it is loaded from disk at run-time
+	Content string
 }
 
 // Case defines inputs and expected outputs for a run
@@ -63,6 +65,7 @@ func Parse(file []byte, absolutePath string) (Test, error) {
 
 // RunTest runs a the given test
 // if caseCallback is not nill it is called once before execution of every case
+// if a scripts content field is empty, it is loaded from disk
 func RunTest(t Test, caseCallback func(c Case)) []error {
 
 	fails := make([]error, 0)
@@ -101,24 +104,31 @@ func RunTest(t Test, caseCallback func(c Case)) []error {
 			v.SetErrorHandler(errHandler)
 			vms = append(vms, v)
 			file := path.Join(path.Dir(t.AbsolutePath), script.Name)
-			f, err := ioutil.ReadFile(file)
-			if err != nil {
-				fails = append(fails, err)
-				return fails
+			var scriptContent string
+			if script.Content == "" {
+				f, err := ioutil.ReadFile(file)
+				if err != nil {
+					fails = append(fails, err)
+					return fails
+				}
+				scriptContent = string(f)
+			} else {
+				scriptContent = script.Content
 			}
+
 			v.SetIterations(script.Iterations)
 			v.SetMaxExecutedLines(script.MaxLines)
 
 			if strings.HasSuffix(script.Name, ".nolol") {
 				conv := nolol.NewConverter()
-				prog, err := conv.ConvertFromSource(string(f))
+				prog, err := conv.ConvertFromSource(string(scriptContent))
 				if err != nil {
 					fails = append(fails, err)
 					return fails
 				}
 				v.Run(prog)
 			} else {
-				v.RunSource(string(f))
+				v.RunSource(string(scriptContent))
 			}
 		}
 
