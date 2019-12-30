@@ -7,6 +7,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/dbaumgarten/yodk/nolol"
+
 	"github.com/shopspring/decimal"
 	yaml "gopkg.in/yaml.v2"
 
@@ -106,7 +108,18 @@ func RunTest(t Test, caseCallback func(c Case)) []error {
 			}
 			v.SetIterations(script.Iterations)
 			v.SetMaxExecutedLines(script.MaxLines)
-			v.RunSource(string(f))
+
+			if strings.HasSuffix(script.Name, ".nolol") {
+				conv := nolol.NewConverter()
+				prog, err := conv.ConvertFromSource(string(f))
+				if err != nil {
+					fails = append(fails, err)
+					return fails
+				}
+				v.Run(prog)
+			} else {
+				v.RunSource(string(f))
+			}
 		}
 
 		coord.Run()
