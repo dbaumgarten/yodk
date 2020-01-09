@@ -35,7 +35,7 @@ var testCmd = &cobra.Command{
 			test, err := testing.Parse([]byte(file), absolutePath)
 			exitOnError(err, "loading test case")
 			fmt.Println("Running file: " + arg)
-			fails := testing.RunTest(test, func(c testing.Case) {
+			fails := test.Run(func(c testing.Case) {
 				fmt.Println("  Running case: " + c.Name)
 			})
 			if len(fails) == 0 {

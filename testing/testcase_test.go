@@ -36,7 +36,7 @@ if :number%5==0 then :out+="buzz " end
 		t.Error(err)
 	}
 	test.Scripts[0].Content = script
-	fails := thistesting.RunTest(test, nil)
+	fails := test.Run(nil)
 	if len(fails) > 0 {
 		t.Log("Testcase had errors but should not")
 		for _, f := range fails {
@@ -46,7 +46,7 @@ if :number%5==0 then :out+="buzz " end
 	}
 
 	test.Cases[0].Outputs["number"] = 1337
-	fails = thistesting.RunTest(test, nil)
+	fails = test.Run(nil)
 	if len(fails) != 1 {
 		t.Fatalf("Testcase should have 1 error, but had: %d", len(fails))
 	}
