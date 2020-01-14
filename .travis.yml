@@ -28,6 +28,7 @@ deploy:
     on:
         tags: true
   - provider: script
-    script: vsce publish -p ${VSCODE_MARKETPLACE_TOKEN} $(git describe --tags | tr -d v)
+    script: cd vscode-yolol && vsce publish -p ${VSCODE_MARKETPLACE_TOKEN} $(echo ${TRAVIS_TAG} | tr -d v)
+    skip_cleanup: true
     on:
       tags: true

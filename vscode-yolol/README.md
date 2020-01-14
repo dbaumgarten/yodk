@@ -14,10 +14,9 @@ Adds support for [YOLOL](https://wiki.starbasegame.com/index.php/YOLOL) to vscod
 # Installation
 
 This extension is available from the [vscode marketplace](https://marketplace.visualstudio.com/items?itemName=dbaumgarten.vscode-yolol).  
-If installed via the marketplace, the extension comes bundled with the necessary yodk executables.
 
-## Latest
-You can find the latest version (automatically build for every push) [here](https://github.com/dbaumgarten/yodk/releases).
+## Manual install
+You can find all versions of the extension for manual install [here](https://github.com/dbaumgarten/yodk/releases).
 
 ## From Source / For Devs
 Clone repository.

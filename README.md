@@ -179,7 +179,6 @@ a++ goto 2
 ```
 
 # Upcoming features
-- Automated testing: Define test-cases for your yolol code
 - Implement debug adapter protocoll to enable debugging with vscode
 
 # Compatibility guarantees
