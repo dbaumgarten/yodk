@@ -3,7 +3,9 @@ package nolol
 import (
 	"fmt"
 
+	"github.com/dbaumgarten/yodk/pkg/nolol/nast"
 	"github.com/dbaumgarten/yodk/pkg/parser"
+	"github.com/dbaumgarten/yodk/pkg/parser/ast"
 )
 
 // Printer can generate the nolol-code corresponding to a nolol ast
@@ -20,7 +22,7 @@ func NewPrinter() *Printer {
 }
 
 // Print returns the nolol-code for the given ast
-func (p *Printer) Print(prog *Program) (string, error) {
+func (p *Printer) Print(prog *nast.Program) (string, error) {
 	indentLevel := 0
 
 	indentation := func(amount int) string {
@@ -31,45 +33,45 @@ func (p *Printer) Print(prog *Program) (string, error) {
 		return ind
 	}
 
-	p.yololPrinter.UnknownHandlerFunc = func(node parser.Node, visitType int) (string, error) {
+	p.yololPrinter.UnknownHandlerFunc = func(node ast.Node, visitType int) (string, error) {
 		switch n := node.(type) {
-		case *GoToLabelStatement:
-			if visitType == parser.SingleVisit {
+		case *nast.GoToLabelStatement:
+			if visitType == ast.SingleVisit {
 				return "goto " + n.Label, nil
 			}
 			return "", nil
 
-		case *MultilineIf:
+		case *nast.MultilineIf:
 			switch visitType {
-			case parser.PreVisit:
+			case ast.PreVisit:
 				return indentation(indentLevel) + "if ", nil
-			case parser.InterVisit1:
+			case ast.InterVisit1:
 				indentLevel++
 				return " then\n", nil
-			case parser.InterVisit2:
+			case ast.InterVisit2:
 				return indentation(indentLevel-1) + "else\n", nil
-			case parser.PostVisit:
+			case ast.PostVisit:
 				indentLevel--
 				return indentation(indentLevel) + "end\n", nil
 			default:
 				return "", nil
 			}
-		case *WhileLoop:
+		case *nast.WhileLoop:
 			switch visitType {
-			case parser.PreVisit:
+			case ast.PreVisit:
 				return indentation(indentLevel) + "while ", nil
-			case parser.InterVisit1:
+			case ast.InterVisit1:
 				indentLevel++
 				return " do\n", nil
-			case parser.PostVisit:
+			case ast.PostVisit:
 				indentLevel--
 				return indentation(indentLevel) + "end\n", nil
 			default:
 				return "", nil
 			}
-		case *StatementLine:
+		case *nast.StatementLine:
 			switch visitType {
-			case parser.PreVisit:
+			case ast.PreVisit:
 				out := indentation(indentLevel)
 				if n.Label != "" {
 					out += n.Label + "> "
@@ -78,14 +80,14 @@ func (p *Printer) Print(prog *Program) (string, error) {
 			default:
 				return "", nil
 			}
-		case *ConstDeclaration:
+		case *nast.ConstDeclaration:
 			switch visitType {
-			case parser.PreVisit:
+			case ast.PreVisit:
 				return "const " + n.Name + " = ", nil
-			case parser.PostVisit:
+			case ast.PostVisit:
 				return "", nil
 			}
-		case *Program:
+		case *nast.Program:
 			return "", nil
 		}
 		return "", fmt.Errorf("Unknown node-type: %T", node)

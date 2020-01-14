@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	"github.com/dbaumgarten/yodk/pkg/parser/ast"
 )
 
 // Printer generates yolol-code from an AST
@@ -11,7 +13,7 @@ type Printer struct {
 	// This function is called whenever an unknown node-type is encountered.
 	// It can be used to add support for additional types to the generator
 	// returns the yolol-code for the giben node or an error
-	UnknownHandlerFunc func(node Node, visitType int) (string, error)
+	UnknownHandlerFunc func(node ast.Node, visitType int) (string, error)
 }
 
 var operatorPriority = map[string]int{
@@ -32,16 +34,16 @@ var operatorPriority = map[string]int{
 }
 
 // Print returns the yolol-code the ast-node and it's children represent
-func (y *Printer) Print(prog Node) (string, error) {
+func (y *Printer) Print(prog ast.Node) (string, error) {
 	return y.PrintCommented(prog, nil)
 }
 
 // PrintCommented returns the yolol-code the ast-node and it's children represent
 // If you are not printing a parser.Program, you can use this to enable printing of comments for ither node-types
-func (y *Printer) PrintCommented(prog Node, commentList []*Token) (string, error) {
+func (y *Printer) PrintCommented(prog ast.Node, commentList []*ast.Token) (string, error) {
 	commentIndex := 0
 	output := ""
-	err := prog.Accept(VisitorFunc(func(node Node, visitType int) error {
+	err := prog.Accept(ast.VisitorFunc(func(node ast.Node, visitType int) error {
 		// add the original comments to the output
 		if commentList != nil && len(commentList) > commentIndex {
 			if commentList[commentIndex].Position.Before(node.Start()) {
@@ -50,11 +52,11 @@ func (y *Printer) PrintCommented(prog Node, commentList []*Token) (string, error
 			}
 		}
 		switch n := node.(type) {
-		case *Program:
+		case *ast.Program:
 			commentList = n.Comments
 			break
-		case *Line:
-			if visitType == PostVisit {
+		case *ast.Line:
+			if visitType == ast.PostVisit {
 				if commentList != nil && len(commentList) > commentIndex && commentList[commentIndex].Position.Line == n.End().Line {
 					output += commentList[commentIndex].Value
 					commentIndex++
@@ -65,35 +67,35 @@ func (y *Printer) PrintCommented(prog Node, commentList []*Token) (string, error
 				output += " "
 			}
 			break
-		case *Assignment:
-			if visitType == PreVisit {
+		case *ast.Assignment:
+			if visitType == ast.PreVisit {
 				output += n.Variable + n.Operator
 			}
 			break
-		case *IfStatement:
+		case *ast.IfStatement:
 			output += y.printIf(visitType)
 			break
-		case *GoToStatement:
+		case *ast.GoToStatement:
 			output += "goto " + strconv.Itoa(n.Line)
 			break
-		case *Dereference:
+		case *ast.Dereference:
 			output += y.printDeref(n)
 			break
-		case *StringConstant:
+		case *ast.StringConstant:
 			output += "\"" + n.Value + "\""
 			break
-		case *NumberConstant:
+		case *ast.NumberConstant:
 			if strings.HasPrefix(n.Value, "-") {
 				output += " "
 			}
 			output += fmt.Sprintf(n.Value)
 			break
-		case *BinaryOperation:
+		case *ast.BinaryOperation:
 			output += y.printBinaryOperation(n, visitType)
 			break
-		case *UnaryOperation:
-			_, childBinary := n.Exp.(*BinaryOperation)
-			if visitType == PreVisit {
+		case *ast.UnaryOperation:
+			_, childBinary := n.Exp.(*ast.BinaryOperation)
+			if visitType == ast.PreVisit {
 				op := n.Operator
 				if op == "not" {
 					op = " " + op + " "
@@ -106,14 +108,14 @@ func (y *Printer) PrintCommented(prog Node, commentList []*Token) (string, error
 					output += "("
 				}
 			}
-			if visitType == PostVisit {
+			if visitType == ast.PostVisit {
 				if childBinary {
 					output += ")"
 				}
 			}
 			break
-		case *FuncCall:
-			if visitType == PreVisit {
+		case *ast.FuncCall:
+			if visitType == ast.PreVisit {
 				output += n.Function + "("
 			} else {
 				output += ")"
@@ -139,19 +141,19 @@ func (y *Printer) PrintCommented(prog Node, commentList []*Token) (string, error
 	return strings.Replace(output, "  ", " ", -1), nil
 }
 
-func (y *Printer) printBinaryOperation(o *BinaryOperation, visitType int) string {
+func (y *Printer) printBinaryOperation(o *ast.BinaryOperation, visitType int) string {
 	lPrio := priorityForExpression(o.Exp1)
 	rPrio := priorityForExpression(o.Exp2)
-	_, rBinary := o.Exp2.(*BinaryOperation)
+	_, rBinary := o.Exp2.(*ast.BinaryOperation)
 	myPrio := priorityForExpression(o)
 	output := ""
 	switch visitType {
-	case PreVisit:
+	case ast.PreVisit:
 		if lPrio < myPrio {
 			output += "("
 		}
 		break
-	case InterVisit1:
+	case ast.InterVisit1:
 		if lPrio < myPrio {
 			output += ")"
 		}
@@ -164,7 +166,7 @@ func (y *Printer) printBinaryOperation(o *BinaryOperation, visitType int) string
 			output += "("
 		}
 		break
-	case PostVisit:
+	case ast.PostVisit:
 		if rBinary && rPrio <= myPrio {
 			output += ")"
 		}
@@ -173,9 +175,9 @@ func (y *Printer) printBinaryOperation(o *BinaryOperation, visitType int) string
 	return output
 }
 
-func priorityForExpression(e Expression) int {
+func priorityForExpression(e ast.Expression) int {
 	switch ex := e.(type) {
-	case *BinaryOperation:
+	case *ast.BinaryOperation:
 		return operatorPriority[ex.Operator]
 	default:
 		return 10
@@ -185,20 +187,20 @@ func priorityForExpression(e Expression) int {
 func (y *Printer) printIf(visitType int) string {
 
 	switch visitType {
-	case PreVisit:
+	case ast.PreVisit:
 		return "if "
-	case InterVisit1:
+	case ast.InterVisit1:
 		return " then "
-	case InterVisit2:
+	case ast.InterVisit2:
 		return " else "
-	case PostVisit:
+	case ast.PostVisit:
 		return " end"
 	default:
 		return " "
 	}
 }
 
-func (y *Printer) printDeref(d *Dereference) string {
+func (y *Printer) printDeref(d *ast.Dereference) string {
 	txt := ""
 	if d.PrePost == "Pre" {
 		txt += " " + d.Operator

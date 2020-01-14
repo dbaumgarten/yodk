@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/dbaumgarten/yodk/pkg/parser"
+	"github.com/dbaumgarten/yodk/pkg/parser/ast"
 )
 
 // VariableNameOptimizer replaces variable names with sorter names
@@ -21,18 +21,18 @@ func NewVariableNameOptimizer() *VariableNameOptimizer {
 }
 
 // Optimize is needed to implement Optimizer
-func (o *VariableNameOptimizer) Optimize(prog parser.Node) error {
+func (o *VariableNameOptimizer) Optimize(prog ast.Node) error {
 	return prog.Accept(o)
 }
 
 // Visit is needed to implement Visitor
-func (o *VariableNameOptimizer) Visit(node parser.Node, visitType int) error {
-	if visitType == parser.SingleVisit || visitType == parser.PreVisit {
+func (o *VariableNameOptimizer) Visit(node ast.Node, visitType int) error {
+	if visitType == ast.SingleVisit || visitType == ast.PreVisit {
 		switch n := node.(type) {
-		case *parser.Assignment:
+		case *ast.Assignment:
 			n.Variable = o.replaceVarName(n.Variable)
 			break
-		case *parser.Dereference:
+		case *ast.Dereference:
 			n.Variable = o.replaceVarName(n.Variable)
 			break
 		}

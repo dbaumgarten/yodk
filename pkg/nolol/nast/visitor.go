@@ -1,17 +1,17 @@
-package nolol
+package nast
 
 import (
-	"github.com/dbaumgarten/yodk/pkg/parser"
+	"github.com/dbaumgarten/yodk/pkg/parser/ast"
 )
 
 // Accept is used to implement Acceptor
-func (g *GoToLabelStatement) Accept(v parser.Visitor) error {
-	return v.Visit(g, parser.SingleVisit)
+func (g *GoToLabelStatement) Accept(v ast.Visitor) error {
+	return v.Visit(g, ast.SingleVisit)
 }
 
 // Accept is used to implement Acceptor
-func (p *Program) Accept(v parser.Visitor) error {
-	err := v.Visit(p, parser.PreVisit)
+func (p *Program) Accept(v ast.Visitor) error {
+	err := v.Visit(p, ast.PreVisit)
 	if err != nil {
 		return err
 	}
@@ -21,7 +21,7 @@ func (p *Program) Accept(v parser.Visitor) error {
 			return err
 		}
 		err = p.Lines[i].Accept(v)
-		if repl, is := err.(parser.NodeReplacement); is {
+		if repl, is := err.(ast.NodeReplacement); is {
 			p.Lines = patchLines(p.Lines, i, repl)
 			i += len(repl.Replacement) - 1
 			err = nil
@@ -30,12 +30,12 @@ func (p *Program) Accept(v parser.Visitor) error {
 			return err
 		}
 	}
-	return v.Visit(p, parser.PostVisit)
+	return v.Visit(p, ast.PostVisit)
 }
 
 // Accept is used to implement Acceptor
-func (l *StatementLine) Accept(v parser.Visitor) error {
-	err := v.Visit(l, parser.PreVisit)
+func (l *StatementLine) Accept(v ast.Visitor) error {
+	err := v.Visit(l, ast.PreVisit)
 	if err != nil {
 		return err
 	}
@@ -43,41 +43,41 @@ func (l *StatementLine) Accept(v parser.Visitor) error {
 	if err != nil {
 		return err
 	}
-	return v.Visit(l, parser.PostVisit)
+	return v.Visit(l, ast.PostVisit)
 }
 
 // Accept is used to implement Acceptor
-func (l *ConstDeclaration) Accept(v parser.Visitor) error {
-	err := v.Visit(l, parser.PreVisit)
+func (l *ConstDeclaration) Accept(v ast.Visitor) error {
+	err := v.Visit(l, ast.PreVisit)
 	if err != nil {
 		return err
 	}
 	err = l.Value.Accept(v)
-	if repl, is := err.(parser.NodeReplacement); is {
-		l.Value = repl.Replacement[0].(parser.Expression)
+	if repl, is := err.(ast.NodeReplacement); is {
+		l.Value = repl.Replacement[0].(ast.Expression)
 		err = nil
 	}
 	if err != nil {
 		return err
 	}
-	return v.Visit(l, parser.PostVisit)
+	return v.Visit(l, ast.PostVisit)
 }
 
 // Accept is used to implement Acceptor
-func (s *MultilineIf) Accept(v parser.Visitor) error {
-	err := v.Visit(s, parser.PreVisit)
+func (s *MultilineIf) Accept(v ast.Visitor) error {
+	err := v.Visit(s, ast.PreVisit)
 	if err != nil {
 		return err
 	}
 	err = s.Condition.Accept(v)
-	if repl, is := err.(parser.NodeReplacement); is {
-		s.Condition = repl.Replacement[0].(parser.Expression)
+	if repl, is := err.(ast.NodeReplacement); is {
+		s.Condition = repl.Replacement[0].(ast.Expression)
 		err = nil
 	}
 	if err != nil {
 		return err
 	}
-	err = v.Visit(s, parser.InterVisit1)
+	err = v.Visit(s, ast.InterVisit1)
 	if err != nil {
 		return err
 	}
@@ -87,7 +87,7 @@ func (s *MultilineIf) Accept(v parser.Visitor) error {
 			return err
 		}
 		err = s.IfBlock[i].Accept(v)
-		if repl, is := err.(parser.NodeReplacement); is {
+		if repl, is := err.(ast.NodeReplacement); is {
 			s.IfBlock = patchExecutableLines(s.IfBlock, i, repl)
 			i += len(repl.Replacement) - 1
 			err = nil
@@ -97,7 +97,7 @@ func (s *MultilineIf) Accept(v parser.Visitor) error {
 		}
 	}
 	if s.ElseBlock != nil {
-		err = v.Visit(s, parser.InterVisit2)
+		err = v.Visit(s, ast.InterVisit2)
 		if err != nil {
 			return err
 		}
@@ -107,7 +107,7 @@ func (s *MultilineIf) Accept(v parser.Visitor) error {
 				return err
 			}
 			err = s.ElseBlock[i].Accept(v)
-			if repl, is := err.(parser.NodeReplacement); is {
+			if repl, is := err.(ast.NodeReplacement); is {
 				s.ElseBlock = patchExecutableLines(s.ElseBlock, i, repl)
 				i += len(repl.Replacement) - 1
 				err = nil
@@ -120,24 +120,24 @@ func (s *MultilineIf) Accept(v parser.Visitor) error {
 			return err
 		}
 	}
-	return v.Visit(s, parser.PostVisit)
+	return v.Visit(s, ast.PostVisit)
 }
 
 // Accept is used to implement Acceptor
-func (s *WhileLoop) Accept(v parser.Visitor) error {
-	err := v.Visit(s, parser.PreVisit)
+func (s *WhileLoop) Accept(v ast.Visitor) error {
+	err := v.Visit(s, ast.PreVisit)
 	if err != nil {
 		return err
 	}
 	err = s.Condition.Accept(v)
-	if repl, is := err.(parser.NodeReplacement); is {
-		s.Condition = repl.Replacement[0].(parser.Expression)
+	if repl, is := err.(ast.NodeReplacement); is {
+		s.Condition = repl.Replacement[0].(ast.Expression)
 		err = nil
 	}
 	if err != nil {
 		return err
 	}
-	err = v.Visit(s, parser.InterVisit1)
+	err = v.Visit(s, ast.InterVisit1)
 	if err != nil {
 		return err
 	}
@@ -147,7 +147,7 @@ func (s *WhileLoop) Accept(v parser.Visitor) error {
 			return err
 		}
 		err = s.Block[i].Accept(v)
-		if repl, is := err.(parser.NodeReplacement); is {
+		if repl, is := err.(ast.NodeReplacement); is {
 			s.Block = patchExecutableLines(s.Block, i, repl)
 			i += len(repl.Replacement) - 1
 			err = nil
@@ -156,10 +156,10 @@ func (s *WhileLoop) Accept(v parser.Visitor) error {
 			return err
 		}
 	}
-	return v.Visit(s, parser.PostVisit)
+	return v.Visit(s, ast.PostVisit)
 }
 
-func patchLines(old []Line, position int, repl parser.NodeReplacement) []Line {
+func patchLines(old []Line, position int, repl ast.NodeReplacement) []Line {
 	newv := make([]Line, 0, len(old)+len(repl.Replacement)-1)
 	newv = append(newv, old[:position]...)
 	for _, elem := range repl.Replacement {
@@ -173,7 +173,7 @@ func patchLines(old []Line, position int, repl parser.NodeReplacement) []Line {
 	return newv
 }
 
-func patchExecutableLines(old []ExecutableLine, position int, repl parser.NodeReplacement) []ExecutableLine {
+func patchExecutableLines(old []ExecutableLine, position int, repl ast.NodeReplacement) []ExecutableLine {
 	newv := make([]ExecutableLine, 0, len(old)+len(repl.Replacement)-1)
 	newv = append(newv, old[:position]...)
 	for _, elem := range repl.Replacement {

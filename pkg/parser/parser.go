@@ -5,14 +5,16 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+
+	"github.com/dbaumgarten/yodk/pkg/parser/ast"
 )
 
 // Parser parses a yolol programm into an AST
 type Parser struct {
-	Tokenizer    *Tokenizer
-	CurrentToken *Token
-	NextToken    *Token
-	PrevToken    *Token
+	Tokenizer    *ast.Tokenizer
+	CurrentToken *ast.Token
+	NextToken    *ast.Token
+	PrevToken    *ast.Token
 	// if true, there was whitespace between CurrentToken and NextToken
 	NextWouldBeWhitespace bool
 	// if true, current token was preceeded by whitespace
@@ -20,7 +22,7 @@ type Parser struct {
 	// using an interface of ourself to call the parsing-methods allows them to be overridden by 'subclasses'
 	This YololParserFunctions
 	// Contains all comments encountered during parsing
-	Comments []*Token
+	Comments []*ast.Token
 	// Contains all errors encountered during parsing
 	Errors Errors
 	// If true, return all found errors, not only one per line
@@ -49,22 +51,22 @@ to leave vital fields empty in the returned value.
 
 // YololParserFunctions is used together with Parser.This to allow 'subclasses' to override 'virtual functions'
 type YololParserFunctions interface {
-	ParseStatement() Statement
-	ParsePreOrPostOperation() Statement
-	ParseGoto() Statement
-	ParseAssignment() Statement
-	ParseIf() Statement
-	ParseExpression() Expression
-	ParseLogicExpression() Expression
-	ParseCompareExpression() Expression
-	ParseSumExpression() Expression
-	ParseProdExpression() Expression
-	ParseUnaryExpression() Expression
-	ParseBracketExpression() Expression
-	ParseSingleExpression() Expression
-	ParseFuncCall() Expression
-	ParsePreOpExpression() Expression
-	ParsePostOpExpression() Expression
+	ParseStatement() ast.Statement
+	ParsePreOrPostOperation() ast.Statement
+	ParseGoto() ast.Statement
+	ParseAssignment() ast.Statement
+	ParseIf() ast.Statement
+	ParseExpression() ast.Expression
+	ParseLogicExpression() ast.Expression
+	ParseCompareExpression() ast.Expression
+	ParseSumExpression() ast.Expression
+	ParseProdExpression() ast.Expression
+	ParseUnaryExpression() ast.Expression
+	ParseBracketExpression() ast.Expression
+	ParseSingleExpression() ast.Expression
+	ParseFuncCall() ast.Expression
+	ParsePreOpExpression() ast.Expression
+	ParsePostOpExpression() ast.Expression
 }
 
 // NewParser creates a new parser
@@ -79,19 +81,19 @@ func NewParser() *Parser {
 
 // HasNext returns true if there is a next token
 func (p *Parser) HasNext() bool {
-	return p.CurrentToken.Type != TypeEOF
+	return p.CurrentToken.Type != ast.TypeEOF
 }
 
 // Advance advances the current token to the next (non whitespace) token in the list
-func (p *Parser) Advance() *Token {
+func (p *Parser) Advance() *ast.Token {
 	if p.CurrentToken == nil || p.HasNext() {
 		p.PrevToken = p.CurrentToken
 		p.CurrentToken = p.NextToken
 		p.NextToken = p.Tokenizer.Next()
 		p.SkippedWhitespace = p.NextWouldBeWhitespace
 		p.NextWouldBeWhitespace = false
-		for p.NextToken.Type != TypeEOF && (p.NextToken.Type == TypeWhitespace || p.NextToken.Type == TypeComment) {
-			if p.NextToken.Type == TypeWhitespace {
+		for p.NextToken.Type != ast.TypeEOF && (p.NextToken.Type == ast.TypeWhitespace || p.NextToken.Type == ast.TypeComment) {
+			if p.NextToken.Type == ast.TypeWhitespace {
 				p.NextWouldBeWhitespace = true
 			} else {
 				// next token is a comment. Store it.
@@ -106,7 +108,7 @@ func (p *Parser) Advance() *Token {
 
 // Error appends an error to the list of errors encountered during parsing
 // if p.AllErrors is false, only the first error per line is appended to the list of errors
-func (p *Parser) Error(msg string, start Position, end Position) {
+func (p *Parser) Error(msg string, start ast.Position, end ast.Position) {
 
 	// if not disabled, only log the first error for each line and discard the rest
 	if !p.AllErrors {
@@ -134,10 +136,10 @@ func (p *Parser) ErrorCurrent(msg string) {
 // Expect checks if the current token has the given type and value
 // if true, the tokens position is returned, otherwise an error is logged
 // alsways advances to the next token
-func (p *Parser) Expect(tokenType string, tokenValue string) Position {
+func (p *Parser) Expect(tokenType string, tokenValue string) ast.Position {
 	if p.CurrentToken.Type != tokenType || p.CurrentToken.Value != tokenValue {
 		var msg string
-		if tokenType == TypeNewline {
+		if tokenType == ast.TypeNewline {
 			msg = "Expected newline"
 		} else {
 			msg = fmt.Sprintf("Expected token '%s'(%s)", tokenValue, tokenType)
@@ -151,9 +153,9 @@ func (p *Parser) Expect(tokenType string, tokenValue string) Position {
 
 // init prepares all internal fields for a new parsing run
 func (p *Parser) init() {
-	p.Tokenizer = NewTokenizer()
+	p.Tokenizer = ast.NewTokenizer()
 	p.Errors = make(Errors, 0)
-	p.Comments = make([]*Token, 0)
+	p.Comments = make([]*ast.Token, 0)
 	p.CurrentToken = nil
 	p.PrevToken = nil
 	p.NextToken = nil
@@ -164,7 +166,7 @@ func (p *Parser) init() {
 // ---------------------------------------------
 
 // Parse is the main method of the parser. Parses a yolol-program into an AST.
-func (p *Parser) Parse(prog string) (*Program, error) {
+func (p *Parser) Parse(prog string) (*ast.Program, error) {
 	p.init()
 	p.Tokenizer.Load(prog)
 	// Advance twice to fill CurrentToken and NextToken
@@ -179,10 +181,10 @@ func (p *Parser) Parse(prog string) (*Program, error) {
 }
 
 // ParseProgram parses a programm-node
-func (p *Parser) ParseProgram() *Program {
+func (p *Parser) ParseProgram() *ast.Program {
 	p.Log()
-	ret := Program{
-		Lines: make([]*Line, 0),
+	ret := ast.Program{
+		Lines: make([]*ast.Line, 0),
 	}
 	for p.HasNext() {
 		ret.Lines = append(ret.Lines, p.ParseLine())
@@ -192,21 +194,21 @@ func (p *Parser) ParseProgram() *Program {
 
 // SkipLine skips tokens up to the next newline
 func (p *Parser) SkipLine() {
-	for p.CurrentToken.Type != TypeNewline && p.CurrentToken.Type != TypeEOF {
+	for p.CurrentToken.Type != ast.TypeNewline && p.CurrentToken.Type != ast.TypeEOF {
 		p.Advance()
 	}
 }
 
 // ParseLine parses a line-node
-func (p *Parser) ParseLine() *Line {
+func (p *Parser) ParseLine() *ast.Line {
 	p.Log()
-	ret := Line{
+	ret := ast.Line{
 		Position:   p.CurrentToken.Position,
-		Statements: make([]Statement, 0),
+		Statements: make([]ast.Statement, 0),
 	}
 
 	// empty line
-	if p.CurrentToken.Type == TypeNewline || p.CurrentToken.Type == TypeEOF {
+	if p.CurrentToken.Type == ast.TypeNewline || p.CurrentToken.Type == ast.TypeEOF {
 		p.Advance()
 		return &ret
 	}
@@ -220,7 +222,7 @@ func (p *Parser) ParseLine() *Line {
 		ret.Statements = append(ret.Statements, stmt)
 
 		// line ends after statement
-		if p.CurrentToken.Type == TypeNewline || p.CurrentToken.Type == TypeEOF {
+		if p.CurrentToken.Type == ast.TypeNewline || p.CurrentToken.Type == ast.TypeEOF {
 			p.Advance()
 			return &ret
 		}
@@ -231,7 +233,7 @@ func (p *Parser) ParseLine() *Line {
 		}
 	}
 
-	if p.CurrentToken.Type != TypeEOF {
+	if p.CurrentToken.Type != ast.TypeEOF {
 		p.Error("Missing newline", ret.Start(), ret.End())
 	}
 
@@ -239,7 +241,7 @@ func (p *Parser) ParseLine() *Line {
 }
 
 // ParseStatement parses a statement-node
-func (p *Parser) ParseStatement() Statement {
+func (p *Parser) ParseStatement() ast.Statement {
 	p.Log()
 
 	stmt := p.This.ParseAssignment()
@@ -266,17 +268,17 @@ func (p *Parser) ParseStatement() Statement {
 }
 
 // ParsePreOrPostOperation parses a pre-/post operation (x++, ++x) as a statement
-func (p *Parser) ParsePreOrPostOperation() Statement {
+func (p *Parser) ParsePreOrPostOperation() ast.Statement {
 	p.Log()
 	preOpVarDeref := p.This.ParsePreOpExpression()
 	if preOpVarDeref != nil {
-		preOpVarDeref.(*Dereference).IsStatement = true
+		preOpVarDeref.(*ast.Dereference).IsStatement = true
 		return preOpVarDeref
 	}
 
 	postOpVarDeref := p.This.ParsePostOpExpression()
 	if postOpVarDeref != nil {
-		postOpVarDeref.(*Dereference).IsStatement = true
+		postOpVarDeref.(*ast.Dereference).IsStatement = true
 		return postOpVarDeref
 	}
 
@@ -284,14 +286,14 @@ func (p *Parser) ParsePreOrPostOperation() Statement {
 }
 
 // ParseGoto parse parses a goto-node
-func (p *Parser) ParseGoto() Statement {
-	if p.CurrentToken.Type == TypeKeyword && p.CurrentToken.Value == "goto" {
-		stmt := GoToStatement{
+func (p *Parser) ParseGoto() ast.Statement {
+	if p.CurrentToken.Type == ast.TypeKeyword && p.CurrentToken.Value == "goto" {
+		stmt := ast.GoToStatement{
 			Position: p.CurrentToken.Position,
 		}
 		p.Advance()
 		line, err := strconv.Atoi(p.CurrentToken.Value)
-		if p.CurrentToken.Type != TypeNumber || err != nil {
+		if p.CurrentToken.Type != ast.TypeNumber || err != nil {
 			p.Error("Goto must be followed by a line number", stmt.Start(), stmt.Start())
 		}
 		stmt.Line = line
@@ -302,13 +304,13 @@ func (p *Parser) ParseGoto() Statement {
 }
 
 // ParseAssignment parses an assignment-node
-func (p *Parser) ParseAssignment() Statement {
+func (p *Parser) ParseAssignment() ast.Statement {
 	p.Log()
 	assignmentOperators := []string{"=", "+=", "-=", "*=", "/=", "%="}
-	ret := Assignment{
+	ret := ast.Assignment{
 		Position: p.CurrentToken.Position,
 	}
-	if p.CurrentToken.Type != TypeID || !contains(assignmentOperators, p.NextToken.Value) {
+	if p.CurrentToken.Type != ast.TypeID || !contains(assignmentOperators, p.NextToken.Value) {
 		return nil
 	}
 	ret.Variable = p.CurrentToken.Value
@@ -324,12 +326,12 @@ func (p *Parser) ParseAssignment() Statement {
 }
 
 // ParseIf parses an if-node
-func (p *Parser) ParseIf() Statement {
+func (p *Parser) ParseIf() ast.Statement {
 	p.Log()
-	ret := IfStatement{
+	ret := ast.IfStatement{
 		Position: p.CurrentToken.Position,
 	}
-	if p.CurrentToken.Type != TypeKeyword || p.CurrentToken.Value != "if" {
+	if p.CurrentToken.Type != ast.TypeKeyword || p.CurrentToken.Value != "if" {
 		return nil
 	}
 	p.Advance()
@@ -339,13 +341,13 @@ func (p *Parser) ParseIf() Statement {
 		p.ErrorCurrent("No expression found as if-condition")
 	}
 
-	p.Expect(TypeKeyword, "then")
+	p.Expect(ast.TypeKeyword, "then")
 
 	stmt := p.This.ParseStatement()
 	if stmt == nil {
 		p.ErrorCurrent("If-block needs at least one statement")
 	}
-	ret.IfBlock = make([]Statement, 0, 1)
+	ret.IfBlock = make([]ast.Statement, 0, 1)
 	ret.IfBlock = append(ret.IfBlock, stmt)
 
 	for {
@@ -356,13 +358,13 @@ func (p *Parser) ParseIf() Statement {
 		ret.IfBlock = append(ret.IfBlock, stmt2)
 	}
 
-	if p.CurrentToken.Type == TypeKeyword && p.CurrentToken.Value == "else" {
+	if p.CurrentToken.Type == ast.TypeKeyword && p.CurrentToken.Value == "else" {
 		p.Advance()
 		stmt := p.This.ParseStatement()
 		if stmt == nil {
 			p.ErrorCurrent("Else-block needs at least one statement")
 		}
-		ret.ElseBlock = make([]Statement, 0, 1)
+		ret.ElseBlock = make([]ast.Statement, 0, 1)
 		ret.ElseBlock = append(ret.ElseBlock, stmt)
 
 		for {
@@ -374,21 +376,21 @@ func (p *Parser) ParseIf() Statement {
 		}
 	}
 
-	p.Expect(TypeKeyword, "end")
+	p.Expect(ast.TypeKeyword, "end")
 
 	return &ret
 }
 
 // ParseExpression parses an expression
-func (p *Parser) ParseExpression() Expression {
+func (p *Parser) ParseExpression() ast.Expression {
 	p.Log()
 	return p.This.ParseLogicExpression()
 }
 
 // ParseLogicExpression parses a logical expression
-func (p *Parser) ParseLogicExpression() Expression {
+func (p *Parser) ParseLogicExpression() ast.Expression {
 	p.Log()
-	var exp Expression
+	var exp ast.Expression
 
 	exp = p.This.ParseCompareExpression()
 	if exp == nil {
@@ -396,8 +398,8 @@ func (p *Parser) ParseLogicExpression() Expression {
 	}
 	logOps := []string{"or", "and"}
 
-	for p.CurrentToken.Type == TypeKeyword && contains(logOps, p.CurrentToken.Value) {
-		binexp := &BinaryOperation{
+	for p.CurrentToken.Type == ast.TypeKeyword && contains(logOps, p.CurrentToken.Value) {
+		binexp := &ast.BinaryOperation{
 			Operator: p.CurrentToken.Value,
 			Exp1:     exp,
 		}
@@ -412,7 +414,7 @@ func (p *Parser) ParseLogicExpression() Expression {
 }
 
 // ParseCompareExpression parses a compare expression
-func (p *Parser) ParseCompareExpression() Expression {
+func (p *Parser) ParseCompareExpression() ast.Expression {
 	p.Log()
 	exp1 := p.This.ParseSumExpression()
 	if exp1 == nil {
@@ -420,8 +422,8 @@ func (p *Parser) ParseCompareExpression() Expression {
 	}
 	logOps := []string{"==", "!=", "<=", ">=", "<", ">"}
 
-	if p.CurrentToken.Type == TypeSymbol && contains(logOps, p.CurrentToken.Value) {
-		binexp := &BinaryOperation{
+	if p.CurrentToken.Type == ast.TypeSymbol && contains(logOps, p.CurrentToken.Value) {
+		binexp := &ast.BinaryOperation{
 			Operator: p.CurrentToken.Value,
 			Exp1:     exp1,
 		}
@@ -436,9 +438,9 @@ func (p *Parser) ParseCompareExpression() Expression {
 }
 
 // ParseSumExpression parses a sum-expression
-func (p *Parser) ParseSumExpression() Expression {
+func (p *Parser) ParseSumExpression() ast.Expression {
 	p.Log()
-	var exp Expression
+	var exp ast.Expression
 
 	exp = p.This.ParseProdExpression()
 	if exp == nil {
@@ -446,8 +448,8 @@ func (p *Parser) ParseSumExpression() Expression {
 	}
 	logOps := []string{"+", "-"}
 
-	for p.CurrentToken.Type == TypeSymbol && contains(logOps, p.CurrentToken.Value) {
-		binexp := &BinaryOperation{
+	for p.CurrentToken.Type == ast.TypeSymbol && contains(logOps, p.CurrentToken.Value) {
+		binexp := &ast.BinaryOperation{
 			Operator: p.CurrentToken.Value,
 			Exp1:     exp,
 		}
@@ -462,9 +464,9 @@ func (p *Parser) ParseSumExpression() Expression {
 }
 
 // ParseProdExpression parses a product expression
-func (p *Parser) ParseProdExpression() Expression {
+func (p *Parser) ParseProdExpression() ast.Expression {
 	p.Log()
-	var exp Expression
+	var exp ast.Expression
 
 	exp = p.This.ParseUnaryExpression()
 	if exp == nil {
@@ -472,8 +474,8 @@ func (p *Parser) ParseProdExpression() Expression {
 	}
 	logOps := []string{"*", "/", "%", "^"}
 
-	for p.CurrentToken.Type == TypeSymbol && contains(logOps, p.CurrentToken.Value) {
-		binexp := &BinaryOperation{
+	for p.CurrentToken.Type == ast.TypeSymbol && contains(logOps, p.CurrentToken.Value) {
+		binexp := &ast.BinaryOperation{
 			Operator: p.CurrentToken.Value,
 			Exp1:     exp,
 		}
@@ -488,11 +490,11 @@ func (p *Parser) ParseProdExpression() Expression {
 }
 
 // ParseUnaryExpression parses an unary expression
-func (p *Parser) ParseUnaryExpression() Expression {
+func (p *Parser) ParseUnaryExpression() ast.Expression {
 	p.Log()
 	preUnaryOps := []string{"not", "-"}
 	if contains(preUnaryOps, p.CurrentToken.Value) {
-		unaryExp := &UnaryOperation{
+		unaryExp := &ast.UnaryOperation{
 			Operator: p.CurrentToken.Value,
 			Position: p.CurrentToken.Position,
 		}
@@ -508,22 +510,22 @@ func (p *Parser) ParseUnaryExpression() Expression {
 }
 
 // ParseBracketExpression parses a racketed expression
-func (p *Parser) ParseBracketExpression() Expression {
+func (p *Parser) ParseBracketExpression() ast.Expression {
 	p.Log()
-	if p.CurrentToken.Type == TypeSymbol && p.CurrentToken.Value == "(" {
+	if p.CurrentToken.Type == ast.TypeSymbol && p.CurrentToken.Value == "(" {
 		p.Advance()
 		innerExp := p.This.ParseExpression()
 		if innerExp == nil {
 			p.ErrorCurrent(fmt.Sprintf("Expected expression after '('"))
 		}
-		p.Expect(TypeSymbol, ")")
+		p.Expect(ast.TypeSymbol, ")")
 		return innerExp
 	}
 	return p.This.ParseSingleExpression()
 }
 
 // ParseSingleExpression parses a single expression
-func (p *Parser) ParseSingleExpression() Expression {
+func (p *Parser) ParseSingleExpression() ast.Expression {
 	p.Log()
 
 	preOpVarDeref := p.This.ParsePreOpExpression()
@@ -541,23 +543,23 @@ func (p *Parser) ParseSingleExpression() Expression {
 		return funccall
 	}
 
-	if p.CurrentToken.Type == TypeID {
+	if p.CurrentToken.Type == ast.TypeID {
 		defer p.Advance()
-		return &Dereference{
+		return &ast.Dereference{
 			Variable: p.CurrentToken.Value,
 			Position: p.CurrentToken.Position,
 		}
 	}
-	if p.CurrentToken.Type == TypeString {
+	if p.CurrentToken.Type == ast.TypeString {
 		defer p.Advance()
-		return &StringConstant{
+		return &ast.StringConstant{
 			Value:    p.CurrentToken.Value,
 			Position: p.CurrentToken.Position,
 		}
 	}
-	if p.CurrentToken.Type == TypeNumber {
+	if p.CurrentToken.Type == ast.TypeNumber {
 		defer p.Advance()
-		return &NumberConstant{
+		return &ast.NumberConstant{
 			Value:    p.CurrentToken.Value,
 			Position: p.CurrentToken.Position,
 		}
@@ -568,12 +570,12 @@ func (p *Parser) ParseSingleExpression() Expression {
 }
 
 // ParseFuncCall parse a function call
-func (p *Parser) ParseFuncCall() Expression {
+func (p *Parser) ParseFuncCall() ast.Expression {
 	p.Log()
-	if p.CurrentToken.Type != TypeID || p.NextToken.Type != TypeSymbol || p.NextToken.Value != "(" {
+	if p.CurrentToken.Type != ast.TypeID || p.NextToken.Type != ast.TypeSymbol || p.NextToken.Value != "(" {
 		return nil
 	}
-	fc := &FuncCall{
+	fc := &ast.FuncCall{
 		Function: p.CurrentToken.Value,
 	}
 	p.Advance()
@@ -584,22 +586,22 @@ func (p *Parser) ParseFuncCall() Expression {
 		p.ErrorCurrent("Functions need exactly one argument")
 	}
 
-	p.Expect(TypeSymbol, ")")
+	p.Expect(ast.TypeSymbol, ")")
 
 	return fc
 }
 
 // ParsePreOpExpression parse pre-expression
-func (p *Parser) ParsePreOpExpression() Expression {
+func (p *Parser) ParsePreOpExpression() ast.Expression {
 	p.Log()
-	if p.CurrentToken.Type == TypeSymbol && (p.CurrentToken.Value == "++" || p.CurrentToken.Value == "--") {
-		exp := Dereference{
+	if p.CurrentToken.Type == ast.TypeSymbol && (p.CurrentToken.Value == "++" || p.CurrentToken.Value == "--") {
+		exp := ast.Dereference{
 			Operator: p.CurrentToken.Value,
 			PrePost:  "Pre",
 			Position: p.CurrentToken.Position,
 		}
 		p.Advance()
-		if p.CurrentToken.Type != TypeID {
+		if p.CurrentToken.Type != ast.TypeID {
 			p.Error("Pre- Increment/Decrement must be followed by a variable", exp.Start(), exp.Start())
 		}
 		exp.Variable = p.CurrentToken.Value
@@ -610,10 +612,10 @@ func (p *Parser) ParsePreOpExpression() Expression {
 }
 
 // ParsePostOpExpression parse post-expression
-func (p *Parser) ParsePostOpExpression() Expression {
+func (p *Parser) ParsePostOpExpression() ast.Expression {
 	p.Log()
-	if p.NextToken.Type == TypeSymbol && (p.NextToken.Value == "++" || p.NextToken.Value == "--") && p.CurrentToken.Type == TypeID {
-		exp := Dereference{
+	if p.NextToken.Type == ast.TypeSymbol && (p.NextToken.Value == "++" || p.NextToken.Value == "--") && p.CurrentToken.Type == ast.TypeID {
+		exp := ast.Dereference{
 			Variable: p.CurrentToken.Value,
 			Operator: p.NextToken.Value,
 			PrePost:  "Post",

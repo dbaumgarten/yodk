@@ -8,6 +8,7 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/dbaumgarten/yodk/pkg/parser"
+	"github.com/dbaumgarten/yodk/pkg/parser/ast"
 )
 
 var errAbortLine = fmt.Errorf("")
@@ -37,7 +38,7 @@ type FinishHandlerFunc func(vm *YololVM)
 type RuntimeError struct {
 	Base error
 	// The Node that caused the error
-	Node parser.Node
+	Node ast.Node
 }
 
 func (e RuntimeError) Error() string {
@@ -70,7 +71,7 @@ type YololVM struct {
 	// list of active breakpoints
 	breakpoints map[int]bool
 	// the parsed program
-	program *parser.Program
+	program *ast.Program
 	// a lock to synchronize acces to the vms state
 	lock *sync.Mutex
 	// line number of a breakpoint to skip
@@ -129,7 +130,7 @@ func (v *YololVM) SetMaxExecutedLines(lines int) {
 }
 
 // AddBreakpoint adds a breakpoint at the line. Breakpoint-lines always refer to the position recorded in the
-// ast nodes, not the position of the Line in the Line-Slice of parser.Program.
+// ast nodes, not the position of the Line in the Line-Slice of ast.Program.
 func (v *YololVM) AddBreakpoint(line int) {
 	v.lock.Lock()
 	defer v.lock.Unlock()
@@ -352,7 +353,7 @@ func (v *YololVM) WaitForTermination() {
 // Begin main section ------------------------------------------
 
 // Run runs the compiled program prog in a new go-routine
-func (v *YololVM) Run(prog *parser.Program) {
+func (v *YololVM) Run(prog *ast.Program) {
 	v.Terminate()
 	v.lock.Lock()
 	v.running = true
@@ -476,7 +477,7 @@ func (v *YololVM) run() {
 	}
 }
 
-func (v *YololVM) runLine(line *parser.Line) error {
+func (v *YololVM) runLine(line *ast.Line) error {
 
 	// wait until the coordinator allows this VM to run a line
 	if v.coordinator != nil {
@@ -506,7 +507,7 @@ func (v *YololVM) runLine(line *parser.Line) error {
 	return nil
 }
 
-func (v *YololVM) runStmt(stmt parser.Statement) error {
+func (v *YololVM) runStmt(stmt ast.Statement) error {
 
 	// did we hit a breakpoint?
 	if _, exists := v.breakpoints[v.currentSourceLine]; exists && v.skipBp != v.currentSourceLine {
@@ -527,9 +528,9 @@ func (v *YololVM) runStmt(stmt parser.Statement) error {
 	}
 
 	switch e := stmt.(type) {
-	case *parser.Assignment:
+	case *ast.Assignment:
 		return v.runAssignment(e)
-	case *parser.IfStatement:
+	case *ast.IfStatement:
 		conditionResult, err := v.runExpr(e.Condition)
 		if err != nil {
 			return err
@@ -553,10 +554,10 @@ func (v *YololVM) runStmt(stmt parser.Statement) error {
 			}
 		}
 		return nil
-	case *parser.GoToStatement:
+	case *ast.GoToStatement:
 		v.currentAstLine = e.Line - 1
 		return errAbortLine
-	case *parser.Dereference:
+	case *ast.Dereference:
 		_, err := v.runDeref(e)
 		return err
 	default:
@@ -564,12 +565,12 @@ func (v *YololVM) runStmt(stmt parser.Statement) error {
 	}
 }
 
-func (v *YololVM) runAssignment(as *parser.Assignment) error {
+func (v *YololVM) runAssignment(as *ast.Assignment) error {
 	var newValue *Variable
 	var err error
 	if as.Operator != "=" {
-		binop := parser.BinaryOperation{
-			Exp1: &parser.Dereference{
+		binop := ast.BinaryOperation{
+			Exp1: &ast.Dereference{
 				Variable: as.Variable,
 				Position: as.Start(),
 			},
@@ -587,30 +588,30 @@ func (v *YololVM) runAssignment(as *parser.Assignment) error {
 	return nil
 }
 
-func (v *YololVM) runExpr(expr parser.Expression) (*Variable, error) {
+func (v *YololVM) runExpr(expr ast.Expression) (*Variable, error) {
 	switch e := expr.(type) {
-	case *parser.StringConstant:
+	case *ast.StringConstant:
 		return &Variable{Value: e.Value}, nil
-	case *parser.NumberConstant:
+	case *ast.NumberConstant:
 		num, err := decimal.NewFromString(e.Value)
 		if err != nil {
 			return nil, err
 		}
 		return &Variable{Value: num}, nil
-	case *parser.BinaryOperation:
+	case *ast.BinaryOperation:
 		return v.runBinOp(e)
-	case *parser.UnaryOperation:
+	case *ast.UnaryOperation:
 		return v.runUnaryOp(e)
-	case *parser.Dereference:
+	case *ast.Dereference:
 		return v.runDeref(e)
-	case *parser.FuncCall:
+	case *ast.FuncCall:
 		return v.runFuncCall(e)
 	default:
 		return nil, RuntimeError{fmt.Errorf("UNKNWON-EXPRESSION:%T", e), expr}
 	}
 }
 
-func (v *YololVM) runFuncCall(d *parser.FuncCall) (*Variable, error) {
+func (v *YololVM) runFuncCall(d *ast.FuncCall) (*Variable, error) {
 	arg, err := v.runExpr(d.Argument)
 	if err != nil {
 		return nil, err
@@ -618,7 +619,7 @@ func (v *YololVM) runFuncCall(d *parser.FuncCall) (*Variable, error) {
 	return RunFunction(arg, d.Function)
 }
 
-func (v *YololVM) runDeref(d *parser.Dereference) (*Variable, error) {
+func (v *YololVM) runDeref(d *ast.Dereference) (*Variable, error) {
 	oldval, exists := v.getVariable(d.Variable)
 	if !exists {
 		// uninitialized variables have a default value of 0
@@ -666,7 +667,7 @@ func (v *YololVM) runDeref(d *parser.Dereference) (*Variable, error) {
 	return oldval, nil
 }
 
-func (v *YololVM) runBinOp(op *parser.BinaryOperation) (*Variable, error) {
+func (v *YololVM) runBinOp(op *ast.BinaryOperation) (*Variable, error) {
 	arg1, err1 := v.runExpr(op.Exp1)
 	if err1 != nil {
 		return nil, err1
@@ -682,7 +683,7 @@ func (v *YololVM) runBinOp(op *parser.BinaryOperation) (*Variable, error) {
 	return result, err
 }
 
-func (v *YololVM) runUnaryOp(op *parser.UnaryOperation) (*Variable, error) {
+func (v *YololVM) runUnaryOp(op *ast.UnaryOperation) (*Variable, error) {
 	arg, err := v.runExpr(op.Exp)
 	if err != nil {
 		return nil, err

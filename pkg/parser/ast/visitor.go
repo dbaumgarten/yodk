@@ -1,4 +1,4 @@
-package parser
+package ast
 
 // Visit() is called multiple times per node. The visitType tells the handler which one
 // of the multiple calls the current one is

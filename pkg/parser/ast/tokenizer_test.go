@@ -1,10 +1,10 @@
-package parser_test
+package ast_test
 
 import (
 	"strings"
 	"testing"
 
-	"github.com/dbaumgarten/yodk/pkg/parser"
+	"github.com/dbaumgarten/yodk/pkg/parser/ast"
 )
 
 func TestTokenizer(t *testing.T) {
@@ -116,14 +116,14 @@ func TestTokenizer(t *testing.T) {
 	Line: 11, Coloumn: 1, Type: Whitespace, Value: '	'
 	`
 
-	tk := parser.NewTokenizer()
+	tk := ast.NewTokenizer()
 	tk.Load(input)
 
 	output := ""
 
 	for {
 		token := tk.Next()
-		if token.Type == parser.TypeEOF {
+		if token.Type == ast.TypeEOF {
 			break
 		}
 		output += token.String()

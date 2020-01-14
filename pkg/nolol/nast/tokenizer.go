@@ -1,14 +1,14 @@
-package nolol
+package nast
 
 import (
 	"regexp"
 
-	"github.com/dbaumgarten/yodk/pkg/parser"
+	"github.com/dbaumgarten/yodk/pkg/parser/ast"
 )
 
 // NewNololTokenizer creates a Yolol-Tokenizer that is modified to also accept Nolol-specific tokens
-func NewNololTokenizer() *parser.Tokenizer {
-	tok := parser.NewTokenizer()
+func NewNololTokenizer() *ast.Tokenizer {
+	tok := ast.NewTokenizer()
 	tok.KeywordRegex = regexp.MustCompile("^\\b(if|else|end|then|goto|and|or|not|const|while|do)\\b")
 	return tok
 }

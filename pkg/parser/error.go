@@ -1,12 +1,16 @@
 package parser
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/dbaumgarten/yodk/pkg/parser/ast"
+)
 
 // Error represents an error encountered during parsing
 type Error struct {
 	Message       string
-	StartPosition Position
-	EndPosition   Position
+	StartPosition ast.Position
+	EndPosition   ast.Position
 }
 
 func (e Error) Error() string {

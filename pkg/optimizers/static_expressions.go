@@ -3,7 +3,7 @@ package optimizers
 import (
 	"fmt"
 
-	"github.com/dbaumgarten/yodk/pkg/parser"
+	"github.com/dbaumgarten/yodk/pkg/parser/ast"
 	"github.com/dbaumgarten/yodk/pkg/vm"
 	"github.com/shopspring/decimal"
 )
@@ -18,26 +18,26 @@ func NewStaticExpressionOptimizer() *StaticExpressionOptimizer {
 }
 
 // Optimize is required to implement Optimizer
-func (o *StaticExpressionOptimizer) Optimize(prog parser.Node) error {
+func (o *StaticExpressionOptimizer) Optimize(prog ast.Node) error {
 	return prog.Accept(o)
 }
 
 // Visit is needed to implement the Visitor interface
-func (o *StaticExpressionOptimizer) Visit(node parser.Node, visitType int) error {
-	if visitType == parser.PostVisit {
-		if exp, isexp := node.(parser.Expression); isexp {
+func (o *StaticExpressionOptimizer) Visit(node ast.Node, visitType int) error {
+	if visitType == ast.PostVisit {
+		if exp, isexp := node.(ast.Expression); isexp {
 			optimized := optimizeExpression(exp)
 			if optimized != nil {
-				return parser.NewNodeReplacement(optimized)
+				return ast.NewNodeReplacement(optimized)
 			}
 		}
 	}
 	return nil
 }
 
-func optimizeExpression(exp parser.Expression) parser.Expression {
+func optimizeExpression(exp ast.Expression) ast.Expression {
 	switch n := exp.(type) {
-	case *parser.FuncCall:
+	case *ast.FuncCall:
 		if !isConstant(n.Argument) {
 			break
 		}
@@ -46,7 +46,7 @@ func optimizeExpression(exp parser.Expression) parser.Expression {
 			break
 		}
 		return varToConst(res)
-	case *parser.UnaryOperation:
+	case *ast.UnaryOperation:
 		if !isConstant(n.Exp) {
 			break
 		}
@@ -57,7 +57,7 @@ func optimizeExpression(exp parser.Expression) parser.Expression {
 			break
 		}
 		return varToConst(res)
-	case *parser.BinaryOperation:
+	case *ast.BinaryOperation:
 		if !isConstant(n.Exp1) || !isConstant(n.Exp2) {
 			break
 		}
@@ -71,22 +71,22 @@ func optimizeExpression(exp parser.Expression) parser.Expression {
 }
 
 // is the given expression constant (does not depend on a variable)
-func isConstant(exp parser.Expression) bool {
+func isConstant(exp ast.Expression) bool {
 	switch exp.(type) {
-	case *parser.StringConstant:
+	case *ast.StringConstant:
 		return true
-	case *parser.NumberConstant:
+	case *ast.NumberConstant:
 		return true
 	}
 	return false
 }
 
 // convert a constant AST-node to a vm-variable
-func constToVar(exp parser.Expression) *vm.Variable {
+func constToVar(exp ast.Expression) *vm.Variable {
 	switch e := exp.(type) {
-	case *parser.StringConstant:
+	case *ast.StringConstant:
 		return &vm.Variable{Value: e.Value}
-	case *parser.NumberConstant:
+	case *ast.NumberConstant:
 		num, err := decimal.NewFromString(e.Value)
 		if err != nil {
 			panic("This should never happen")
@@ -97,13 +97,13 @@ func constToVar(exp parser.Expression) *vm.Variable {
 }
 
 // convert a vm-variable to a constant AST-Node
-func varToConst(v *vm.Variable) parser.Expression {
+func varToConst(v *vm.Variable) ast.Expression {
 	if v.IsNumber() {
-		return &parser.NumberConstant{
+		return &ast.NumberConstant{
 			Value: v.Itoa(),
 		}
 	}
-	return &parser.StringConstant{
+	return &ast.StringConstant{
 		Value: v.String(),
 	}
 }
