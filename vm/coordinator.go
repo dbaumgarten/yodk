@@ -1,12 +1,15 @@
 package vm
 
-import "sync"
+import (
+	"sync"
+)
 
 // Coordinator is responsible for coordinating the execution of multiple VMs
 // It coordinates the line-by-line execution of the scripts and provides shared global variables
 type Coordinator struct {
 	vms             []*YololVM
 	currentVM       int
+	cvm             *YololVM
 	globalVariables map[string]*Variable
 	condLock        *sync.Mutex
 	condition       *sync.Cond
@@ -30,16 +33,16 @@ func NewCoordinator() *Coordinator {
 // Run() on the VMs must have been called before
 func (c *Coordinator) Run() {
 	c.condLock.Lock()
-	defer c.condLock.Unlock()
-	c.currentVM = 0
-	c.condition.Broadcast()
+	c.currentVM = -1
+	c.condLock.Unlock()
+	c.finishTurn()
 }
 
 // Stop stops the execution
 func (c *Coordinator) Stop() {
 	c.condLock.Lock()
 	defer c.condLock.Unlock()
-	c.currentVM = 0
+	c.currentVM = -1
 	c.condition.Broadcast()
 }
 
@@ -124,10 +127,16 @@ func (c *Coordinator) unRegisterVM(vm *YololVM) {
 	}
 	if idx != -1 {
 		c.vms = append(c.vms[:idx], c.vms[idx+1:]...)
-		if c.currentVM == idx && len(c.vms) > 0 {
-			c.currentVM = c.currentVM % len(c.vms)
-			c.condition.Broadcast()
+		if idx == c.currentVM {
+			if len(c.vms) > 0 {
+				c.cvm = c.vms[c.currentVM]
+				c.condition.Broadcast()
+			}
+		} else if idx < c.currentVM {
+			c.currentVM--
+			c.cvm = c.vms[c.currentVM]
 		}
+
 	}
 }
 
@@ -135,7 +144,7 @@ func (c *Coordinator) unRegisterVM(vm *YololVM) {
 // vm must have registered itself before calling this
 func (c *Coordinator) waitForTurn(vm *YololVM) {
 	c.condLock.Lock()
-	for c.currentVM == -1 || c.vms[c.currentVM] != vm {
+	for c.currentVM == -1 || c.cvm != vm {
 		c.condition.Wait()
 	}
 	c.condLock.Unlock()
@@ -147,5 +156,6 @@ func (c *Coordinator) finishTurn() {
 	c.condLock.Lock()
 	defer c.condLock.Unlock()
 	c.currentVM = (c.currentVM + 1) % len(c.vms)
+	c.cvm = c.vms[c.currentVM]
 	c.condition.Broadcast()
 }
