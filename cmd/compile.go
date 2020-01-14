@@ -5,8 +5,8 @@ import (
 	"path"
 	"strings"
 
-	"github.com/dbaumgarten/yodk/nolol"
-	"github.com/dbaumgarten/yodk/parser"
+	"github.com/dbaumgarten/yodk/pkg/nolol"
+	"github.com/dbaumgarten/yodk/pkg/parser"
 
 	"github.com/spf13/cobra"
 )

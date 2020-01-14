@@ -8,12 +8,12 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/dbaumgarten/yodk/nolol"
-	"github.com/dbaumgarten/yodk/parser"
-	"github.com/dbaumgarten/yodk/testing"
+	"github.com/dbaumgarten/yodk/pkg/nolol"
+	"github.com/dbaumgarten/yodk/pkg/parser"
+	"github.com/dbaumgarten/yodk/pkg/testing"
 
 	"github.com/abiosoft/ishell"
-	"github.com/dbaumgarten/yodk/vm"
+	"github.com/dbaumgarten/yodk/pkg/vm"
 	"github.com/spf13/cobra"
 )
 

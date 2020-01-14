@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/dbaumgarten/yodk/langserver"
+	"github.com/dbaumgarten/yodk/pkg/langserver"
 	"github.com/spf13/cobra"
 )
 

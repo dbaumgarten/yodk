@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/dbaumgarten/yodk/parser"
+	"github.com/dbaumgarten/yodk/pkg/parser"
 	"github.com/spf13/cobra"
 )
 

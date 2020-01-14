@@ -19,7 +19,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/dbaumgarten/yodk/testing"
+	"github.com/dbaumgarten/yodk/pkg/testing"
 	"github.com/spf13/cobra"
 )
 

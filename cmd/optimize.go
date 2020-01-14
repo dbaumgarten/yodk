@@ -5,8 +5,8 @@ import (
 	"path"
 	"strings"
 
-	"github.com/dbaumgarten/yodk/optimizers"
-	"github.com/dbaumgarten/yodk/parser"
+	"github.com/dbaumgarten/yodk/pkg/optimizers"
+	"github.com/dbaumgarten/yodk/pkg/parser"
 	"github.com/spf13/cobra"
 )
 
