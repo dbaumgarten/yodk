@@ -9,14 +9,18 @@ install:
   - cd vscode-yolol && npm install && npm install -g vsce && cd ..
 script:
   - go test ./...
-  - go build
+  - go build -ldflags "-X github.com/dbaumgarten/yodk/cmd.YodkVersion=${TRAVIS_BRANCH}"
+  - ./yodk version
   - ./yodk test examples/*_test.yaml
-  - GOOS=windows go build
+  - GOOS=windows go build -ldflags "-X github.com/dbaumgarten/yodk/cmd.YodkVersion=${TRAVIS_BRANCH}"
 before_deploy:
-  - VERSION=$(git describe --tags)
   - zip yodk-win.zip yodk.exe
   - zip yodk-linux.zip yodk
-  - cd vscode-yolol && vsce package && cp *.vsix ../vscode-yolol.vsix && cd ..
+  - cd vscode-yolol
+  - npm version --no-git-tag-version $(echo ${TRAVIS_TAG} | tr -d v) --allow-same-version
+  - vsce package
+  - cp *.vsix ../vscode-yolol.vsix
+  - cd ..
 deploy:
   - provider: releases
     api-key: $GITHUB_TOKEN
@@ -28,7 +32,7 @@ deploy:
     on:
         tags: true
   - provider: script
-    script: cd vscode-yolol && vsce publish -p ${VSCODE_MARKETPLACE_TOKEN} $(echo ${TRAVIS_TAG} | tr -d v)
+    script: cd vscode-yolol && vsce publish -p ${VSCODE_MARKETPLACE_TOKEN}
     skip_cleanup: true
     on:
       tags: true
