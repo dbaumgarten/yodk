@@ -121,6 +121,12 @@ Tests OK
 
 ```
 
+Tests can also be debugged to find out what exactly is going wrong. Debugging happens with the usual debug command.
+
+```
+# yodk debug testcase.yaml
+```
+
 
 ## vscode Extension
 Extension for visual studio code. Adds syntax highlighting, validation, formatting and commands for compiling and optimizing code. [More information](vscode-yolol/README.md)

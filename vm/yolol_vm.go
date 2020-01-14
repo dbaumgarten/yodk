@@ -404,8 +404,10 @@ func (v *YololVM) run() {
 		if err != nil && err != errKillVM {
 			panic(err)
 		}
+		v.lock.Lock()
 		v.state = StateDone
 		v.running = false
+		v.lock.Unlock()
 		if v.coordinator != nil {
 			v.coordinator.unRegisterVM(v)
 		}

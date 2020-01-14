@@ -3,20 +3,25 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/dbaumgarten/yodk/nolol"
 	"github.com/dbaumgarten/yodk/parser"
+	"github.com/dbaumgarten/yodk/testing"
 
 	"github.com/abiosoft/ishell"
 	"github.com/dbaumgarten/yodk/vm"
 	"github.com/spf13/cobra"
 )
 
+// cli args passed to this command
+var cliArgs []string
+
 // index of the current script (the script targeted by commands)
-// used to index into vms, inputProgs and inputFileNames
+// used to index into vms, inputScripts and scriptFileNames
 var currentScript int
 
 // the coordinater to coordinate the running vms
@@ -24,65 +29,86 @@ var coordinator *vm.Coordinator
 var debugShell *ishell.Shell
 
 // source code of the running scripts
-var inputProgs []string
+var inputScripts []string
 
 // names of the running scripts
-var inputFileNames []string
+var scriptFileNames []string
 
 // list of vms for the running scripts
 var vms []*vm.YololVM
 
+// number of the case in the given test to execute
+var caseNumber int
+
 // debugCmd represents the debug command
 var debugCmd = &cobra.Command{
-	Use:   "debug [file] [file] [file]",
-	Short: "Debug yolol/nolol programs",
+	Use:   "debug [script]+ / debug [testfile]",
+	Short: "Debug yolol/nolol programs or tests",
 	Long:  `Execute programs interactively in debugger`,
 	Run: func(cmd *cobra.Command, args []string) {
-		inputFileNames = args
-		inputProgs = make([]string, len(inputFileNames))
-		vms = make([]*vm.YololVM, len(inputFileNames))
-		for i, filename := range inputFileNames {
-			if !strings.HasSuffix(filename, ".yolol") && !strings.HasSuffix(filename, ".nolol") {
-				fmt.Println("Unknown file-extension for file: ", filename)
-				os.Exit(1)
-			}
-			inputProgs[i] = loadInputFile(args[i])
-		}
-
+		cliArgs = args
 		load()
 		debugShell.Run()
 	},
 	Args: cobra.MinimumNArgs(1),
 }
 
-// create a VM for every script
+// load input scripts
+// decide whether to load a bunch of scripts or a test-file
 func load() {
+	containsScript := false
+	containsTest := false
+	for _, arg := range cliArgs {
+		if strings.HasSuffix(arg, ".yaml") {
+			containsTest = true
+		} else if strings.HasSuffix(arg, ".yolol") || strings.HasSuffix(arg, ".nolol") {
+			containsScript = true
+		} else {
+			fmt.Println("Unknown file-extension for file: ", arg)
+			os.Exit(1)
+		}
+	}
+
+	if containsScript && containsTest {
+		fmt.Println("Can not mix test-files and scripts.")
+		os.Exit(1)
+	}
+
+	if len(cliArgs) > 1 && containsTest {
+		fmt.Println("Can only debug one test at once")
+		os.Exit(1)
+	}
+
+	if containsTest {
+		loadTest()
+	} else {
+		loadScripts()
+	}
+
+	debugShell.Println("Loaded and paused programs. Enter 'c' to resume execution.")
+}
+
+// create a VM for every script
+func loadScripts() {
+	scriptFileNames = cliArgs
+	inputScripts = make([]string, len(cliArgs))
+	vms = make([]*vm.YololVM, len(cliArgs))
 	currentScript = 0
+	for i, filename := range cliArgs {
+		inputScripts[i] = loadInputFile(filename)
+	}
+
 	coordinator = vm.NewCoordinator()
 
-	for i := 0; i < len(inputFileNames); i++ {
-		inputFileName := inputFileNames[i]
-		inputProg := inputProgs[i]
+	for i := 0; i < len(scriptFileNames); i++ {
+		inputFileName := scriptFileNames[i]
+		inputProg := inputScripts[i]
 		thisVM := vm.NewYololVMCoordinated(coordinator)
-		vms[i] = thisVM
 		thisVM.SetIterations(0)
-		currentScript = 0
+		vms[i] = thisVM
+		prepareVM(thisVM, inputFileName)
 
-		thisVM.SetBreakpointHandler(func(x *vm.YololVM) bool {
-			debugShell.Printf("--Hit Breakpoint at %s:%d--\n", inputFileName, x.CurrentSourceLine())
-			return false
-		})
-		thisVM.SetErrorHandler(func(x *vm.YololVM, err error) bool {
-			debugShell.Printf("--A runtime error occured at %s:%d--\n", inputFileName, x.CurrentSourceLine())
-			debugShell.Println(err)
-			debugShell.Println("--Execution paused--")
-			return false
-		})
-		thisVM.SetFinishHandler(func(x *vm.YololVM) {
-			debugShell.Printf("--Program %s finished--\n", inputFileName)
-		})
 		if strings.HasSuffix(inputFileName, ".yolol") {
-
 			thisVM.RunSource(inputProg)
 		} else if strings.HasSuffix(inputFileName, ".nolol") {
 			converter := nolol.NewConverter()
@@ -94,11 +120,61 @@ func load() {
 		}
 		debugShell.Printf("--Loaded %s--\n", inputFileName)
 	}
-	debugShell.Println("Loaded and paused programs. Enter 'c' to resume execution.")
+}
+
+// create VMs from the given test-file
+func loadTest() {
+	var err error
+
+	file := loadInputFile(cliArgs[0])
+	abs, _ := filepath.Abs(cliArgs[0])
+	t, err := testing.Parse([]byte(file), abs)
+	exitOnError(err, "parsing test-file")
+
+	scriptFileNames = make([]string, len(t.Scripts))
+	for i, script := range t.Scripts {
+		scriptFileNames[i] = script.Name
+	}
+
+	inputScripts = make([]string, len(t.Scripts))
+	for i, script := range t.Scripts {
+		inputScripts[i], _ = script.GetCode()
+	}
+
+	c := t.Cases[caseNumber-1]
+
+	coordinator = vm.NewCoordinator()
+	c.InitializeVariables(coordinator)
+
+	v, err := t.CreateVMs(coordinator, nil)
+	exitOnError(err, "creating VMs for test")
+	vms = v
+	for i, iv := range vms {
+		prepareVM(iv, scriptFileNames[i])
+	}
+	currentScript = 0
+}
+
+// prepares the given VM for use in the debugger
+func prepareVM(thisVM *vm.YololVM, inputFileName string) {
+	thisVM.SetBreakpointHandler(func(x *vm.YololVM) bool {
+		debugShell.Printf("--Hit Breakpoint at %s:%d--\n", inputFileName, x.CurrentSourceLine())
+		return false
+	})
+	thisVM.SetErrorHandler(func(x *vm.YololVM, err error) bool {
+		debugShell.Printf("--A runtime error occured at %s:%d--\n", inputFileName, x.CurrentSourceLine())
+		debugShell.Println(err)
+		debugShell.Println("--Execution paused--")
+		return false
+	})
+	thisVM.SetFinishHandler(func(x *vm.YololVM) {
+		debugShell.Printf("--Program %s finished--\n", inputFileName)
+	})
 }
 
 // initialize the shell
 func init() {
+	debugCmd.Flags().IntVarP(&caseNumber, "case", "c", 1, "Numer of the case to execute when debugging a test")
 	rootCmd.AddCommand(debugCmd)
 
 	debugShell = ishell.New()
@@ -117,7 +193,7 @@ func init() {
 		Aliases: []string{"ll"},
 		Help:    "list scripts",
 		Func: func(c *ishell.Context) {
-			for i, file := range inputFileNames {
+			for i, file := range scriptFileNames {
 				line := "  "
 				if i == currentScript {
 					line = "> "
@@ -136,7 +212,7 @@ func init() {
 				debugShell.Println("You must enter a script name (run scripts to list them).")
 				return
 			}
-			for i, file := range inputFileNames {
+			for i, file := range scriptFileNames {
 				if file == c.Args[0] {
 					currentScript = i
 					debugShell.Printf("--Changed to %s--\n", file)
@@ -271,7 +347,7 @@ func init() {
 		Func: func(c *ishell.Context) {
 			current := vms[currentScript].CurrentSourceLine()
 			bps := vms[currentScript].ListBreakpoints()
-			progLines := strings.Split(inputProgs[currentScript], "\n")
+			progLines := strings.Split(inputScripts[currentScript], "\n")
 			debugShell.Println("--Programm--")
 			pfx := ""
 			for i, line := range progLines {
@@ -295,12 +371,12 @@ func init() {
 		Aliases: []string{"d"},
 		Help:    "show yolol code for nolol source",
 		Func: func(c *ishell.Context) {
-			if !strings.HasSuffix(inputFileNames[currentScript], ".nolol") {
+			if !strings.HasSuffix(scriptFileNames[currentScript], ".nolol") {
 				debugShell.Print("Disas is only available when debugging nolol code")
 			}
 			current := vms[currentScript].CurrentAstLine()
 			conv := nolol.NewConverter()
-			ast, _ := conv.ConvertFromSource(inputProgs[currentScript])
+			ast, _ := conv.ConvertFromSource(inputScripts[currentScript])
 			yolol, _ := (&parser.Printer{}).Print(ast)
 			progLines := strings.Split(yolol, "\n")
 			debugShell.Println("--Programm--")
