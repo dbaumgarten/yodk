@@ -3,13 +3,12 @@ language: go
 branches:
   - master
 env:
-  - NODE_VERSION="8.10"
+  - NODE_VERSION="8.10" GO111MODULE=on
 
 before_install:
   - nvm install $NODE_VERSION
 install:
-  - go get ./...
-  - go get github.com/inconshreveable/mousetrap
+  - go mod download
   - cd vscode-yolol && npm install && npm install -g vsce && cd ..
 script:
   - go test ./...
