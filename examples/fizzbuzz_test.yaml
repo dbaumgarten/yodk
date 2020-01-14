@@ -1,0 +1,22 @@
+scripts: 
+  # list of scripts to run
+  - name: fizzbuzz.yolol
+    # optional. Number of iterations for this script. Default: 1
+    iterations: 1
+    # optional. Number of lines to execute maximally for this script. Default: 0 = infinite
+    maxlines: 10000
+cases:
+  # list of testcases
+  - name: TestOutput
+    # global variables to set before running. ':' can be omitted
+    inputs:
+      number: 0
+    # expected value for global variables after running
+    outputs:
+      out: "fizzbuzz fizz buzz fizz fizz buzz fizz fizzbuzz fizz buzz fizz fizz buzz fizz fizzbuzz fizz buzz fizz fizz buzz fizz fizzbuzz fizz buzz fizz fizz buzz fizz fizzbuzz fizz buzz fizz fizz buzz fizz fizzbuzz fizz buzz fizz fizz buzz fizz fizzbuzz fizz buzz fizz fizz buzz "
+      number: 101
+  - name: TestOutput2
+    inputs:
+      number: 99
+    outputs:
+       out: "fizz buzz "

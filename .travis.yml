@@ -13,6 +13,8 @@ install:
   - cd vscode-yolol && npm install && npm install -g vsce && cd ..
 script:
   - go test ./...
+  - go build
+  - ./yodk test examples/*_test.yaml
 before_deploy:
   - git tag -f latest
   - git remote add gh https://${TRAVIS_REPO_SLUG%/*}:${GITHUB_TOKEN}@github.com/${TRAVIS_REPO_SLUG}.git

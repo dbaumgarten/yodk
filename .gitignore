@@ -1,7 +1,5 @@
 .vscode/
 *.out
-*.yolol
-*.nolol
 yodk
 yodk.exe
 lslog
