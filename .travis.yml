@@ -1,7 +1,4 @@
-sudo: required
 language: go
-branches:
-  - master
 env:
   - NODE_VERSION="8.10" GO111MODULE=on
 
@@ -14,27 +11,19 @@ script:
   - go test ./...
   - go build
   - ./yodk test examples/*_test.yaml
-before_deploy:
-  - git tag -f latest
-  - git remote add gh https://${TRAVIS_REPO_SLUG%/*}:${GITHUB_TOKEN}@github.com/${TRAVIS_REPO_SLUG}.git
-  - git push -f gh latest
-  - git remote remove gh
-  - go build
   - GOOS=windows go build
-  - zip yodk-latest-win.zip yodk.exe
-  - zip yodk-latest-linux.zip yodk
-  - cd vscode-yolol && vsce package && cp *.vsix ../vscode-yolol-latest.vsix && cd ..
+before_deploy:
+  - VERSION=$(git describe --tags)
+  - zip yodk-win.zip yodk.exe
+  - zip yodk-linux.zip yodk
+  - cd vscode-yolol && vsce package && cp *.vsix ../vscode-yolol.vsix && cd ..
 deploy:
   provider: releases
   api-key: $GITHUB_TOKEN
   file: 
-    - yodk-latest-win.zip
-    - yodk-latest-linux.zip
-    - vscode-yolol-latest.vsix
+    - yodk-win.zip
+    - yodk-linux.zip
+    - vscode-yolol.vsix
   skip_cleanup: true
-  name: Automated build of master
-  body: This release contains the most current version of yodk automatically compiled on every push
-  overwrite: true
-  target_commitish: $TRAVIS_COMMIT
   on:
-    branch: master
+    tags: true
