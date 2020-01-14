@@ -18,12 +18,16 @@ before_deploy:
   - zip yodk-linux.zip yodk
   - cd vscode-yolol && vsce package && cp *.vsix ../vscode-yolol.vsix && cd ..
 deploy:
-  provider: releases
-  api-key: $GITHUB_TOKEN
-  file: 
-    - yodk-win.zip
-    - yodk-linux.zip
-    - vscode-yolol.vsix
-  skip_cleanup: true
-  on:
-    tags: true
+  - provider: releases
+    api-key: $GITHUB_TOKEN
+    file: 
+      - yodk-win.zip
+      - yodk-linux.zip
+      - vscode-yolol.vsix
+    skip_cleanup: true
+    on:
+        tags: true
+  - provider: script
+    script: vsce publish -p ${VSCODE_MARKETPLACE_TOKEN} $(git describe --tags | tr -d v)
+    on:
+      tags: true
