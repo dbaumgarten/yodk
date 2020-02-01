@@ -91,7 +91,7 @@ type Tokenizer struct {
 	line      int
 	text      string
 	remaining []byte
-	symbols   []string
+	Symbols   []string
 	// KeywordRegex is used to parse keywords
 	KeywordRegex *regexp.Regexp
 	// IdentifierRegex is used to parse identifiers
@@ -105,7 +105,7 @@ type Tokenizer struct {
 // NewTokenizer creates a new tokenizer
 func NewTokenizer() *Tokenizer {
 	return &Tokenizer{
-		symbols:         symbols,
+		Symbols:         symbols,
 		KeywordRegex:    keywordRegex,
 		IdentifierRegex: identifierRegex,
 		NumberRegex:     numberRegex,
@@ -213,8 +213,8 @@ func (t *Tokenizer) getNewline() *Token {
 }
 
 func (t *Tokenizer) getSymbol() *Token {
-	for i := range symbols {
-		symbol := []byte(symbols[i])
+	for i := range t.Symbols {
+		symbol := []byte(t.Symbols[i])
 		if bytes.HasPrefix(t.remaining, symbol) {
 			defer t.advance(len(symbol))
 			return t.newToken(TypeSymbol, string(symbol))

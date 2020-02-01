@@ -65,14 +65,39 @@ func (p *Parser) ParseStatementLine() *nast.StatementLine {
 		p.Advance()
 	}
 
+	if p.CurrentToken.Type == ast.TypeSymbol && p.CurrentToken.Value == "$" {
+		ret.HasBOL = true
+		p.Advance()
+	}
+
 	// the line has no statements
 	if p.CurrentToken.Type == ast.TypeEOF || p.CurrentToken.Type == ast.TypeNewline {
 		p.Advance()
+		// if a line has no statements, its BOL is also its EOL
+		ret.HasEOL = ret.HasBOL
 		return &ret
 	}
 
 	stmt := p.This.ParseStatement()
-	ret.Statements = append(ret.Statements, stmt)
+	// a line may have 0 statements and may still be usefull because of an EOL
+	if stmt != nil {
+		ret.Statements = append(ret.Statements, stmt)
+	}
+
+	for p.CurrentToken.Type == ast.TypeSymbol && p.CurrentToken.Value == ";" {
+		p.Advance()
+		stmt = p.This.ParseStatement()
+		if stmt != nil {
+			ret.Statements = append(ret.Statements, stmt)
+		} else {
+			p.ErrorCurrent(("Expected a statement after ';'"))
+		}
+	}
+
+	if p.CurrentToken.Type == ast.TypeSymbol && p.CurrentToken.Value == "$" {
+		ret.HasEOL = true
+		p.Advance()
+	}
 
 	if p.CurrentToken.Type != ast.TypeEOF {
 		p.Expect(ast.TypeNewline, "")

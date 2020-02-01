@@ -76,6 +76,19 @@ func (p *Printer) Print(prog *nast.Program) (string, error) {
 				if n.Label != "" {
 					out += n.Label + "> "
 				}
+				if n.HasBOL {
+					out += "$"
+					if len(n.Statements) > 0 {
+						out += " "
+					}
+				}
+				return out, nil
+			case ast.PostVisit:
+				out := ""
+				if n.HasEOL && len(n.Statements) > 0 {
+					out += " $"
+				}
+				out += "\n"
 				return out, nil
 			default:
 				return "", nil

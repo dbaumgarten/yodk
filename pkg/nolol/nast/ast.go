@@ -33,6 +33,10 @@ type ExecutableLine interface {
 // StatementLine is a line consisting of yolol-statements
 type StatementLine struct {
 	ast.Line
+	// If true, do not append this line to any other line during conversion to yolol
+	HasBOL bool
+	// If true, no other lines may be appended to this line during conversion to yolol
+	HasEOL   bool
 	Label    string
 	Position ast.Position
 }

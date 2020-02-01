@@ -412,7 +412,7 @@ func (c *Converter) filterLines(p ast.Node) error {
 	f := func(node ast.Node, visitType int) error {
 		switch n := node.(type) {
 		case *nast.StatementLine:
-			if n.Label == "" && len(n.Statements) == 0 {
+			if n.Label == "" && len(n.Statements) == 0 && !n.HasEOL && !n.HasBOL {
 				// empty line
 				return ast.NewNodeReplacement()
 			}
@@ -470,17 +470,37 @@ func (c *Converter) mergeStatementLines(lines []*nast.StatementLine) ([]*nast.St
 			},
 			Label:    lines[i].Label,
 			Position: lines[i].Position,
+			HasEOL:   lines[i].HasEOL,
 		}
 		current.Statements = append(current.Statements, lines[i].Statements...)
 		newLines = append(newLines, current)
+
+		if current.HasEOL {
+			// no lines may MUST be appended to a line having EOL
+			i++
+			continue
+		}
+
 		for i+1 < len(lines) {
 			currlen := getLengthOfLine(&current.Line)
+
+			if currlen > maxlen {
+				return newLines, &parser.Error{
+					Message:       "The line is too long (>70 characters) to be converted to yolol, even after optimization.",
+					StartPosition: current.Start(),
+					EndPosition:   current.End(),
+				}
+			}
+
 			nextline := lines[i+1]
 			nextlen := getLengthOfLine(&nextline.Line)
 
-			if nextline.Label == "" && currlen+nextlen <= maxlen {
+			if nextline.Label == "" && currlen+nextlen <= maxlen && !nextline.HasBOL {
 				current.Statements = append(current.Statements, nextline.Statements...)
 				i++
+				if nextline.HasEOL {
+					break
+				}
 			} else {
 				break
 			}

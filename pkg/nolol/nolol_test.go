@@ -34,6 +34,19 @@ while number<=upto do
 end
 `
 
+var testProg2 = `
+zzz=7
+a=1;b=2;c=3 $
+x="blabla"
+y="hey"
+$
+$
+foo="bar"
+$ what="ever"
+$ z = 0 $
+x = 99
+`
+
 func TestNolol(t *testing.T) {
 	conv := nolol.NewConverter()
 	prog, err := conv.ConvertFromSource(testProg)
@@ -61,4 +74,19 @@ func TestNolol(t *testing.T) {
 	if result.String() != expected {
 		t.Fatal("Output is wrong")
 	}
+}
+
+func TestLineHandling(t *testing.T) {
+	conv := nolol.NewConverter()
+	prog, err := conv.ConvertFromSource(testProg2)
+	if err != nil {
+		t.Error(err)
+	}
+
+	lines := len(prog.Lines)
+
+	if lines != 8 {
+		t.Fatal("Wrong amount of lines after merging. Expected 8, but got: ", lines)
+	}
+
 }

@@ -10,5 +10,6 @@ import (
 func NewNololTokenizer() *ast.Tokenizer {
 	tok := ast.NewTokenizer()
 	tok.KeywordRegex = regexp.MustCompile("^\\b(if|else|end|then|goto|and|or|not|const|while|do)\\b")
+	tok.Symbols = append(tok.Symbols, []string{";", "$"}...)
 	return tok
 }

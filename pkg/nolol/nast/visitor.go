@@ -39,10 +39,23 @@ func (l *StatementLine) Accept(v ast.Visitor) error {
 	if err != nil {
 		return err
 	}
-	err = l.Line.Accept(v)
-	if err != nil {
-		return err
+
+	for i := 0; i < len(l.Statements); i++ {
+		err = v.Visit(l, i)
+		if err != nil {
+			return err
+		}
+		err = l.Statements[i].Accept(v)
+		if repl, is := err.(ast.NodeReplacement); is {
+			l.Statements = ast.PatchStatements(l.Statements, i, repl)
+			i += len(repl.Replacement) - 1
+			err = nil
+		}
+		if err != nil {
+			return err
+		}
 	}
+
 	return v.Visit(l, ast.PostVisit)
 }
 
