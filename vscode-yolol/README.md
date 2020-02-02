@@ -12,8 +12,10 @@ Adds support for [YOLOL](https://wiki.starbasegame.com/index.php/YOLOL) to vscod
 - Also supports nolol
 
 # Installation
-
 This extension is available from the [vscode marketplace](https://marketplace.visualstudio.com/items?itemName=dbaumgarten.vscode-yolol).  
+
+## Dependencies
+This extension comes bundled with the yodk executable. You can however set the environment variable YODK_EXECUTABLE to a path to your own yodk binary. This is helpfull for development.
 
 ## Manual install
 You can find all versions of the extension for manual install [here](https://github.com/dbaumgarten/yodk/releases).
@@ -22,7 +24,7 @@ You can find all versions of the extension for manual install [here](https://git
 Clone repository.
 Copy the directory vscode-yolol to your vscode extension directory.  
 Run ```npm install``` in the copied directory.  
-Place the yodk executable (or a symlink to it) in the bin folder.
+Place the yodk executable (or a symlink to it) in the bin folder or set the environment variable YODK_EXECUTABLE to the path to your yodk binary.
 
 # ATTENTION
 This extension is still work-in-progress, does contain bugs and may break any time.

@@ -56,6 +56,10 @@
 			{
 				"command": "yodk.optimizeYolol",
 				"title": "Optimize YOLOL-Code"
+			},
+			{
+				"command": "yodk.restartLangserver",
+				"title": "Restart Language Server"
 			}
 		]
 	},
