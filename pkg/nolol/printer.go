@@ -91,8 +91,11 @@ func (p *Printer) Print(prog *nast.Program) (string, error) {
 				out += "\n"
 				return out, nil
 			default:
-				return "", nil
+				if visitType > 0 {
+					return "; ", nil
+				}
 			}
+			return "", nil
 		case *nast.ConstDeclaration:
 			switch visitType {
 			case ast.PreVisit:
@@ -101,6 +104,11 @@ func (p *Printer) Print(prog *nast.Program) (string, error) {
 				return "", nil
 			}
 		case *nast.Program:
+			return "", nil
+		case *nast.BlockStatement:
+			if visitType == ast.PreVisit {
+				return "block ", nil
+			}
 			return "", nil
 		}
 		return "", fmt.Errorf("Unknown node-type: %T", node)

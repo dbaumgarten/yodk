@@ -106,7 +106,7 @@ func (p *Parser) ParseStatementLine() *nast.StatementLine {
 	return &ret
 }
 
-// ParseExecutableLine parses an if, while or statement-line
+// ParseBlockStatement parses a NOLOL block statement
 func (p *Parser) ParseBlockStatement() *nast.BlockStatement {
 	if p.CurrentToken.Type != ast.TypeKeyword || p.CurrentToken.Value != "block" {
 		return nil
