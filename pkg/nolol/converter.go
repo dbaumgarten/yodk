@@ -12,10 +12,17 @@ import (
 // special error that is emitted if a nolol if can not be converted to an inline yolol-if
 var errInlineIfImpossible = fmt.Errorf("Can not convert to inline if")
 
+// reservedTimeVariable is the variable used to track passed time
+var reservedTimeVariable = "_time"
+
+// reservedTimeVariableReplaced is the name of reservedTimeVariable after variable name optimization
+var reservedTimeVariableReplaced = "t"
+
 // Converter can convert a nolol-ast to a yolol-ast
 type Converter struct {
-	jumpLabels map[string]int
-	constants  map[string]interface{}
+	jumpLabels       map[string]int
+	constants        map[string]interface{}
+	usesTimeTracking bool
 }
 
 // NewConverter creates a new converter
@@ -45,6 +52,11 @@ func (c *Converter) Convert(prog *nast.Program) (*ast.Program, error) {
 	if err != nil {
 		return nil, err
 	}
+	// replace builtin functions with their yolol code
+	err = c.insertBuiltinFunctions(prog)
+	if err != nil {
+		return nil, err
+	}
 	// optimize static expressions
 	err = optimizers.NewStaticExpressionOptimizer().Optimize(prog)
 	if err != nil {
@@ -56,7 +68,15 @@ func (c *Converter) Convert(prog *nast.Program) (*ast.Program, error) {
 		return nil, err
 	}
 	// shorten variable names
-	err = optimizers.NewVariableNameOptimizer().Optimize(prog)
+	opt := optimizers.NewVariableNameOptimizer()
+	// take special care that the special variables are replaced correctly
+	opt.SpecialReplacement(reservedTimeVariable, reservedTimeVariableReplaced)
+	err = opt.Optimize(prog)
+	if err != nil {
+		return nil, err
+	}
+	// convert block statements to yolol code
+	err = c.convertBlockStatement(prog)
 	if err != nil {
 		return nil, err
 	}
@@ -86,6 +106,12 @@ func (c *Converter) Convert(prog *nast.Program) (*ast.Program, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	if c.usesTimeTracking {
+		// inset line counter at the beginning of each line
+		c.insertLineCounter(prog)
+	}
+
 	// convert remaining nolol-types to yolol types
 	newprog := c.convertLineTypes(prog)
 
@@ -120,6 +146,52 @@ func (c *Converter) findConstantDeclarations(p ast.Node) error {
 						EndPosition:   constDecl.End(),
 					}
 				}
+			}
+		}
+		return nil
+	}
+	return p.Accept(ast.VisitorFunc(f))
+}
+
+func (c *Converter) convertBlockStatement(p ast.Node) error {
+	counter := 0
+	f := func(node ast.Node, visitType int) error {
+		if block, is := node.(*nast.BlockStatement); is {
+			label := fmt.Sprintf("block%d", counter)
+			return ast.NewNodeReplacement(&nast.StatementLine{
+				Label:  label,
+				HasEOL: true,
+				Line: ast.Line{
+					Position: node.Start(),
+					Statements: []ast.Statement{
+						&ast.IfStatement{
+							Position:  node.Start(),
+							Condition: block.Condition,
+							IfBlock: []ast.Statement{
+								&nast.GoToLabelStatement{
+									Label: label,
+								},
+							},
+						},
+					},
+				},
+			})
+		}
+		return nil
+	}
+	return p.Accept(ast.VisitorFunc(f))
+}
+
+func (c *Converter) insertBuiltinFunctions(p ast.Node) error {
+
+	f := func(node ast.Node, visitType int) error {
+		if function, isFunction := node.(*ast.FuncCall); isFunction {
+			switch function.Function {
+			case "time":
+				c.usesTimeTracking = true
+				return ast.NewNodeReplacement(&ast.Dereference{
+					Variable: reservedTimeVariable,
+				})
 			}
 		}
 		return nil
@@ -525,6 +597,23 @@ func getLengthOfLine(line *ast.Line) int {
 	}
 
 	return len(generated)
+}
+
+func (c *Converter) insertLineCounter(p *nast.Program) {
+	counterVar := reservedTimeVariableReplaced
+	for _, line := range p.Lines {
+		if stmtline, is := line.(*nast.StatementLine); is {
+			stmts := make([]ast.Statement, 1, len(stmtline.Statements)+1)
+			stmts[0] = &ast.Dereference{
+				Variable:    counterVar,
+				Operator:    "++",
+				PrePost:     "Post",
+				IsStatement: true,
+			}
+			stmts = append(stmts, stmtline.Statements...)
+			stmtline.Statements = stmts
+		}
+	}
 }
 
 // convertLineTypes converts nolol line-types to yolol-types

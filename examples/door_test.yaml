@@ -1,0 +1,8 @@
+scripts: 
+  - name: door.nolol
+    iterations: 1
+cases:
+  - name: TestClosingTime
+    outputs:
+      door: "closed"
+      out: "door closed after 10 cycles"

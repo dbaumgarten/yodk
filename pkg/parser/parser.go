@@ -576,6 +576,7 @@ func (p *Parser) ParseFuncCall() ast.Expression {
 		return nil
 	}
 	fc := &ast.FuncCall{
+		Position: p.CurrentToken.Position,
 		Function: p.CurrentToken.Value,
 	}
 	p.Advance()

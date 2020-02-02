@@ -1,0 +1,11 @@
+// example for opening a door for a specific time
+
+// open door and set close-time to now (1) plus 10 cycles
+// the block line costs an additional cycle, therefore we need to substract 1
+// also take not of the start time so we can check the result later
+// as all statements are on the same line (separated by ;) they are executed at the same time
+:door = "open"; closeWhen = time() + (10 - 1); start = time()
+// block while closeWhen is not reached
+block time() < closeWhen
+// close the door
+:door = "closed"; :out="door closed after "+ (time() - start) + " cycles"

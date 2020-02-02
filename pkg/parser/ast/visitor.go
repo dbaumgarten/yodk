@@ -178,13 +178,15 @@ func (f *FuncCall) Accept(v Visitor) error {
 	if err != nil {
 		return err
 	}
-	err = f.Argument.Accept(v)
-	if repl, is := err.(NodeReplacement); is {
-		f.Argument = repl.Replacement[0].(Expression)
-		err = nil
-	}
-	if err != nil {
-		return err
+	if f.Argument != nil {
+		err = f.Argument.Accept(v)
+		if repl, is := err.(NodeReplacement); is {
+			f.Argument = repl.Replacement[0].(Expression)
+			err = nil
+		}
+		if err != nil {
+			return err
+		}
 	}
 	return v.Visit(f, PostVisit)
 }

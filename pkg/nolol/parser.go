@@ -6,7 +6,7 @@ import (
 	"github.com/dbaumgarten/yodk/pkg/parser/ast"
 )
 
-// Parser pasres a nolol-program
+// Parser parses a nolol-program
 type Parser struct {
 	*parser.Parser
 }
@@ -107,6 +107,24 @@ func (p *Parser) ParseStatementLine() *nast.StatementLine {
 }
 
 // ParseExecutableLine parses an if, while or statement-line
+func (p *Parser) ParseBlockStatement() *nast.BlockStatement {
+	if p.CurrentToken.Type != ast.TypeKeyword || p.CurrentToken.Value != "block" {
+		return nil
+	}
+	p.Advance()
+	st := &nast.BlockStatement{
+		Position: p.CurrentToken.Position,
+	}
+
+	st.Condition = p.This.ParseExpression()
+	if st.Condition == nil {
+		p.ErrorCurrent("Expected an expression after 'block'")
+	}
+
+	return st
+}
+
+// ParseExecutableLine parses an if, while or statement-line
 func (p *Parser) ParseExecutableLine() nast.ExecutableLine {
 
 	ifline := p.ParseMultilineIf()
@@ -117,6 +135,11 @@ func (p *Parser) ParseExecutableLine() nast.ExecutableLine {
 	whileline := p.ParseWhile()
 	if whileline != nil {
 		return whileline
+	}
+
+	block := p.ParseBlockStatement()
+	if block != nil {
+		return block
 	}
 
 	return p.ParseStatementLine()
@@ -271,4 +294,33 @@ func (p *Parser) ParseGoto() ast.Statement {
 		return stmt
 	}
 	return nil
+}
+
+// ParseFuncCall parse a function call
+func (p *Parser) ParseFuncCall() ast.Expression {
+	p.Log()
+	if p.CurrentToken.Type != ast.TypeID || p.NextToken.Type != ast.TypeSymbol || p.NextToken.Value != "(" {
+		return nil
+	}
+	fc := &ast.FuncCall{
+		Position: p.CurrentToken.Position,
+		Function: p.CurrentToken.Value,
+	}
+	p.Advance()
+	p.Advance()
+
+	if p.CurrentToken.Type == ast.TypeSymbol && p.CurrentToken.Value == ")" {
+		p.Advance()
+		return fc
+	}
+
+	arg := p.This.ParseExpression()
+	fc.Argument = arg
+	if arg == nil {
+		p.ErrorCurrent("Expected a function argument or ')'")
+	}
+
+	p.Expect(ast.TypeSymbol, ")")
+
+	return fc
 }

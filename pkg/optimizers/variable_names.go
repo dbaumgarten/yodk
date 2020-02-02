@@ -10,19 +10,30 @@ import (
 // VariableNameOptimizer replaces variable names with sorter names
 // Names of external variables will be left unchanged
 type VariableNameOptimizer struct {
-	variableNames map[string]string
+	variableMappings map[string]string
+	variableNames    map[string]struct{}
+	varNumber        int
 }
 
 // NewVariableNameOptimizer returns a new VariableNameOptimizer
 func NewVariableNameOptimizer() *VariableNameOptimizer {
 	return &VariableNameOptimizer{
-		variableNames: make(map[string]string),
+		variableMappings: make(map[string]string),
+		variableNames:    make(map[string]struct{}),
+		varNumber:        1,
 	}
 }
 
 // Optimize is needed to implement Optimizer
 func (o *VariableNameOptimizer) Optimize(prog ast.Node) error {
 	return prog.Accept(o)
+}
+
+// SpecialReplacement registers aspecial replacement. Variables named in, will be renamed to out.
+// No other variables will be renamed to out (no collions will occur)
+func (o *VariableNameOptimizer) SpecialReplacement(in string, out string) {
+	o.variableMappings[in] = out
+	o.variableNames[out] = struct{}{}
 }
 
 // Visit is needed to implement Visitor
@@ -46,28 +57,37 @@ func (o *VariableNameOptimizer) replaceVarName(in string) string {
 	if strings.HasPrefix(in, ":") {
 		return in
 	}
-	newName, exists := o.variableNames[in]
+	newName, exists := o.variableMappings[in]
 	if !exists {
 		newName = o.getNextVarName()
-		o.variableNames[in] = newName
+		o.variableMappings[in] = newName
 	}
 	return newName
 }
 
 // generate a new variable name
 func (o *VariableNameOptimizer) getNextVarName() string {
-	base := 26
-	varnum := len(o.variableNames) + 1
-	varname := ""
-	for varnum > 0 {
-		rem := (varnum % base)
-		if rem == 0 {
-			rem = base
-			varnum = (varnum / base) - 1
-		} else {
-			varnum /= base
+	for {
+		base := 26
+		varnum := o.varNumber
+		varname := ""
+		for varnum > 0 {
+			rem := (varnum % base)
+			if rem == 0 {
+				rem = base
+				varnum = (varnum / base) - 1
+			} else {
+				varnum /= base
+			}
+			varname = fmt.Sprintf("%c", rem-1+97) + varname
 		}
-		varname = fmt.Sprintf("%c", rem-1+97) + varname
+		o.varNumber++
+		if _, exists := o.variableNames[varname]; exists {
+			// we generated an already existing name. This can happen because of special replacements.
+			// try again
+			continue
+		}
+		o.variableNames[varname] = struct{}{}
+		return varname
 	}
-	return varname
 }

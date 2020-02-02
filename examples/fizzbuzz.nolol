@@ -3,20 +3,20 @@ const buzz = "buzz"
 const sep = " "
 const upto = 100
 
-if :out == 0 then
-	:out = ""
+if :out==0 then
+	:out=""
 end
 // main loop
 while :number<=upto do
 	if :number%3==0 and :number%5==0 then
-		:out += fizz+buzz+sep
+		:out+=fizz+buzz+sep
 		goto next //skip other cases
 	end
 	if :number%3==0 then
 		:out+=fizz+sep
 	end
 	if :number%5==0 then
-	:out+=buzz+sep
+		:out+=buzz+sep
 	end
 	next> 
 	:number++ 

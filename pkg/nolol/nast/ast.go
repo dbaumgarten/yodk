@@ -116,3 +116,19 @@ func (n *WhileLoop) Start() ast.Position {
 func (n *WhileLoop) End() ast.Position {
 	return n.Block[len(n.Block)-1].End()
 }
+
+// BlockStatement blocks execution while the Condition is true
+type BlockStatement struct {
+	Position  ast.Position
+	Condition ast.Expression
+}
+
+// Start is needed to implement ast.Node
+func (n *BlockStatement) Start() ast.Position {
+	return n.Position
+}
+
+// End is needed to implement ast.Node
+func (n *BlockStatement) End() ast.Position {
+	return n.Condition.End()
+}
