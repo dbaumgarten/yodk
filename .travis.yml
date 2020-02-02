@@ -1,4 +1,7 @@
 language: go
+dist: bionic
+services:
+  - xvfb
 env:
   - NODE_VERSION="8.10" GO111MODULE=on
 
@@ -7,12 +10,18 @@ before_install:
 install:
   - go mod download
   - cd vscode-yolol && npm install && npm install -g vsce && cd ..
+before_script:
+  - export DISPLAY=:99.0;
 script:
   - go test ./...
   - go build -ldflags "-X github.com/dbaumgarten/yodk/cmd.YodkVersion=${TRAVIS_BRANCH}"
   - ./yodk version
   - ./yodk test examples/*_test.yaml
   - GOOS=windows go build -ldflags "-X github.com/dbaumgarten/yodk/cmd.YodkVersion=${TRAVIS_BRANCH}"
+  - cd vscode-yolol
+  - npm run vscode:prepublish
+  - npm test --silent
+  - cd ..
 before_deploy:
   - zip yodk-win.zip yodk.exe
   - zip yodk-linux.zip yodk

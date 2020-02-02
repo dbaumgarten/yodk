@@ -11,25 +11,33 @@ import {
 import * as vscode from 'vscode';
 
 let client: LanguageClient;
+let context: ExtensionContext;
 
-function getExePath(context: ExtensionContext){
+export function getContext(){
+	return context
+}
+
+export function getExePath(platform?){
+
+	if (!platform){
+		platform = process.platform
+	}
 
 	if (process.env.YODK_EXECUTABLE){
 		return process.env.YODK_EXECUTABLE
 	}
 
 	let executable = path.join(".","bin","yodk")
-	if (process.platform == "win32") {
+	if (platform == "win32") {
 		executable += ".exe"
 	}
 	return context.asAbsolutePath(executable);
 }
 
-function runYodkCommand(cmd, context: ExtensionContext) {
+export async function runYodkCommand(cmd): Promise<{}> {
 	const cp = require('child_process')
 
-	let binary = cp.spawn(getExePath(context));
-
+	let binary = cp.spawn(getExePath(),cmd);
 	let buffer = "";
 	binary.stdout.on("data", (data) => {
 		let text = data.toString();
@@ -38,15 +46,22 @@ function runYodkCommand(cmd, context: ExtensionContext) {
 		}
 	});
 
-	binary.on("close", (code) => {
-		if (code != 0) {
-			vscode.window.showErrorMessage(buffer)
-		}
+	return new Promise((resolve, reject) => {
+		binary.on("exit", (code) => {
+			console.log(code)
+			resolve({
+				code: code,
+				output: buffer
+			})
+			if (code != 0) {
+				vscode.window.showErrorMessage(buffer)
+			}
+		})
 	})
 }
 
-function startLangServer(context: ExtensionContext){
-	let serverModule = getExePath(context);
+export function startLangServer(){
+	let serverModule = getExePath();
 
 	// If the extension is launched in debug mode then the debug server options are used
 	// Otherwise the run options are used
@@ -85,30 +100,30 @@ function startLangServer(context: ExtensionContext){
 	client.start();
 }
 
-function restartLangServer(context: ExtensionContext) {
+export function restartLangServer() {
 	client.stop()
-	startLangServer(context)
+	startLangServer()
 }
 
-export function activate(context: ExtensionContext) {
-
+export function activate(lcontext: ExtensionContext) {
+	context = lcontext
 	const compileCommandHandler = () => {
-		runYodkCommand(["compile", vscode.window.activeTextEditor.document.fileName],context)
+		runYodkCommand(["compile", vscode.window.activeTextEditor.document.fileName])
 	};
 
 	const optimizeCommandHandler = () => {
-		runYodkCommand(["optimize", vscode.window.activeTextEditor.document.fileName],context)
+		runYodkCommand(["optimize", vscode.window.activeTextEditor.document.fileName])
 	};
 
 	const restartCommandHandler = () => {
-		restartLangServer(context)
+		restartLangServer()
 	};
 
 	context.subscriptions.push(vscode.commands.registerCommand('yodk.compileNolol', compileCommandHandler));
 	context.subscriptions.push(vscode.commands.registerCommand('yodk.optimizeYolol', optimizeCommandHandler));
 	context.subscriptions.push(vscode.commands.registerCommand('yodk.restartLangserver', restartCommandHandler));
 
-	startLangServer(context)
+	startLangServer()
 }
 
 export function deactivate(): Thenable<void> | undefined {

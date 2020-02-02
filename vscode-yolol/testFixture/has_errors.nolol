@@ -1,0 +1,24 @@
+const fizz = "fizz"
+const buzz = "buzz"
+const sep = " "
+const upto = 100
+
+if :out==0 then
+	:out=""
+end
+// main loop
+while :number<=upto do do
+	if :number%3==0 and :number%5==0 then
+		:out+=fizz+buzz+sep
+		goto next //skip other cases
+	end
+	if :number%3==0 then
+		:out+=fizz+sep
+	end
+	if :number%5==0 then
+		:out+=buzz+sep
+		goto 1
+	end
+	next> 
+	:number++ 
+end

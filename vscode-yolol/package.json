@@ -83,7 +83,8 @@
 		"watch": "tsc -b -w",
 		"bin": "cd .. && go build && cp yodk* vscode-yolol/bin/ && cd vscode-yolol",
 		"update-vscode": "vscode-install",
-		"postinstall": "vscode-install"
+		"postinstall": "vscode-install",
+		"test": "sh ./scripts/e2e.sh"
 	},
 	"__metadata": {
 		"id": "e3871e35-a24a-4789-b037-50055f4d0bbb",

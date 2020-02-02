@@ -5,3 +5,4 @@ yodk.exe
 lslog
 !vscode-yolol/.vscode
 *.vsix
+vscode-yolol/.vscode-test/
