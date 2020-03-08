@@ -314,6 +314,7 @@ func (c *Converter) convertIfInline(mlif *nast.MultilineIf) error {
 		return errInlineIfImpossible
 	}
 	linelength += getLengthOfLine(&mergedIfLines[0].(*nast.StatementLine).Line)
+	linelength += getLengthOfLine(mlif.Condition)
 
 	if mlif.ElseBlock != nil {
 		mergedElseLines, _ = c.mergeExecutableLines(mlif.ElseBlock)
@@ -583,7 +584,7 @@ func (c *Converter) mergeStatementLines(lines []*nast.StatementLine) ([]*nast.St
 }
 
 // getLengthOfLine returns the amount of characters needed to represent the given line as yolol-code
-func getLengthOfLine(line *ast.Line) int {
+func getLengthOfLine(line ast.Node) int {
 	ygen := parser.Printer{}
 	ygen.UnknownHandlerFunc = func(node ast.Node, visitType int) (string, error) {
 		if _, is := node.(*nast.GoToLabelStatement); is {
