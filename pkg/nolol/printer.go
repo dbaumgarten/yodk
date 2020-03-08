@@ -88,6 +88,11 @@ func (p *Printer) Print(prog *nast.Program) (string, error) {
 				if n.HasEOL && len(n.Statements) > 0 {
 					out += " $"
 				}
+				if n.Comment != "" && (n.HasBOL || n.Label != "" || len(n.Statements) > 0) {
+					// the line has a comment and somethin else. Seperate it by a space
+					out += " "
+				}
+				out += n.Comment
 				out += "\n"
 				return out, nil
 			default:
@@ -114,5 +119,5 @@ func (p *Printer) Print(prog *nast.Program) (string, error) {
 		return "", fmt.Errorf("Unknown node-type: %T", node)
 	}
 
-	return p.yololPrinter.PrintCommented(prog, prog.Comments)
+	return p.yololPrinter.Print(prog)
 }

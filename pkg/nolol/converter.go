@@ -23,6 +23,7 @@ type Converter struct {
 	jumpLabels       map[string]int
 	constants        map[string]interface{}
 	usesTimeTracking bool
+	debug            bool
 }
 
 // NewConverter creates a new converter
@@ -33,11 +34,17 @@ func NewConverter() *Converter {
 // ConvertFromSource is a shortcut that parses and directly convertes a nolol program
 func (c *Converter) ConvertFromSource(prog string) (*ast.Program, error) {
 	p := NewParser()
+	p.Debug(c.debug)
 	parsed, err := p.Parse(prog)
 	if err != nil {
 		return nil, err
 	}
 	return c.Convert(parsed)
+}
+
+// Debug enables/disables debug logging
+func (c *Converter) Debug(b bool) {
+	c.debug = b
 }
 
 // Convert converts a nolol-program to a yolol-program

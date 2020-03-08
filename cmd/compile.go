@@ -19,6 +19,7 @@ var compileCmd = &cobra.Command{
 		outfile := strings.Replace(args[0], path.Ext(args[0]), ".yolol", -1)
 		file := loadInputFile(args[0])
 		converter := nolol.NewConverter()
+		converter.Debug(debugLog)
 		converted, err := converter.ConvertFromSource(file)
 		exitOnError(err, "converting to yolol")
 		gen := parser.Printer{}
@@ -32,4 +33,5 @@ var compileCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(compileCmd)
 	compileCmd.Flags().StringVarP(&outputFile, "out", "o", "<inputfile>.out", "The output file")
+	compileCmd.Flags().BoolVarP(&debugLog, "debug", "d", false, "Print debug logs while parsing")
 }

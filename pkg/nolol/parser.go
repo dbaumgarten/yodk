@@ -21,16 +21,19 @@ func NewParser() *Parser {
 	return ep
 }
 
+// Debug enables/disables debug logging
+func (p *Parser) Debug(b bool) {
+	p.DebugLog = b
+}
+
 // Parse is the entry point for parsing
 func (p *Parser) Parse(prog string) (*nast.Program, error) {
 	p.Errors = make(parser.Errors, 0)
-	p.Comments = make([]*ast.Token, 0)
 	p.Tokenizer.Load(prog)
 	// Advance twice to fill CurrentToken and NextToken
 	p.Advance()
 	p.Advance()
 	parsed := p.ParseProgram()
-	parsed.Comments = p.Comments
 	if len(p.Errors) == 0 {
 		return parsed, nil
 	}
@@ -51,6 +54,7 @@ func (p *Parser) ParseProgram() *nast.Program {
 
 // ParseStatementLine parses a statement line
 func (p *Parser) ParseStatementLine() *nast.StatementLine {
+	p.Log()
 	ret := nast.StatementLine{
 		Line: ast.Line{
 			Statements: make([]ast.Statement, 0, 1),
@@ -65,13 +69,22 @@ func (p *Parser) ParseStatementLine() *nast.StatementLine {
 		p.Advance()
 	}
 
+	// this line has no statements, only a comment
+	if p.CurrentToken.Type == ast.TypeComment {
+		ret.Comment = p.CurrentToken.Value
+		p.Advance()
+	}
+
 	if p.CurrentToken.Type == ast.TypeSymbol && p.CurrentToken.Value == "$" {
 		ret.HasBOL = true
 		p.Advance()
 	}
 
 	// the line has no statements
-	if p.CurrentToken.Type == ast.TypeEOF || p.CurrentToken.Type == ast.TypeNewline {
+	if p.CurrentToken.Type == ast.TypeEOF || p.CurrentToken.Type == ast.TypeNewline || p.CurrentToken.Type == ast.TypeComment {
+		if p.CurrentToken.Type == ast.TypeComment {
+			ret.Comment = p.CurrentToken.Value
+		}
 		p.Advance()
 		// if a line has no statements, its BOL is also its EOL
 		ret.HasEOL = ret.HasBOL
@@ -79,9 +92,13 @@ func (p *Parser) ParseStatementLine() *nast.StatementLine {
 	}
 
 	stmt := p.This.ParseStatement()
-	// a line may have 0 statements and may still be usefull because of an EOL
+	// at this point, the line must at least have one statement
 	if stmt != nil {
 		ret.Statements = append(ret.Statements, stmt)
+	} else {
+		p.ErrorCurrent("Expected a statement")
+		p.Advance()
+		return &ret
 	}
 
 	for p.CurrentToken.Type == ast.TypeSymbol && p.CurrentToken.Value == ";" {
@@ -99,6 +116,12 @@ func (p *Parser) ParseStatementLine() *nast.StatementLine {
 		p.Advance()
 	}
 
+	// This line has statements and a comment at the end
+	if p.CurrentToken.Type == ast.TypeComment {
+		ret.Comment = p.CurrentToken.Value
+		p.Advance()
+	}
+
 	if p.CurrentToken.Type != ast.TypeEOF {
 		p.Expect(ast.TypeNewline, "")
 	}
@@ -108,6 +131,7 @@ func (p *Parser) ParseStatementLine() *nast.StatementLine {
 
 // ParseBlockStatement parses a NOLOL block statement
 func (p *Parser) ParseBlockStatement() *nast.BlockStatement {
+	p.Log()
 	if p.CurrentToken.Type != ast.TypeKeyword || p.CurrentToken.Value != "block" {
 		return nil
 	}
@@ -126,6 +150,7 @@ func (p *Parser) ParseBlockStatement() *nast.BlockStatement {
 
 // ParseExecutableLine parses an if, while or statement-line
 func (p *Parser) ParseExecutableLine() nast.ExecutableLine {
+	p.Log()
 
 	ifline := p.ParseMultilineIf()
 	if ifline != nil {
@@ -159,6 +184,7 @@ func (p *Parser) ParseLine() nast.Line {
 
 // ParseConstantDeclaration parses a constant declaration
 func (p *Parser) ParseConstantDeclaration() *nast.ConstDeclaration {
+	p.Log()
 	if p.CurrentToken.Type != ast.TypeKeyword || p.CurrentToken.Value != "const" {
 		return nil
 	}
@@ -186,6 +212,7 @@ func (p *Parser) ParseConstantDeclaration() *nast.ConstDeclaration {
 
 // ParseLinesUntil parse lines until stop() returns true
 func (p *Parser) ParseLinesUntil(stop func() bool) []nast.ExecutableLine {
+	p.Log()
 	lines := make([]nast.ExecutableLine, 0)
 	for p.HasNext() && !stop() {
 		line := p.ParseExecutableLine()
@@ -277,6 +304,7 @@ func (p *Parser) ParseIf() ast.Statement {
 
 // ParseGoto allows labeled-gotos and forbids line-based gotos
 func (p *Parser) ParseGoto() ast.Statement {
+	p.Log()
 	if p.CurrentToken.Type == ast.TypeKeyword && p.CurrentToken.Value == "goto" {
 		p.Advance()
 

@@ -12,6 +12,7 @@ type Optimizer interface {
 type CompoundOptimizer struct {
 	seopt  *StaticExpressionOptimizer
 	varopt *VariableNameOptimizer
+	comopt *CommentOptimizer
 }
 
 // NewCompoundOptimizer creates a new compound optimizer
@@ -19,12 +20,17 @@ func NewCompoundOptimizer() *CompoundOptimizer {
 	return &CompoundOptimizer{
 		seopt:  &StaticExpressionOptimizer{},
 		varopt: NewVariableNameOptimizer(),
+		comopt: &CommentOptimizer{},
 	}
 }
 
 // Optimize is required to implement Optimizer
 func (co *CompoundOptimizer) Optimize(prog *ast.Program) error {
 	err := co.seopt.Optimize(prog)
+	if err != nil {
+		return err
+	}
+	err = co.comopt.Optimize(prog)
 	if err != nil {
 		return err
 	}

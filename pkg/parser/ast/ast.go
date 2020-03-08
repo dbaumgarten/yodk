@@ -16,8 +16,6 @@ type Node interface {
 // Program represents the whole yolol-programm
 type Program struct {
 	Lines []*Line
-	// Contains all the comments that were found while parsing the program. MUST be ordered.
-	Comments []*Token
 }
 
 // Start is needed to implement Node
@@ -34,6 +32,8 @@ func (n *Program) End() Position {
 type Line struct {
 	Position   Position
 	Statements []Statement
+	// A Line can have a comment at the end or be just a comment without statements
+	Comment string
 }
 
 // Start is needed to implement Node
@@ -44,9 +44,25 @@ func (n *Line) Start() Position {
 // End is needed to implement Node
 func (n *Line) End() Position {
 	if len(n.Statements) == 0 {
-		return n.Position
+		return n.Position.Add(len(n.Comment))
 	}
-	return n.Statements[len(n.Statements)-1].End()
+	return n.Statements[len(n.Statements)-1].End().Add(len(n.Comment) + 1)
+}
+
+// CommentLine represents a line only containing a comment
+type CommentLine struct {
+	Position Position
+	Text     string
+}
+
+// Start is needed to implement Node
+func (n *CommentLine) Start() Position {
+	return n.Position
+}
+
+// End is needed to implement Node
+func (n *CommentLine) End() Position {
+	return n.Position.Add(len(n.Text) + 2)
 }
 
 // Expression is the interface for all expressions

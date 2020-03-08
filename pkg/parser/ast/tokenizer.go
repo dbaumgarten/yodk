@@ -65,7 +65,7 @@ var identifierRegex = regexp.MustCompile("^:?[a-zA-Z]+[a-zA-Z0-9_]*")
 
 var numberRegex = regexp.MustCompile("^[0-9]+(\\.[0-9]+)?")
 
-var commentRegex = regexp.MustCompile("^[ \\t]*\\/\\/([^\n]*)")
+var commentRegex = regexp.MustCompile("^\\/\\/([^\n]*)")
 
 var whitespaceRegex = regexp.MustCompile("^[ \\t\r]+")
 

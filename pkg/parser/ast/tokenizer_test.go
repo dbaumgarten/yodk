@@ -49,7 +49,8 @@ func TestTokenizer(t *testing.T) {
 	Line: 4, Coloumn: 8, Type: Symbol, Value: '='
 	Line: 4, Coloumn: 9, Type: Whitespace, Value: ' '
 	Line: 4, Coloumn: 10, Type: String, Value: 'welt'
-	Line: 4, Coloumn: 16, Type: Comment, Value: ' //comment1'
+	Line: 4, Coloumn: 16, Type: Whitespace, Value: ' '
+	Line: 4, Coloumn: 17, Type: Comment, Value: '//comment1'
 	Line: 4, Coloumn: 27, Type: Newline
 	Line: 5, Coloumn: 1, Type: Whitespace, Value: '	'
 	Line: 5, Coloumn: 2, Type: Keyword, Value: 'if'
@@ -91,7 +92,8 @@ func TestTokenizer(t *testing.T) {
 	Line: 7, Coloumn: 11, Type: Whitespace, Value: ' '
 	Line: 7, Coloumn: 12, Type: Number, Value: '1'
 	Line: 7, Coloumn: 13, Type: Newline
-	Line: 8, Coloumn: 1, Type: Comment, Value: '	// comment 2'
+	Line: 8, Coloumn: 1, Type: Whitespace, Value: '	'
+	Line: 8, Coloumn: 2, Type: Comment, Value: '// comment 2'
 	Line: 8, Coloumn: 14, Type: Newline
 	Line: 9, Coloumn: 1, Type: Whitespace, Value: '	'
 	Line: 9, Coloumn: 2, Type: ID, Value: ':var'

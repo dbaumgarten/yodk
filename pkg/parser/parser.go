@@ -21,8 +21,6 @@ type Parser struct {
 	SkippedWhitespace bool
 	// using an interface of ourself to call the parsing-methods allows them to be overridden by 'subclasses'
 	This YololParserFunctions
-	// Contains all comments encountered during parsing
-	Comments []*ast.Token
 	// Contains all errors encountered during parsing
 	Errors Errors
 	// If true, return all found errors, not only one per line
@@ -92,12 +90,9 @@ func (p *Parser) Advance() *ast.Token {
 		p.NextToken = p.Tokenizer.Next()
 		p.SkippedWhitespace = p.NextWouldBeWhitespace
 		p.NextWouldBeWhitespace = false
-		for p.NextToken.Type != ast.TypeEOF && (p.NextToken.Type == ast.TypeWhitespace || p.NextToken.Type == ast.TypeComment) {
+		for p.NextToken.Type == ast.TypeWhitespace {
 			if p.NextToken.Type == ast.TypeWhitespace {
 				p.NextWouldBeWhitespace = true
-			} else {
-				// next token is a comment. Store it.
-				p.Comments = append(p.Comments, p.NextToken)
 			}
 			p.NextToken = p.Tokenizer.Next()
 		}
@@ -155,7 +150,6 @@ func (p *Parser) Expect(tokenType string, tokenValue string) ast.Position {
 func (p *Parser) init() {
 	p.Tokenizer = ast.NewTokenizer()
 	p.Errors = make(Errors, 0)
-	p.Comments = make([]*ast.Token, 0)
 	p.CurrentToken = nil
 	p.PrevToken = nil
 	p.NextToken = nil
@@ -173,7 +167,6 @@ func (p *Parser) Parse(prog string) (*ast.Program, error) {
 	p.Advance()
 	p.Advance()
 	parsed := p.ParseProgram()
-	parsed.Comments = p.Comments
 	if len(p.Errors) == 0 {
 		return parsed, nil
 	}
@@ -207,7 +200,12 @@ func (p *Parser) ParseLine() *ast.Line {
 		Statements: make([]ast.Statement, 0),
 	}
 
-	// empty line
+	if p.CurrentToken.Type == ast.TypeComment {
+		ret.Comment = p.CurrentToken.Value
+		p.Advance()
+	}
+
+	// not statements in this line
 	if p.CurrentToken.Type == ast.TypeNewline || p.CurrentToken.Type == ast.TypeEOF {
 		p.Advance()
 		return &ret
@@ -221,7 +219,12 @@ func (p *Parser) ParseLine() *ast.Line {
 		}
 		ret.Statements = append(ret.Statements, stmt)
 
-		// line ends after statement
+		if p.CurrentToken.Type == ast.TypeComment {
+			ret.Comment = p.CurrentToken.Value
+			p.Advance()
+		}
+
+		// line ends after statement (or after comment)
 		if p.CurrentToken.Type == ast.TypeNewline || p.CurrentToken.Type == ast.TypeEOF {
 			p.Advance()
 			return &ret
