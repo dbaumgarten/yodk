@@ -11,12 +11,14 @@ import (
 
 type LangServer struct {
 	client lsp.Client
+	cache  *Cache
 }
 
 func Run(ctx context.Context, stream jsonrpc2.Stream, opts ...interface{}) error {
 	s := &LangServer{}
 	conn, client := lsp.RunServer(ctx, stream, s, opts...)
 	s.client = client
+	s.cache = NewCache()
 	return conn.Wait(ctx)
 }
 
@@ -77,13 +79,15 @@ func (ls *LangServer) ExecuteCommand(ctx context.Context, params *lsp.ExecuteCom
 	return nil, unsupported()
 }
 func (ls *LangServer) DidOpen(ctx context.Context, params *lsp.DidOpenTextDocumentParams) error {
-	ls.Diagnose(ctx, params.TextDocument.URI, params.TextDocument.Text)
+	ls.cache.Set(params.TextDocument.URI, params.TextDocument.Text)
+	ls.Diagnose(ctx, params.TextDocument.URI)
 	return nil
 }
 func (ls *LangServer) DidChange(ctx context.Context, params *lsp.DidChangeTextDocumentParams) error {
 	// We expect the full content of file, i.e. a single change with no range.
 	if change := params.ContentChanges[0]; change.RangeLength == 0 {
-		ls.Diagnose(ctx, params.TextDocument.URI, change.Text)
+		ls.cache.Set(params.TextDocument.URI, change.Text)
+		ls.Diagnose(ctx, params.TextDocument.URI)
 	}
 	return nil
 }
@@ -153,7 +157,7 @@ func (ls *LangServer) ColorPresentation(ctx context.Context, params *lsp.ColorPr
 	return nil, unsupported()
 }
 func (ls *LangServer) Formatting(ctx context.Context, params *lsp.DocumentFormattingParams) ([]lsp.TextEdit, error) {
-	return format(params)
+	return ls.Format(params)
 }
 func (ls *LangServer) RangeFormatting(ctx context.Context, params *lsp.DocumentRangeFormattingParams) ([]lsp.TextEdit, error) {
 	return nil, unsupported()

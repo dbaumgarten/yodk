@@ -11,11 +11,12 @@ import (
 	"github.com/dbaumgarten/yodk/pkg/parser"
 )
 
-func (s *LangServer) Diagnose(ctx context.Context, uri lsp.DocumentURI, text string) {
+func (s *LangServer) Diagnose(ctx context.Context, uri lsp.DocumentURI) {
 
 	go func() {
 
 		var errs error
+		text, _ := s.cache.Get(uri)
 		if strings.HasSuffix(string(uri), ".yolol") {
 			p := parser.NewParser()
 			_, errs = p.Parse(text)

@@ -1,10 +1,7 @@
 package langserver
 
 import (
-	"io/ioutil"
 	"log"
-	"net/url"
-	"path/filepath"
 	"strings"
 
 	"github.com/dbaumgarten/yodk/pkg/lsp"
@@ -14,32 +11,12 @@ import (
 	"github.com/pmezard/go-difflib/difflib"
 )
 
-// getFilePath returns the plattform specific file-path for a given uri
-// windows does behave stupid here
-func getFilePath(u lsp.DocumentURI) (string, error) {
-	ur, err := url.Parse(string(u))
-	if err != nil {
-		return "", err
-	}
-	s := filepath.FromSlash(ur.Path)
-
-	if !strings.HasSuffix(s, "\\\\") {
-		s = strings.TrimPrefix(s, "\\")
-	}
-	return s, nil
-}
-
-func format(params *lsp.DocumentFormattingParams) ([]lsp.TextEdit, error) {
-	file, err := getFilePath(params.TextDocument.URI)
+func (s *LangServer) Format(params *lsp.DocumentFormattingParams) ([]lsp.TextEdit, error) {
+	unformatted, err := s.cache.Get(params.TextDocument.URI)
+	file := string(params.TextDocument.URI)
 	if err != nil {
 		return nil, err
 	}
-	unformattedraw, err := ioutil.ReadFile(file)
-	if err != nil {
-		return nil, err
-	}
-
-	unformatted := string(unformattedraw)
 	var formatted string
 
 	if strings.HasSuffix(file, ".yolol") {
