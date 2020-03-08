@@ -10,6 +10,7 @@ import (
 	"github.com/dbaumgarten/yodk/pkg/lsp"
 	"github.com/dbaumgarten/yodk/pkg/nolol"
 	"github.com/dbaumgarten/yodk/pkg/parser"
+	"github.com/dbaumgarten/yodk/pkg/util"
 	"github.com/pmezard/go-difflib/difflib"
 )
 
@@ -52,6 +53,10 @@ func format(params *lsp.DocumentFormattingParams) ([]lsp.TextEdit, error) {
 		if err != nil {
 			return nil, err
 		}
+		err = util.CheckForFormattingErrorYolol(parsed, formatted)
+		if err != nil {
+			return nil, err
+		}
 	} else if strings.HasSuffix(file, ".nolol") {
 		p := nolol.NewParser()
 		parsed, errs := p.Parse(unformatted)
@@ -60,6 +65,10 @@ func format(params *lsp.DocumentFormattingParams) ([]lsp.TextEdit, error) {
 		}
 		printer := nolol.NewPrinter()
 		formatted, err = printer.Print(parsed)
+		if err != nil {
+			return nil, err
+		}
+		err = util.CheckForFormattingErrorNolol(parsed, formatted)
 		if err != nil {
 			return nil, err
 		}

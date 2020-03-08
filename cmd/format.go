@@ -3,12 +3,11 @@ package cmd
 import (
 	"fmt"
 	"io/ioutil"
-	"path"
 	"strings"
 
 	"github.com/dbaumgarten/yodk/pkg/nolol"
-
 	"github.com/dbaumgarten/yodk/pkg/parser"
+	"github.com/dbaumgarten/yodk/pkg/util"
 	"github.com/spf13/cobra"
 )
 
@@ -18,7 +17,6 @@ var formatCmd = &cobra.Command{
 	Short: "Format a code-file",
 
 	Run: func(cmd *cobra.Command, args []string) {
-		outfile := strings.Replace(args[0], path.Ext(args[0]), "", -1) + "-fmt" + path.Ext(args[0])
 		file := loadInputFile(args[0])
 		generated := ""
 		var err error
@@ -31,6 +29,8 @@ var formatCmd = &cobra.Command{
 			gen := parser.Printer{}
 			generated, err = gen.Print(parsed)
 			exitOnError(err, "generating code")
+			err = util.CheckForFormattingErrorYolol(parsed, generated)
+			exitOnError(err, "formatting code")
 		} else if strings.HasSuffix(args[0], ".nolol") {
 			p := nolol.NewParser()
 			parsed, errs := p.Parse(file)
@@ -40,10 +40,13 @@ var formatCmd = &cobra.Command{
 			printer := nolol.NewPrinter()
 			generated, err = printer.Print(parsed)
 			exitOnError(err, "generating code")
+			err = util.CheckForFormattingErrorNolol(parsed, generated)
+			exitOnError(err, "formatting code")
 		} else {
 			exitOnError(fmt.Errorf("Unsupported file-type"), "opening file")
 		}
-		ioutil.WriteFile(outfile, []byte(generated), 0700)
+
+		ioutil.WriteFile(args[0], []byte(generated), 0700)
 	},
 }
 
