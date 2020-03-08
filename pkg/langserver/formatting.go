@@ -11,6 +11,9 @@ import (
 	"github.com/pmezard/go-difflib/difflib"
 )
 
+// Format computes formatting instructions for the given document.
+// Parser errors during formatting are silently discared, as reporting them to the user would just be annoying
+// and showing errors is already done by the diagnostics
 func (s *LangServer) Format(params *lsp.DocumentFormattingParams) ([]lsp.TextEdit, error) {
 	unformatted, err := s.cache.Get(params.TextDocument.URI)
 	file := string(params.TextDocument.URI)
@@ -23,12 +26,12 @@ func (s *LangServer) Format(params *lsp.DocumentFormattingParams) ([]lsp.TextEdi
 		p := parser.NewParser()
 		parsed, errs := p.Parse(unformatted)
 		if errs != nil {
-			return nil, errs
+			return []lsp.TextEdit{}, nil
 		}
 		gen := parser.Printer{}
 		formatted, err = gen.Print(parsed)
 		if err != nil {
-			return nil, err
+			return []lsp.TextEdit{}, nil
 		}
 		err = util.CheckForFormattingErrorYolol(parsed, formatted)
 		if err != nil {
@@ -38,12 +41,12 @@ func (s *LangServer) Format(params *lsp.DocumentFormattingParams) ([]lsp.TextEdi
 		p := nolol.NewParser()
 		parsed, errs := p.Parse(unformatted)
 		if errs != nil {
-			return nil, errs
+			return []lsp.TextEdit{}, nil
 		}
 		printer := nolol.NewPrinter()
 		formatted, err = printer.Print(parsed)
 		if err != nil {
-			return nil, err
+			return []lsp.TextEdit{}, nil
 		}
 		err = util.CheckForFormattingErrorNolol(parsed, formatted)
 		if err != nil {
