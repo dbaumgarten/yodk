@@ -59,7 +59,7 @@ func (p Position) Before(other Position) bool {
 var symbols = []string{"++", "--", ">=", "<=", "!=", "==", "==", "+=", "-=", "*=", "/=", "%=",
 	"=", ">", "<", "+", "-", "*", "/", "^", "%", ",", "(", ")"}
 
-var keywordRegex = regexp.MustCompile("^\\b(if|else|end|then|goto|and|or|not)\\b")
+var keywordRegex = regexp.MustCompile("(?i)^\\b(if|else|end|then|goto|and|or|not)\\b")
 
 var identifierRegex = regexp.MustCompile("^:?[a-zA-Z]+[a-zA-Z0-9_]*")
 
@@ -128,7 +128,7 @@ func (t *Tokenizer) newToken(typ string, val string) *Token {
 func (t *Tokenizer) Load(input string) {
 	t.column = 1
 	t.text = input
-	t.remaining = []byte(strings.ToLower(input))
+	t.remaining = []byte(input)
 	t.line = 1
 }
 
@@ -237,7 +237,8 @@ func (t *Tokenizer) getKeyword() *Token {
 	if found != nil {
 		defer t.advance(len(found[0]))
 		kw := found[1]
-		tok := t.newToken(TypeKeyword, string(kw))
+		// keywords are always treated as lowercase
+		tok := t.newToken(TypeKeyword, strings.ToLower(string(kw)))
 		return tok
 	}
 	return nil
@@ -247,6 +248,8 @@ func (t *Tokenizer) getIdentifier() *Token {
 	found := t.IdentifierRegex.Find(t.remaining)
 	if found != nil {
 		defer t.advance(len(found))
+		// do not convert value to lowercase.
+		// the parser deals with casing
 		return t.newToken(TypeID, string(found))
 	}
 	return nil

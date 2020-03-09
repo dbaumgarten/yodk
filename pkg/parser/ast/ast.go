@@ -49,22 +49,6 @@ func (n *Line) End() Position {
 	return n.Statements[len(n.Statements)-1].End().Add(len(n.Comment) + 1)
 }
 
-// CommentLine represents a line only containing a comment
-type CommentLine struct {
-	Position Position
-	Text     string
-}
-
-// Start is needed to implement Node
-func (n *CommentLine) Start() Position {
-	return n.Position
-}
-
-// End is needed to implement Node
-func (n *CommentLine) End() Position {
-	return n.Position.Add(len(n.Text) + 2)
-}
-
 // Expression is the interface for all expressions
 type Expression interface {
 	Node
@@ -109,7 +93,8 @@ func (n *NumberConstant) End() Position {
 // Dereference represents the dereferencing of a variable
 type Dereference struct {
 	Position Position
-	// The variable to dereference
+	// The internal name of the dereferenced variable.
+	// VariableDisplayName is used, but lowercased so all operations are case insensitive
 	Variable string
 	// Additional operator (++ or --)
 	Operator string
@@ -117,6 +102,9 @@ type Dereference struct {
 	PrePost string
 	// True if this is used as a statement instead of expression
 	IsStatement bool
+	// VariableDisplayName is the name for the variable that is used when generating source code
+	// Initialized with the original name read from the source code (in its original caseing)
+	VariableDisplayName string
 }
 
 // Start is needed to implement Node
@@ -191,12 +179,16 @@ type Statement interface {
 // Assignment represents the assignment to a variable
 type Assignment struct {
 	Position Position
-	// The variable to assign to
+	// The internal name of the assigned variable.
+	// VariableDisplayName is used, but lowercased so all operations are case insensitive
 	Variable string
 	// The value to be assigned
 	Value Expression
 	// Operator to use (=,+=,-=, etc.)
 	Operator string
+	// VariableDisplayName is the name for the variable that is used when generating source code
+	// Initialized with the original name read from the source code (in its original caseing)
+	VariableDisplayName string
 }
 
 // Start is needed to implement Node

@@ -40,11 +40,13 @@ func (o *VariableNameOptimizer) SpecialReplacement(in string, out string) {
 func (o *VariableNameOptimizer) Visit(node ast.Node, visitType int) error {
 	if visitType == ast.SingleVisit || visitType == ast.PreVisit {
 		switch n := node.(type) {
+		// only change the display name of the variable
+		// this way, it is shortened when generating code, but remains the same in the debugger
 		case *ast.Assignment:
-			n.Variable = o.replaceVarName(n.Variable)
+			n.VariableDisplayName = o.replaceVarName(n.VariableDisplayName)
 			break
 		case *ast.Dereference:
-			n.Variable = o.replaceVarName(n.Variable)
+			n.VariableDisplayName = o.replaceVarName(n.VariableDisplayName)
 			break
 		}
 	}

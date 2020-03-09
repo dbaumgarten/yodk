@@ -197,7 +197,8 @@ func (c *Converter) insertBuiltinFunctions(p ast.Node) error {
 			case "time":
 				c.usesTimeTracking = true
 				return ast.NewNodeReplacement(&ast.Dereference{
-					Variable: reservedTimeVariable,
+					Variable:            reservedTimeVariable,
+					VariableDisplayName: reservedTimeVariable,
 				})
 			}
 		}
@@ -608,15 +609,15 @@ func getLengthOfLine(line ast.Node) int {
 }
 
 func (c *Converter) insertLineCounter(p *nast.Program) {
-	counterVar := reservedTimeVariableReplaced
 	for _, line := range p.Lines {
 		if stmtline, is := line.(*nast.StatementLine); is {
 			stmts := make([]ast.Statement, 1, len(stmtline.Statements)+1)
 			stmts[0] = &ast.Dereference{
-				Variable:    counterVar,
-				Operator:    "++",
-				PrePost:     "Post",
-				IsStatement: true,
+				Variable:            reservedTimeVariable,
+				VariableDisplayName: reservedTimeVariableReplaced,
+				Operator:            "++",
+				PrePost:             "Post",
+				IsStatement:         true,
 			}
 			stmts = append(stmts, stmtline.Statements...)
 			stmtline.Statements = stmts

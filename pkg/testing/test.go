@@ -76,6 +76,7 @@ func Parse(file []byte, absolutePath string) (Test, error) {
 // to the variables of the given Coordinator
 func (c Case) InitializeVariables(coord *vm.Coordinator) {
 	for key, value := range c.Inputs {
+		//key = strings.ToLower(key)
 		variable := &vm.Variable{}
 		if number, isnum := value.(int); isnum {
 			variable.Value = decimal.NewFromFloat(float64(number))
@@ -140,6 +141,7 @@ func (t Test) CreateVMs(coord *vm.Coordinator, errF vm.ErrorHandlerFunc) ([]*vm.
 func (c Case) CheckResults(coord *vm.Coordinator) []error {
 	fails := make([]error, 0)
 	for key, value := range c.Outputs {
+		//key = strings.ToLower(key)
 		key = prefixVarname(key)
 		expected := &vm.Variable{
 			Value: value,

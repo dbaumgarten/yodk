@@ -57,7 +57,7 @@ func (y *Printer) Print(prog ast.Node) (string, error) {
 			break
 		case *ast.Assignment:
 			if visitType == ast.PreVisit {
-				output += n.Variable + n.Operator
+				output += n.VariableDisplayName + n.Operator
 			}
 			break
 		case *ast.IfStatement:
@@ -193,7 +193,7 @@ func (y *Printer) printDeref(d *ast.Dereference) string {
 	if d.PrePost == "Pre" {
 		txt += " " + d.Operator
 	}
-	txt += d.Variable
+	txt += d.VariableDisplayName
 	if d.PrePost == "Post" {
 		txt += d.Operator + " "
 	}

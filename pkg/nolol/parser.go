@@ -1,6 +1,8 @@
 package nolol
 
 import (
+	"strings"
+
 	"github.com/dbaumgarten/yodk/pkg/nolol/nast"
 	"github.com/dbaumgarten/yodk/pkg/parser"
 	"github.com/dbaumgarten/yodk/pkg/parser/ast"
@@ -64,7 +66,7 @@ func (p *Parser) ParseStatementLine() *nast.StatementLine {
 
 	// get line-label if it exists
 	if p.CurrentToken.Type == ast.TypeID && (p.NextToken.Type == ast.TypeSymbol && p.NextToken.Value == ">") {
-		ret.Label = p.CurrentToken.Value
+		ret.Label = strings.ToLower(p.CurrentToken.Value)
 		p.Advance()
 		p.Advance()
 	}
@@ -194,8 +196,9 @@ func (p *Parser) ParseConstantDeclaration() *nast.ConstDeclaration {
 		p.ErrorCurrent("const keyword must be followed by an identifier")
 	}
 	decl := &nast.ConstDeclaration{
-		Name:     p.CurrentToken.Value,
-		Position: startpos,
+		Name:        strings.ToLower(p.CurrentToken.Value),
+		DisplayName: p.CurrentToken.Value,
+		Position:    startpos,
 	}
 	p.Advance()
 	p.Expect(ast.TypeSymbol, "=")
@@ -310,7 +313,7 @@ func (p *Parser) ParseGoto() ast.Statement {
 
 		stmt := &nast.GoToLabelStatement{
 			Position: p.CurrentToken.Position,
-			Label:    p.CurrentToken.Value,
+			Label:    strings.ToLower(p.CurrentToken.Value),
 		}
 
 		if p.CurrentToken.Type != ast.TypeID {
@@ -332,7 +335,7 @@ func (p *Parser) ParseFuncCall() ast.Expression {
 	}
 	fc := &ast.FuncCall{
 		Position: p.CurrentToken.Position,
-		Function: p.CurrentToken.Value,
+		Function: strings.ToLower(p.CurrentToken.Value),
 	}
 	p.Advance()
 	p.Advance()

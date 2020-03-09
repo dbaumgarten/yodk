@@ -316,7 +316,8 @@ func (p *Parser) ParseAssignment() ast.Statement {
 	if p.CurrentToken.Type != ast.TypeID || !contains(assignmentOperators, p.NextToken.Value) {
 		return nil
 	}
-	ret.Variable = p.CurrentToken.Value
+	ret.VariableDisplayName = p.CurrentToken.Value
+	ret.Variable = strings.ToLower(p.CurrentToken.Value)
 	p.Advance()
 	ret.Operator = p.CurrentToken.Value
 	p.Advance()
@@ -549,8 +550,9 @@ func (p *Parser) ParseSingleExpression() ast.Expression {
 	if p.CurrentToken.Type == ast.TypeID {
 		defer p.Advance()
 		return &ast.Dereference{
-			Variable: p.CurrentToken.Value,
-			Position: p.CurrentToken.Position,
+			VariableDisplayName: p.CurrentToken.Value,
+			Variable:            strings.ToLower(p.CurrentToken.Value),
+			Position:            p.CurrentToken.Position,
 		}
 	}
 	if p.CurrentToken.Type == ast.TypeString {
@@ -580,7 +582,7 @@ func (p *Parser) ParseFuncCall() ast.Expression {
 	}
 	fc := &ast.FuncCall{
 		Position: p.CurrentToken.Position,
-		Function: p.CurrentToken.Value,
+		Function: strings.ToLower(p.CurrentToken.Value),
 	}
 	p.Advance()
 	p.Advance()
@@ -608,7 +610,8 @@ func (p *Parser) ParsePreOpExpression() ast.Expression {
 		if p.CurrentToken.Type != ast.TypeID {
 			p.Error("Pre- Increment/Decrement must be followed by a variable", exp.Start(), exp.Start())
 		}
-		exp.Variable = p.CurrentToken.Value
+		exp.VariableDisplayName = p.CurrentToken.Value
+		exp.Variable = strings.ToLower(exp.VariableDisplayName)
 		p.Advance()
 		return &exp
 	}
@@ -620,10 +623,11 @@ func (p *Parser) ParsePostOpExpression() ast.Expression {
 	p.Log()
 	if p.NextToken.Type == ast.TypeSymbol && (p.NextToken.Value == "++" || p.NextToken.Value == "--") && p.CurrentToken.Type == ast.TypeID {
 		exp := ast.Dereference{
-			Variable: p.CurrentToken.Value,
-			Operator: p.NextToken.Value,
-			PrePost:  "Post",
-			Position: p.CurrentToken.Position,
+			Variable:            strings.ToLower(p.CurrentToken.Value),
+			VariableDisplayName: p.CurrentToken.Value,
+			Operator:            p.NextToken.Value,
+			PrePost:             "Post",
+			Position:            p.CurrentToken.Position,
 		}
 		p.Advance()
 		p.Advance()
