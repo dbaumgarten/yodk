@@ -23,6 +23,7 @@ type Converter struct {
 	jumpLabels       map[string]int
 	constants        map[string]interface{}
 	usesTimeTracking bool
+	iflabelcounter   int
 	debug            bool
 }
 
@@ -293,49 +294,64 @@ func (c *Converter) convertLabelGoto(p ast.Node) error {
 	return p.Accept(ast.VisitorFunc(f))
 }
 
-// convertIf converts nolol's multiline-ifs to yolol ifs
+// convertIf converts nolol multiline-ifs to yolol
 func (c *Converter) convertIf(p ast.Node) error {
-	counter := 0
 	f := func(node ast.Node, visitType int) error {
 		if mlif, is := node.(*nast.MultilineIf); is && visitType == ast.PostVisit {
-			// first, try to convert to inline if
-			result := c.convertIfInline(mlif)
-			if result != errInlineIfImpossible {
-				return result
+			endif := fmt.Sprintf("endif%d", c.iflabelcounter)
+			repl := []ast.Node{}
+			for i := range mlif.Conditions {
+				endlabel := ""
+				if mlif.ElseBlock != nil || i < len(mlif.Conditions)-1 {
+					endlabel = endif
+				}
+				condline, err := c.convertConditionInline(mlif, i, endlabel)
+				if err == nil {
+					repl = append(repl, condline)
+				} else {
+					condlines := c.convertConditionMultiline(mlif, i, endlabel)
+					repl = append(repl, condlines...)
+				}
 			}
-			// inline if is not possible. Do a multiline if instead
-			return c.convertIfMultiline(mlif, &counter)
+
+			if mlif.ElseBlock != nil {
+				for _, elseline := range mlif.ElseBlock.Lines {
+					repl = append(repl, elseline)
+				}
+			}
+
+			repl = append(repl, &nast.StatementLine{
+				Position: mlif.Position,
+				Label:    endif,
+				Line: ast.Line{
+					Statements: []ast.Statement{},
+				},
+			})
+
+			c.iflabelcounter++
+			return ast.NewNodeReplacement(repl...)
 		}
 		return nil
 	}
 	return p.Accept(ast.VisitorFunc(f))
 }
 
-// convertIfInline converts a nolol-if directly to a yolol-if, if possible
-func (c *Converter) convertIfInline(mlif *nast.MultilineIf) error {
-	linelength := len("if  then  end")
-	mergedIfLines, _ := c.mergeExecutableLines(mlif.IfBlock)
-	var mergedElseLines []nast.ExecutableLine
-	var elseBlock []ast.Statement
+// convertConditionInline converts a single conditional block of a multiline if and tries to produce a single yolol if
+func (c *Converter) convertConditionInline(mlif *nast.MultilineIf, index int, endlabel string) (ast.Node, error) {
+	mergedIfLines, _ := c.mergeExecutableLines(mlif.Blocks[index].Lines)
 
-	if len(mergedIfLines) > 1 || mergedIfLines[0].(*nast.StatementLine).Label != "" {
-		return errInlineIfImpossible
+	if len(mergedIfLines) > 1 || (len(mergedIfLines) > 0 && mergedIfLines[0].(*nast.StatementLine).Label != "") {
+		return nil, errInlineIfImpossible
 	}
-	linelength += getLengthOfLine(&mergedIfLines[0].(*nast.StatementLine).Line)
-	linelength += getLengthOfLine(mlif.Condition)
 
-	if mlif.ElseBlock != nil {
-		mergedElseLines, _ = c.mergeExecutableLines(mlif.ElseBlock)
-		if len(mergedElseLines) > 1 || mergedElseLines[0].(*nast.StatementLine).Label != "" {
-			return errInlineIfImpossible
+	statements := []ast.Statement{}
+	if len(mergedIfLines) > 0 {
+		statements = mergedIfLines[0].(*nast.StatementLine).Line.Statements
+		if endlabel != "" {
+			statements = append(statements, &nast.GoToLabelStatement{
+				Label: endlabel,
+			})
 		}
-		linelength += len(" else ")
-		linelength += getLengthOfLine(&mergedElseLines[0].(*nast.StatementLine).Line)
-		elseBlock = mergedElseLines[0].(*nast.StatementLine).Line.Statements
-	}
-
-	if linelength > 70 {
-		return errInlineIfImpossible
 	}
 
 	repl := &nast.StatementLine{
@@ -344,21 +360,24 @@ func (c *Converter) convertIfInline(mlif *nast.MultilineIf) error {
 			Statements: []ast.Statement{
 				&ast.IfStatement{
 					Position:  mlif.Position,
-					Condition: mlif.Condition,
-					IfBlock:   mergedIfLines[0].(*nast.StatementLine).Line.Statements,
-					ElseBlock: elseBlock,
+					Condition: mlif.Conditions[index],
+					IfBlock:   statements,
 				},
 			},
 		},
 	}
 
-	return ast.NewNodeReplacement(repl)
+	if getLengthOfLine(&repl.Line) > 70 {
+		return nil, errInlineIfImpossible
+	}
+
+	return repl, nil
 }
 
-// convertIfMultiline combines if, lables and gotos to implement multiline ifs with yolol
-func (c *Converter) convertIfMultiline(mlif *nast.MultilineIf, counter *int) error {
-	skipIf := fmt.Sprintf("iflbl%d", *counter)
-	skipElse := fmt.Sprintf("elselbl%d", *counter)
+// convertConditionMultiline converts a single conditional block of a multiline if and produces
+// multiple lines, because a single-line if would become too long
+func (c *Converter) convertConditionMultiline(mlif *nast.MultilineIf, index int, endlabel string) []ast.Node {
+	skipIf := fmt.Sprintf("iflbl%d-%d", c.iflabelcounter, index)
 	repl := []ast.Node{
 		&nast.StatementLine{
 			Position: mlif.Position,
@@ -368,7 +387,7 @@ func (c *Converter) convertIfMultiline(mlif *nast.MultilineIf, counter *int) err
 						Position: mlif.Position,
 						Condition: &ast.UnaryOperation{
 							Operator: "not",
-							Exp:      mlif.Condition,
+							Exp:      mlif.Conditions[index],
 						},
 						IfBlock: []ast.Statement{
 							&nast.GoToLabelStatement{
@@ -382,18 +401,18 @@ func (c *Converter) convertIfMultiline(mlif *nast.MultilineIf, counter *int) err
 		},
 	}
 
-	for _, ifblling := range mlif.IfBlock {
+	for _, ifblling := range mlif.Blocks[index].Lines {
 		repl = append(repl, ifblling)
 	}
 
-	if mlif.ElseBlock != nil {
+	if endlabel != "" {
 		repl = append(repl, &nast.StatementLine{
 			Position: mlif.Position,
 			Line: ast.Line{
 				Statements: []ast.Statement{
 					&nast.GoToLabelStatement{
 						Position: mlif.Position,
-						Label:    skipElse,
+						Label:    endlabel,
 					},
 				},
 			},
@@ -408,22 +427,7 @@ func (c *Converter) convertIfMultiline(mlif *nast.MultilineIf, counter *int) err
 		},
 	})
 
-	if mlif.ElseBlock != nil {
-		for _, ifblling := range mlif.ElseBlock {
-			repl = append(repl, ifblling)
-		}
-	}
-
-	repl = append(repl, &nast.StatementLine{
-		Position: mlif.Position,
-		Label:    skipElse,
-		Line: ast.Line{
-			Statements: []ast.Statement{},
-		},
-	})
-
-	*counter++
-	return ast.NewNodeReplacement(repl...)
+	return repl
 }
 
 // convertWhileLoops converts while loops into yolol-code
@@ -457,7 +461,7 @@ func (c *Converter) convertWhileLoops(p ast.Node) error {
 				},
 			}
 
-			for _, blockline := range loop.Block {
+			for _, blockline := range loop.Block.Lines {
 				repl = append(repl, blockline)
 			}
 			repl = append(repl, &nast.StatementLine{

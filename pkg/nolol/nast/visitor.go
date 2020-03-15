@@ -77,32 +77,60 @@ func (l *ConstDeclaration) Accept(v ast.Visitor) error {
 }
 
 // Accept is used to implement Acceptor
+func (s *Block) Accept(v ast.Visitor) error {
+	err := v.Visit(s, ast.PreVisit)
+	if err != nil {
+		return err
+	}
+	for i := 0; i < len(s.Lines); i++ {
+		err = v.Visit(s, i)
+		if err != nil {
+			return err
+		}
+		err = s.Lines[i].Accept(v)
+		if repl, is := err.(ast.NodeReplacement); is {
+			s.Lines = patchExecutableLines(s.Lines, i, repl)
+			i += len(repl.Replacement) - 1
+			err = nil
+		}
+		if err != nil {
+			return err
+		}
+	}
+	err = v.Visit(s, ast.PostVisit)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// Accept is used to implement Acceptor
 func (s *MultilineIf) Accept(v ast.Visitor) error {
 	err := v.Visit(s, ast.PreVisit)
 	if err != nil {
 		return err
 	}
-	err = s.Condition.Accept(v)
-	if repl, is := err.(ast.NodeReplacement); is {
-		s.Condition = repl.Replacement[0].(ast.Expression)
-		err = nil
-	}
-	if err != nil {
-		return err
-	}
-	err = v.Visit(s, ast.InterVisit1)
-	if err != nil {
-		return err
-	}
-	for i := 0; i < len(s.IfBlock); i++ {
+
+	for i := 0; i < len(s.Conditions); i++ {
 		err = v.Visit(s, i)
 		if err != nil {
 			return err
 		}
-		err = s.IfBlock[i].Accept(v)
+		err = s.Conditions[i].Accept(v)
 		if repl, is := err.(ast.NodeReplacement); is {
-			s.IfBlock = patchExecutableLines(s.IfBlock, i, repl)
-			i += len(repl.Replacement) - 1
+			s.Conditions[i] = repl.Replacement[0].(ast.Expression)
+			err = nil
+		}
+		if err != nil {
+			return err
+		}
+		err = v.Visit(s, ast.InterVisit1)
+		if err != nil {
+			return err
+		}
+		err = s.Blocks[i].Accept(v)
+		if repl, is := err.(ast.NodeReplacement); is {
+			s.Blocks[i] = repl.Replacement[0].(*Block)
 			err = nil
 		}
 		if err != nil {
@@ -114,20 +142,10 @@ func (s *MultilineIf) Accept(v ast.Visitor) error {
 		if err != nil {
 			return err
 		}
-		for i := 0; i < len(s.ElseBlock); i++ {
-			err = v.Visit(s, i)
-			if err != nil {
-				return err
-			}
-			err = s.ElseBlock[i].Accept(v)
-			if repl, is := err.(ast.NodeReplacement); is {
-				s.ElseBlock = patchExecutableLines(s.ElseBlock, i, repl)
-				i += len(repl.Replacement) - 1
-				err = nil
-			}
-			if err != nil {
-				return err
-			}
+		err = s.ElseBlock.Accept(v)
+		if repl, is := err.(ast.NodeReplacement); is {
+			s.ElseBlock = repl.Replacement[0].(*Block)
+			err = nil
 		}
 		if err != nil {
 			return err
@@ -154,20 +172,13 @@ func (s *WhileLoop) Accept(v ast.Visitor) error {
 	if err != nil {
 		return err
 	}
-	for i := 0; i < len(s.Block); i++ {
-		err = v.Visit(s, i)
-		if err != nil {
-			return err
-		}
-		err = s.Block[i].Accept(v)
-		if repl, is := err.(ast.NodeReplacement); is {
-			s.Block = patchExecutableLines(s.Block, i, repl)
-			i += len(repl.Replacement) - 1
-			err = nil
-		}
-		if err != nil {
-			return err
-		}
+	err = s.Block.Accept(v)
+	if repl, is := err.(ast.NodeReplacement); is {
+		s.Block = repl.Replacement[0].(*Block)
+		err = nil
+	}
+	if err != nil {
+		return err
 	}
 	return v.Visit(s, ast.PostVisit)
 }

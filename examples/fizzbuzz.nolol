@@ -10,14 +10,12 @@ end
 while :number<=upto do
 	if :number%3==0 and :number%5==0 then
 		:out+=fizz+buzz+sep
-		goto next //skip other cases
+	else
+		if :number%3==0 then
+			:out+=fizz+sep
+		else if :number%5==0 then
+			:out+=buzz+sep
+		end
 	end
-	if :number%3==0 then
-		:out+=fizz+sep
-	end
-	if :number%5==0 then
-		:out+=buzz+sep
-	end
-	next> 
 	:number++ 
 end

@@ -13,6 +13,8 @@ const (
 	InterVisit1 = -4
 	// This visit is the second intermediate visit of the node
 	InterVisit2 = -5
+	// This visit is the third intermediate visit of the node
+	InterVisit3 = -6
 )
 
 // Acceptor MUST be implemented by EVERY AST-Node. The node must do the following things:

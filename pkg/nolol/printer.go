@@ -41,30 +41,41 @@ func (p *Printer) Print(prog *nast.Program) (string, error) {
 			}
 			return "", nil
 
+		case *nast.Block:
+			switch visitType {
+			case ast.PreVisit:
+				indentLevel++
+				return "", nil
+			case ast.PostVisit:
+				indentLevel--
+				return "", nil
+			default:
+				return indentation(indentLevel), nil
+			}
+
 		case *nast.MultilineIf:
 			switch visitType {
 			case ast.PreVisit:
-				return indentation(indentLevel) + "if ", nil
+				return "if ", nil
 			case ast.InterVisit1:
-				indentLevel++
 				return " then\n", nil
 			case ast.InterVisit2:
-				return indentation(indentLevel-1) + "else\n", nil
+				return indentation(indentLevel) + "else\n", nil
 			case ast.PostVisit:
-				indentLevel--
 				return indentation(indentLevel) + "end\n", nil
 			default:
+				if visitType > 0 {
+					return indentation(indentLevel) + "else if ", nil
+				}
 				return "", nil
 			}
 		case *nast.WhileLoop:
 			switch visitType {
 			case ast.PreVisit:
-				return indentation(indentLevel) + "while ", nil
+				return "while ", nil
 			case ast.InterVisit1:
-				indentLevel++
 				return " do\n", nil
 			case ast.PostVisit:
-				indentLevel--
 				return indentation(indentLevel) + "end\n", nil
 			default:
 				return "", nil
@@ -72,7 +83,7 @@ func (p *Printer) Print(prog *nast.Program) (string, error) {
 		case *nast.StatementLine:
 			switch visitType {
 			case ast.PreVisit:
-				out := indentation(indentLevel)
+				out := ""
 				if n.Label != "" {
 					out += n.Label + "> "
 				}

@@ -63,12 +63,27 @@ func (n *ConstDeclaration) End() ast.Position {
 	return n.Value.End()
 }
 
+// Block represents a block/group of lines, for example inside an if
+type Block struct {
+	Lines []ExecutableLine
+}
+
+// Start is needed to implement ast.Node
+func (n *Block) Start() ast.Position {
+	return n.Lines[0].Start()
+}
+
+// End is needed to implement ast.Node
+func (n *Block) End() ast.Position {
+	return n.Lines[len(n.Lines)-1].End()
+}
+
 // MultilineIf represents a nolol-style multiline if
 type MultilineIf struct {
-	Position  ast.Position
-	Condition ast.Expression
-	IfBlock   []ExecutableLine
-	ElseBlock []ExecutableLine
+	Position   ast.Position
+	Conditions []ast.Expression
+	Blocks     []*Block
+	ElseBlock  *Block
 }
 
 // Start is needed to implement ast.Node
@@ -79,9 +94,9 @@ func (n *MultilineIf) Start() ast.Position {
 // End is needed to implement ast.Node
 func (n *MultilineIf) End() ast.Position {
 	if n.ElseBlock == nil {
-		return n.IfBlock[len(n.IfBlock)-1].End()
+		return n.Blocks[len(n.Blocks)-1].End()
 	}
-	return n.ElseBlock[len(n.ElseBlock)-1].End()
+	return n.ElseBlock.End()
 }
 
 // GoToLabelStatement represents a goto to a line-label
@@ -104,7 +119,7 @@ func (n *GoToLabelStatement) End() ast.Position {
 type WhileLoop struct {
 	Position  ast.Position
 	Condition ast.Expression
-	Block     []ExecutableLine
+	Block     *Block
 }
 
 // Start is needed to implement ast.Node
@@ -114,7 +129,7 @@ func (n *WhileLoop) Start() ast.Position {
 
 // End is needed to implement ast.Node
 func (n *WhileLoop) End() ast.Position {
-	return n.Block[len(n.Block)-1].End()
+	return n.Block.End()
 }
 
 // WaitStatement blocks execution as long as the condition is true

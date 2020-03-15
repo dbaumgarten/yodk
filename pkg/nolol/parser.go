@@ -213,8 +213,8 @@ func (p *Parser) ParseConstantDeclaration() *nast.ConstDeclaration {
 	return decl
 }
 
-// ParseLinesUntil parse lines until stop() returns true
-func (p *Parser) ParseLinesUntil(stop func() bool) []nast.ExecutableLine {
+// ParseBlock parse lines until stop() returns true
+func (p *Parser) ParseBlock(stop func() bool) *nast.Block {
 	p.Log()
 	lines := make([]nast.ExecutableLine, 0)
 	for p.HasNext() && !stop() {
@@ -224,37 +224,58 @@ func (p *Parser) ParseLinesUntil(stop func() bool) []nast.ExecutableLine {
 		}
 		lines = append(lines, line)
 	}
-	return lines
+	return &nast.Block{
+		Lines: lines,
+	}
 }
 
 // ParseMultilineIf parses a nolol-style multiline if
 func (p *Parser) ParseMultilineIf() nast.Line {
 	p.Log()
 	mlif := nast.MultilineIf{
-		Position: p.CurrentToken.Position,
+		Position:   p.CurrentToken.Position,
+		Conditions: make([]ast.Expression, 0),
+		Blocks:     make([]*nast.Block, 0),
 	}
 	if p.CurrentToken.Type != ast.TypeKeyword || p.CurrentToken.Value != "if" {
 		return nil
 	}
 	p.Advance()
 
-	mlif.Condition = p.This.ParseExpression()
-	if mlif.Condition == nil {
-		p.ErrorCurrent("No expression found as if-condition")
-	}
+	for {
+		condition := p.This.ParseExpression()
+		if condition == nil {
+			p.ErrorCurrent("No expression found as if-condition")
+			p.Advance()
+		}
 
-	p.Expect(ast.TypeKeyword, "then")
-	p.Expect(ast.TypeNewline, "")
+		p.Expect(ast.TypeKeyword, "then")
+		p.Expect(ast.TypeNewline, "")
 
-	mlif.IfBlock = p.ParseLinesUntil(func() bool {
-		return p.CurrentToken.Type == ast.TypeKeyword && (p.CurrentToken.Value == "end" || p.CurrentToken.Value == "else")
-	})
-
-	if p.CurrentToken.Type == ast.TypeKeyword && p.CurrentToken.Value == "else" {
-		p.Advance()
-		mlif.ElseBlock = p.ParseLinesUntil(func() bool {
-			return p.CurrentToken.Type == ast.TypeKeyword && p.CurrentToken.Value == "end"
+		block := p.ParseBlock(func() bool {
+			return p.CurrentToken.Type == ast.TypeKeyword && (p.CurrentToken.Value == "end" || p.CurrentToken.Value == "else")
 		})
+		mlif.Conditions = append(mlif.Conditions, condition)
+		mlif.Blocks = append(mlif.Blocks, block)
+
+		if p.CurrentToken.Type == ast.TypeKeyword && p.CurrentToken.Value == "end" {
+			break
+		}
+
+		if p.CurrentToken.Type == ast.TypeKeyword && p.CurrentToken.Value == "else" {
+			p.Advance()
+		}
+
+		if p.CurrentToken.Type == ast.TypeKeyword && p.CurrentToken.Value == "if" {
+			p.Advance()
+			continue
+		} else {
+			p.Expect(ast.TypeNewline, "")
+			mlif.ElseBlock = p.ParseBlock(func() bool {
+				return p.CurrentToken.Type == ast.TypeKeyword && p.CurrentToken.Value == "end"
+			})
+			break
+		}
 	}
 
 	p.Expect(ast.TypeKeyword, "end")
@@ -285,7 +306,7 @@ func (p *Parser) ParseWhile() nast.Line {
 	p.Expect(ast.TypeKeyword, "do")
 	p.Expect(ast.TypeNewline, "")
 
-	loop.Block = p.ParseLinesUntil(func() bool {
+	loop.Block = p.ParseBlock(func() bool {
 		return p.CurrentToken.Type == ast.TypeKeyword && p.CurrentToken.Value == "end"
 	})
 
