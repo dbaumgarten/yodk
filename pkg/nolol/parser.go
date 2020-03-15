@@ -131,14 +131,14 @@ func (p *Parser) ParseStatementLine() *nast.StatementLine {
 	return &ret
 }
 
-// ParseBlockStatement parses a NOLOL block statement
-func (p *Parser) ParseBlockStatement() *nast.BlockStatement {
+// ParseWaitStatement parses a NOLOL wait-statement
+func (p *Parser) ParseWaitStatement() *nast.WaitStatement {
 	p.Log()
-	if p.CurrentToken.Type != ast.TypeKeyword || p.CurrentToken.Value != "block" {
+	if p.CurrentToken.Type != ast.TypeKeyword || p.CurrentToken.Value != "wait" {
 		return nil
 	}
 	p.Advance()
-	st := &nast.BlockStatement{
+	st := &nast.WaitStatement{
 		Position: p.CurrentToken.Position,
 	}
 
@@ -164,7 +164,7 @@ func (p *Parser) ParseExecutableLine() nast.ExecutableLine {
 		return whileline
 	}
 
-	block := p.ParseBlockStatement()
+	block := p.ParseWaitStatement()
 	if block != nil {
 		return block
 	}

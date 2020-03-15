@@ -173,7 +173,7 @@ func (s *WhileLoop) Accept(v ast.Visitor) error {
 }
 
 // Accept is used to implement Acceptor
-func (s *BlockStatement) Accept(v ast.Visitor) error {
+func (s *WaitStatement) Accept(v ast.Visitor) error {
 	err := v.Visit(s, ast.PreVisit)
 	if err != nil {
 		return err

@@ -110,9 +110,9 @@ func (p *Printer) Print(prog *nast.Program) (string, error) {
 			}
 		case *nast.Program:
 			return "", nil
-		case *nast.BlockStatement:
+		case *nast.WaitStatement:
 			if visitType == ast.PreVisit {
-				return "block ", nil
+				return "wait ", nil
 			}
 			return "", nil
 		}

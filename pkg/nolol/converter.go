@@ -83,7 +83,7 @@ func (c *Converter) Convert(prog *nast.Program) (*ast.Program, error) {
 		return nil, err
 	}
 	// convert block statements to yolol code
-	err = c.convertBlockStatement(prog)
+	err = c.convertWaitStatement(prog)
 	if err != nil {
 		return nil, err
 	}
@@ -160,11 +160,11 @@ func (c *Converter) findConstantDeclarations(p ast.Node) error {
 	return p.Accept(ast.VisitorFunc(f))
 }
 
-func (c *Converter) convertBlockStatement(p ast.Node) error {
+func (c *Converter) convertWaitStatement(p ast.Node) error {
 	counter := 0
 	f := func(node ast.Node, visitType int) error {
-		if block, is := node.(*nast.BlockStatement); is {
-			label := fmt.Sprintf("block%d", counter)
+		if wait, is := node.(*nast.WaitStatement); is {
+			label := fmt.Sprintf("wait%d", counter)
 			return ast.NewNodeReplacement(&nast.StatementLine{
 				Label:  label,
 				HasEOL: true,
@@ -173,7 +173,7 @@ func (c *Converter) convertBlockStatement(p ast.Node) error {
 					Statements: []ast.Statement{
 						&ast.IfStatement{
 							Position:  node.Start(),
-							Condition: block.Condition,
+							Condition: wait.Condition,
 							IfBlock: []ast.Statement{
 								&nast.GoToLabelStatement{
 									Label: label,
