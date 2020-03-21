@@ -71,7 +71,7 @@ func (y *Printer) Print(prog ast.Node) (string, error) {
 			output += y.printDeref(n)
 			break
 		case *ast.StringConstant:
-			output += "\"" + n.Value + "\""
+			output += "\"" + insertEscapesIntoString(n.Value) + "\""
 			break
 		case *ast.NumberConstant:
 			if strings.HasPrefix(n.Value, "-") {
@@ -129,6 +129,13 @@ func (y *Printer) Print(prog ast.Node) (string, error) {
 	}
 	// during the generation duplicate spaces might appear. Remove them
 	return strings.Replace(output, "  ", " ", -1), nil
+}
+
+func insertEscapesIntoString(in string) string {
+	in = strings.Replace(in, "\n", "\\n", -1)
+	in = strings.Replace(in, "\t", "\\t", -1)
+	in = strings.Replace(in, "\"", "\\\"", -1)
+	return in
 }
 
 func (y *Printer) printBinaryOperation(o *ast.BinaryOperation, visitType int) string {

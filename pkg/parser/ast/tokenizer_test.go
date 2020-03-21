@@ -100,7 +100,7 @@ func TestTokenizer(t *testing.T) {
 	Line: 9, Coloumn: 6, Type: Whitespace, Value: ' '
 	Line: 9, Coloumn: 7, Type: Symbol, Value: '='
 	Line: 9, Coloumn: 8, Type: Whitespace, Value: ' '
-	Line: 9, Coloumn: 9, Type: String, Value: 'another\"test'
+	Line: 9, Coloumn: 9, Type: String, Value: 'another"test'
 	Line: 9, Coloumn: 24, Type: Newline
 	Line: 10, Coloumn: 1, Type: Whitespace, Value: '	'
 	Line: 10, Coloumn: 2, Type: ID, Value: ':foo'

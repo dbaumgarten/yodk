@@ -260,19 +260,34 @@ func (t *Tokenizer) getStringConstant() *Token {
 		return nil
 	}
 	escaped := false
+	str := ""
 	for i, b := range t.remaining[1:] {
-		if escaped {
-			escaped = false
-			continue
-		}
 		if b == '\\' {
 			escaped = true
+			continue
 		}
-		if b == '"' && !escaped {
-			value := string(t.remaining[1 : i+1])
+		if escaped {
+			switch b {
+			case 'n':
+				str += "\n"
+				escaped = false
+				continue
+			case 't':
+				str += "\t"
+				escaped = false
+				continue
+			case '"':
+				str += "\""
+				escaped = false
+				continue
+			}
+		}
+
+		if b == '"' {
 			defer t.advance(i + 2)
-			return t.newToken(TypeString, value)
+			return t.newToken(TypeString, str)
 		}
+		str += string(b)
 	}
 	return nil
 }
