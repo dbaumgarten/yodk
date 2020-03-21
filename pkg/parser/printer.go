@@ -20,6 +20,7 @@ var operatorPriority = map[string]int{
 	"or":  0,
 	"and": 0,
 	"==":  1,
+	"!=":  1,
 	">=":  1,
 	"<=":  1,
 	">":   1,
@@ -87,9 +88,10 @@ func (y *Printer) Print(prog ast.Node) (string, error) {
 				op := n.Operator
 				if op == "not" {
 					op = " " + op + " "
-				}
-				if op == "-" {
+				} else if op == "-" {
 					op = " " + op
+				} else {
+					panic("Unknown operator: " + op)
 				}
 				output += op
 				if childBinary {

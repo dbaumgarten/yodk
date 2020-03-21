@@ -70,6 +70,11 @@ func (c *Converter) Convert(prog *nast.Program) (*ast.Program, error) {
 	if err != nil {
 		return nil, err
 	}
+	// optimize boolean expressions
+	err = optimizers.ExpressionInversionOptimizer{}.Optimize(prog)
+	if err != nil {
+		return nil, err
+	}
 	// remove useless lines
 	err = c.filterLines(prog)
 	if err != nil {
@@ -83,7 +88,7 @@ func (c *Converter) Convert(prog *nast.Program) (*ast.Program, error) {
 	if err != nil {
 		return nil, err
 	}
-	// convert block statements to yolol code
+	// convert wait statements to yolol code
 	err = c.convertWaitStatement(prog)
 	if err != nil {
 		return nil, err
@@ -378,17 +383,18 @@ func (c *Converter) convertConditionInline(mlif *nast.MultilineIf, index int, en
 // multiple lines, because a single-line if would become too long
 func (c *Converter) convertConditionMultiline(mlif *nast.MultilineIf, index int, endlabel string) []ast.Node {
 	skipIf := fmt.Sprintf("iflbl%d-%d", c.iflabelcounter, index)
+	condition := optimizers.ExpressionInversionOptimizer{}.OptimizeExpression(&ast.UnaryOperation{
+		Operator: "not",
+		Exp:      mlif.Conditions[index],
+	})
 	repl := []ast.Node{
 		&nast.StatementLine{
 			Position: mlif.Position,
 			Line: ast.Line{
 				Statements: []ast.Statement{
 					&ast.IfStatement{
-						Position: mlif.Position,
-						Condition: &ast.UnaryOperation{
-							Operator: "not",
-							Exp:      mlif.Conditions[index],
-						},
+						Position:  mlif.Position,
+						Condition: condition,
 						IfBlock: []ast.Statement{
 							&nast.GoToLabelStatement{
 								Position: mlif.Position,
@@ -437,6 +443,10 @@ func (c *Converter) convertWhileLoops(p ast.Node) error {
 		if loop, is := node.(*nast.WhileLoop); is && visitType == ast.PostVisit {
 			startLabel := fmt.Sprintf("while%d", counter)
 			endLabel := fmt.Sprintf("endwhile%d", counter)
+			condition := optimizers.ExpressionInversionOptimizer{}.OptimizeExpression(&ast.UnaryOperation{
+				Operator: "not",
+				Exp:      loop.Condition,
+			})
 			repl := []ast.Node{
 				&nast.StatementLine{
 					Position: loop.Position,
@@ -444,11 +454,8 @@ func (c *Converter) convertWhileLoops(p ast.Node) error {
 					Line: ast.Line{
 						Statements: []ast.Statement{
 							&ast.IfStatement{
-								Position: loop.Condition.Start(),
-								Condition: &ast.UnaryOperation{
-									Operator: "not",
-									Exp:      loop.Condition,
-								},
+								Position:  loop.Condition.Start(),
+								Condition: condition,
 								IfBlock: []ast.Statement{
 									&nast.GoToLabelStatement{
 										Position: loop.Position,
