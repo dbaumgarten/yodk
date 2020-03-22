@@ -13,41 +13,48 @@ import (
 
 // formatCmd represents the format command
 var formatCmd = &cobra.Command{
-	Use:   "format",
-	Short: "Format a code-file",
+	Use:   "format [file]+",
+	Short: "Format yolol/nolol files",
 
 	Run: func(cmd *cobra.Command, args []string) {
-		file := loadInputFile(args[0])
-		generated := ""
-		var err error
-		if strings.HasSuffix(args[0], ".yolol") {
-			p := parser.NewParser()
-			parsed, errs := p.Parse(file)
-			if errs != nil {
-				exitOnError(errs, "parsing file")
-			}
-			gen := parser.Printer{}
-			generated, err = gen.Print(parsed)
-			exitOnError(err, "generating code")
-			err = util.CheckForFormattingErrorYolol(parsed, generated)
-			exitOnError(err, "formatting code")
-		} else if strings.HasSuffix(args[0], ".nolol") {
-			p := nolol.NewParser()
-			parsed, errs := p.Parse(file)
-			if errs != nil {
-				exitOnError(errs, "parsing file")
-			}
-			printer := nolol.NewPrinter()
-			generated, err = printer.Print(parsed)
-			exitOnError(err, "generating code")
-			err = util.CheckForFormattingErrorNolol(parsed, generated)
-			exitOnError(err, "formatting code")
-		} else {
-			exitOnError(fmt.Errorf("Unsupported file-type"), "opening file")
+		for _, file := range args {
+			fmt.Println("Formatting file:", file)
+			format(file)
 		}
-
-		ioutil.WriteFile(args[0], []byte(generated), 0700)
 	},
+}
+
+func format(filepath string) {
+	file := loadInputFile(filepath)
+	generated := ""
+	var err error
+	if strings.HasSuffix(filepath, ".yolol") {
+		p := parser.NewParser()
+		parsed, errs := p.Parse(file)
+		if errs != nil {
+			exitOnError(errs, "parsing file")
+		}
+		gen := parser.Printer{}
+		generated, err = gen.Print(parsed)
+		exitOnError(err, "generating code")
+		err = util.CheckForFormattingErrorYolol(parsed, generated)
+		exitOnError(err, "formatting code")
+	} else if strings.HasSuffix(filepath, ".nolol") {
+		p := nolol.NewParser()
+		parsed, errs := p.Parse(file)
+		if errs != nil {
+			exitOnError(errs, "parsing file")
+		}
+		printer := nolol.NewPrinter()
+		generated, err = printer.Print(parsed)
+		exitOnError(err, "generating code")
+		err = util.CheckForFormattingErrorNolol(parsed, generated)
+		exitOnError(err, "formatting code")
+	} else {
+		exitOnError(fmt.Errorf("Unsupported file-type"), "opening file")
+	}
+
+	ioutil.WriteFile(filepath, []byte(generated), 0700)
 }
 
 func init() {

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"io/ioutil"
 	"path"
 	"strings"
@@ -13,21 +14,29 @@ import (
 
 // compileCmd represents the compile command
 var compileCmd = &cobra.Command{
-	Use:   "compile [file]",
-	Short: "Compile a nolol programm to yolol",
+	Use:   "compile [file]+",
+	Short: "Compile nolol programms to yolol",
 	Run: func(cmd *cobra.Command, args []string) {
-		outfile := strings.Replace(args[0], path.Ext(args[0]), ".yolol", -1)
-		file := loadInputFile(args[0])
-		converter := nolol.NewConverter()
-		converter.Debug(debugLog)
-		converted, err := converter.ConvertFromSource(file)
-		exitOnError(err, "converting to yolol")
-		gen := parser.Printer{}
-		generated, err := gen.Print(converted)
-		exitOnError(err, "generating code")
-		ioutil.WriteFile(outfile, []byte(generated), 0700)
+		for _, file := range args {
+			fmt.Println("Compiling file:", file)
+			compileFile(file)
+		}
 	},
 	Args: cobra.MinimumNArgs(1),
+}
+
+func compileFile(filepath string) {
+	outfile := strings.Replace(filepath, path.Ext(filepath), ".yolol", -1)
+	file := loadInputFile(filepath)
+	converter := nolol.NewConverter()
+	converter.Debug(debugLog)
+	converted, err := converter.ConvertFromSource(file)
+	exitOnError(err, "converting to yolol")
+	gen := parser.Printer{}
+	generated, err := gen.Print(converted)
+	exitOnError(err, "generating code")
+	err = ioutil.WriteFile(outfile, []byte(generated), 0700)
+	exitOnError(err, "writing file")
 }
 
 func init() {

@@ -11,18 +11,18 @@ var debugLog bool
 
 // verifyCmd represents the verify command
 var verifyCmd = &cobra.Command{
-	Use:   "verify [file]",
-	Short: "Check if a (y/n)olol programm compiles correctly",
-	Long:  `Try to compile the file and run checks on it`,
+	Use:   "verify [file]+",
+	Short: "Check if a yolol programm is valid",
+	Long:  `Tries to parse a yolol file`,
 	Run: func(cmd *cobra.Command, args []string) {
-		p := parser.NewParser()
-		p.DebugLog = debugLog
-		file := loadInputFile(args[0])
-		_, errs := p.Parse(file)
-
-		exitOnError(errs, "parsing file")
-		fmt.Println("File is valid")
-
+		for _, filepath := range args {
+			p := parser.NewParser()
+			p.DebugLog = debugLog
+			file := loadInputFile(filepath)
+			_, errs := p.Parse(file)
+			exitOnError(errs, "parsing file")
+			fmt.Println(filepath, "is valid")
+		}
 	},
 	Args: cobra.MinimumNArgs(1),
 }

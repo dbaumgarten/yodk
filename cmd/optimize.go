@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"io/ioutil"
 	"path"
 	"strings"
@@ -14,26 +15,34 @@ var outputFile string
 
 // optimizeCmd represents the compile command
 var optimizeCmd = &cobra.Command{
-	Use:   "optimize [file]",
-	Short: "Optimize a yolo programm",
-	Long:  `Perform optimizations on a yolol-programm`,
+	Use:   "optimize [file]+",
+	Short: "Optimize yolo programs",
+	Long:  `Perform optimizations on yolol-programs`,
 	Run: func(cmd *cobra.Command, args []string) {
-		outfile := strings.Replace(args[0], path.Ext(args[0]), "", -1) + "-opt" + path.Ext(args[0])
-		p := parser.NewParser()
-		file := loadInputFile(args[0])
-		parsed, errs := p.Parse(file)
-		if errs != nil {
-			exitOnError(errs, "parsing file")
+		for _, file := range args {
+			fmt.Println("Optimizing file:", file)
+			optimize(file)
 		}
-		opt := optimizers.NewCompoundOptimizer()
-		err := opt.Optimize(parsed)
-		exitOnError(err, "performing optimisation")
-		gen := parser.Printer{}
-		generated, err := gen.Print(parsed)
-		exitOnError(err, "generating code")
-		ioutil.WriteFile(outfile, []byte(generated), 0700)
+
 	},
 	Args: cobra.MinimumNArgs(1),
+}
+
+func optimize(filepath string) {
+	outfile := strings.Replace(filepath, path.Ext(filepath), "", -1) + "-opt" + path.Ext(filepath)
+	p := parser.NewParser()
+	file := loadInputFile(filepath)
+	parsed, errs := p.Parse(file)
+	if errs != nil {
+		exitOnError(errs, "parsing file")
+	}
+	opt := optimizers.NewCompoundOptimizer()
+	err := opt.Optimize(parsed)
+	exitOnError(err, "performing optimisation")
+	gen := parser.Printer{}
+	generated, err := gen.Print(parsed)
+	exitOnError(err, "generating code")
+	ioutil.WriteFile(outfile, []byte(generated), 0700)
 }
 
 func init() {
