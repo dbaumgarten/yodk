@@ -35,7 +35,7 @@
 			]
 		},
 		"keyword": {
-			"match": "\\b(if|then|else|end)\\b",
+			"match": "\\b(if|then|else|end|goto)\\b",
 			"name": "keyword.control"
 		},
 		"string": {

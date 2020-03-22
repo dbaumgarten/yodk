@@ -6,3 +6,6 @@ lslog
 !vscode-yolol/.vscode
 *.vsix
 vscode-yolol/.vscode-test/
+docs/generated/*
+docs/README.ms
+docs/vscode-yolol.md

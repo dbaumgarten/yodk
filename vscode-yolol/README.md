@@ -1,8 +1,10 @@
 # VSCODE-YOLOL
 
-Adds support for [YOLOL](https://wiki.starbasegame.com/index.php/YOLOL) to vscode.
+This vscoe extension adds support for [YOLOL](https://wiki.starbasegame.com/index.php/YOLOL) to vscode.
 
 [YOLOL](https://wiki.starbasegame.com/index.php/YOLOL) is the ingame programming language of the upcoming game starbase.
+
+It is a part of the [yolol development kit](https://github.com/dbaumgarten/yodk)
 
 # Features
 - Syntax highlighting

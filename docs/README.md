@@ -8,9 +8,9 @@
 The yodk aims to be a toolkit that helps with the development of YOLOL-Scripts. YOLOL is a pretty limmited language and the lack of common features is really annoying for experienced programmers. The yodk (and in the future especially nolol) will try to mitigate this.  
 
 It mainly consists of:
-- A cli application that bundles helpful features for yolol-development ([docs](https://dbaumgarten.github.io/yodk/#/cli))
-- A vscode extension, that makes the features of the cli available directly in vscode ([docs](https://dbaumgarten.github.io/yodk/#/vscode-colol))
-- A new programming language called NOLOL, that extends YOLOL with a lot of features, experienced dvelopers really miss when using yolol. Lern more about [nolol](https://dbaumgarten.github.io/yodk/#/nolol).
+- A cli application that bundles helpful features for yolol-development ([docs](/cli))
+- A vscode extension, that makes the features of the cli available directly in vscode ([docs](/vscode-colol))
+- A new programming language called NOLOL, that extends YOLOL with a lot of features, experienced dvelopers really miss when using yolol. Lern more about [nolol](/nolol).
 
 # Features
 
@@ -22,7 +22,7 @@ It mainly consists of:
 - compile NOLOL code to YOLOL (also, all previous features also work with NOLOL)
 - start a Language Server Protocol Server
 
-For more detailed information, see the [documentation](https://dbaumgarten.github.io/yodk/#/cli).
+For more detailed information, see the [documentation](/cli).
 
 ## VSCODE-Extension
 - Syntax highlighting of yolol and nolol
@@ -30,10 +30,10 @@ For more detailed information, see the [documentation](https://dbaumgarten.githu
 - Automatically format your code
 - Use cli-functionality directly from within vscode
 
-For more detailed information, see the [documentation](https://dbaumgarten.github.io/yodk/#/vscode-yolol).
+For more detailed information, see the [documentation](/vscode-yolol).
 
 ## NOLOL
-For an overview over the features of nolol, visit the [documentation](https://dbaumgarten.github.io/yodk/#/nolol).
+For an overview over the features of nolol, visit the [documentation](/nolol).
 
 # Installation
 
@@ -47,7 +47,7 @@ You will need to have the go-toolchain installed.
 Note: It is helpful to add the yodk-binary to your path.
 
 ## VScode extension
-You can install ```vscode-yolol``` directly from the vscode marketplace. For more information, see the [documentation](https://dbaumgarten.github.io/yodk/#/vscode-yolol).
+You can install ```vscode-yolol``` directly from the vscode marketplace. For more information, see the [documentation](/vscode-yolol).
 
 
 # Upcoming features
