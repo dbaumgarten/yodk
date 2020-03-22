@@ -1,0 +1,13 @@
+scripts: 
+  - name: loops.nolol
+    iterations: 1
+cases:
+  - name: draw
+    outputs:
+      out: |
+        XXXXXX
+        X0000X
+        X0000X
+        X0000X
+        X0000X
+        XXXXXX

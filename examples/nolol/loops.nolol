@@ -1,0 +1,29 @@
+const width = 5
+const height = 5
+
+// nolol features loops
+// currenty only while-loops are suppored
+
+:out=""
+while y<=height do
+	// loops can of course be nested
+	while x<=width do
+		if x==0 or y==0 or x==width or y==height then
+			:out+="X"
+		else
+			:out+="0"
+		end
+		x++ 
+	end
+	x=0
+	y++ 
+	:out+="\n"
+end
+
+// After execution :out will contain the text:
+// XXXXXX
+// X0000X
+// X0000X
+// X0000X
+// X0000X
+// XXXXXX

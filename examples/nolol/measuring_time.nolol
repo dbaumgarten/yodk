@@ -1,8 +1,9 @@
-// example for opening a door for a specific time
+// nolol provides a built-in funtion time() that returns the amount of lines
+// that have been executed in this script
 
 // open door and set close-time to now (1) plus 10 cycles
 // the block line costs an additional cycle, therefore we need to substract 1
-// also take not of the start time so we can check the result later
+// also take note of the start time so we can check the result later
 // as all statements are on the same line (separated by ;) they are executed at the same time
 :door="open"; closewhen=time()+(10-1); start=time()
 // block while closewhen is not reached

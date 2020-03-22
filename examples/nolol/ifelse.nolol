@@ -1,0 +1,25 @@
+// example demonstrating the use of if-else
+// nolol ifs are multi-line
+// when compiling thei are converted to yolol inline ifs if possible
+// if the body of the if is too large for an inline if, the if will be implemented using a goto
+if :day=="monday" then
+	:msg="fuck"
+else if :day=="tuesday" then
+	:msg="still stupid"
+else if :day=="wednesday" then
+	// especially long string to force a multiline if
+	:msg="half time!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+else if :day=="thursday" then
+	:msg="almost..."
+else if :day=="friday" then
+	:msg="yay"
+else
+	:msg="Weekend!!!"
+	// ifs can be nested
+	if :day=="saturday" then
+		:msg+=" PARTY!"
+	else
+		:msg+=" is almost over :("
+	end
+end
+:other="done"

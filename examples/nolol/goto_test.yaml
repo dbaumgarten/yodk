@@ -1,0 +1,7 @@
+scripts: 
+  - name: goto.nolol
+    iterations: 1
+cases:
+  - name: TestOutputstring
+    outputs:
+      out: "abcdef"

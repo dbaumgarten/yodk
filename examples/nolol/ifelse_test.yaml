@@ -1,0 +1,39 @@
+scripts: 
+  - name: ifelse.nolol
+    iterations: 1
+cases:
+  - name: day1
+    inputs:
+      day: monday
+    outputs:
+      msg: "fuck"
+  - name: day2
+    inputs:
+      day: tuesday
+    outputs:
+      msg: "still stupid"
+  - name: day3
+    inputs:
+      day: wednesday
+    outputs:
+      msg: "half time!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+  - name: day4
+    inputs:
+      day: thursday
+    outputs:
+      msg: "almost..."
+  - name: day5
+    inputs:
+      day: friday
+    outputs:
+      msg: "yay"
+  - name: day6
+    inputs:
+      day: saturday
+    outputs:
+      msg: "Weekend!!! PARTY!"
+  - name: day7
+    inputs:
+      day: sunday
+    outputs:
+      msg: "Weekend!!! is almost over :("
