@@ -18,8 +18,8 @@ func NewParser() *Parser {
 	ep := &Parser{
 		Parser: parser.NewParser(),
 	}
-	ep.Tokenizer = nast.NewNololTokenizer()
 	ep.This = ep
+	ep.Tokenizer = nast.NewNololTokenizer()
 	return ep
 }
 
@@ -36,7 +36,7 @@ func (p *Parser) SetFilename(name string) {
 
 // Parse is the entry point for parsing
 func (p *Parser) Parse(prog string) (*nast.Program, error) {
-	p.Errors = make(parser.Errors, 0)
+	p.Reset()
 	p.Tokenizer.Load(prog)
 	// Advance twice to fill CurrentToken and NextToken
 	p.Advance()

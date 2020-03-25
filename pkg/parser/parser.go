@@ -69,8 +69,9 @@ type YololParserFunctions interface {
 
 // NewParser creates a new parser
 func NewParser() *Parser {
-	p := &Parser{}
-	p.init()
+	p := &Parser{
+		Tokenizer: ast.NewTokenizer(),
+	}
 	p.This = p
 	return p
 }
@@ -146,9 +147,9 @@ func (p *Parser) Expect(tokenType string, tokenValue string) ast.Position {
 	return pos
 }
 
-// init prepares all internal fields for a new parsing run
-func (p *Parser) init() {
-	p.Tokenizer = ast.NewTokenizer()
+// Reset prepares all internal fields for a new parsing run
+// is called automatically by Parse(). Overriding structs must call this in their Parse()
+func (p *Parser) Reset() {
 	p.Errors = make(Errors, 0)
 	p.CurrentToken = nil
 	p.PrevToken = nil
@@ -161,7 +162,7 @@ func (p *Parser) init() {
 
 // Parse is the main method of the parser. Parses a yolol-program into an AST.
 func (p *Parser) Parse(prog string) (*ast.Program, error) {
-	p.init()
+	p.Reset()
 	p.Tokenizer.Load(prog)
 	// Advance twice to fill CurrentToken and NextToken
 	p.Advance()
