@@ -1,6 +1,7 @@
 package nolol
 
 import (
+	"fmt"
 	"io/ioutil"
 	"path/filepath"
 )
@@ -24,4 +25,16 @@ func (f DiskFileSystem) Get(name string) (string, error) {
 		return "", err
 	}
 	return string(content), nil
+}
+
+// MemoryFileSystem serves files from Memory
+type MemoryFileSystem map[string]string
+
+// Get implements FileSystem
+func (f MemoryFileSystem) Get(name string) (string, error) {
+	file, exists := f[name]
+	if !exists {
+		return "", fmt.Errorf("File not found")
+	}
+	return file, nil
 }

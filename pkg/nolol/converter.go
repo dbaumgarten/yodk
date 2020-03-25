@@ -2,6 +2,7 @@ package nolol
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"github.com/dbaumgarten/yodk/pkg/nolol/nast"
 	"github.com/dbaumgarten/yodk/pkg/optimizers"
@@ -33,16 +34,30 @@ func NewConverter() *Converter {
 	return &Converter{}
 }
 
-// ConvertFromSource is a shortcut that parses and directly convertes a nolol program
-// includes is an object to access files that are referenced in prog's include directives
-func (c *Converter) ConvertFromSource(prog string, includes FileSystem) (*ast.Program, error) {
-	p := NewParser()
-	p.Debug(c.debug)
-	parsed, err := p.Parse(prog)
+// ConvertFile is a shortcut that loads a file from the file-system, parses it and directly convertes it.
+// mainfile is the path to the file on the disk.
+// All included are loaded relative to the mainfile.
+func (c *Converter) ConvertFile(mainfile string) (*ast.Program, error) {
+	files := DiskFileSystem{
+		Dir: filepath.Dir(mainfile),
+	}
+	return c.ConvertFileEx(filepath.Base(mainfile), files)
+}
+
+// ConvertFileEx acts like ConvertFile, but allows the passing of a custom filesystem from which the source files
+// are retrieved. This way, files that are not stored on disk can be converted
+func (c *Converter) ConvertFileEx(mainfile string, files FileSystem) (*ast.Program, error) {
+	file, err := files.Get(mainfile)
 	if err != nil {
 		return nil, err
 	}
-	return c.Convert(parsed, includes)
+	p := NewParser()
+	p.Debug(c.debug)
+	parsed, err := p.Parse(file)
+	if err != nil {
+		return nil, err
+	}
+	return c.Convert(parsed, files)
 }
 
 // Debug enables/disables debug logging
@@ -51,8 +66,9 @@ func (c *Converter) Debug(b bool) {
 }
 
 // Convert converts a nolol-program to a yolol-program
-func (c *Converter) Convert(prog *nast.Program, includes FileSystem) (*ast.Program, error) {
-	c.files = includes
+// files is an object to access files that are referenced in prog's include directives
+func (c *Converter) Convert(prog *nast.Program, files FileSystem) (*ast.Program, error) {
+	c.files = files
 	err := c.resolveIncludes(prog)
 	if err != nil {
 		return nil, err

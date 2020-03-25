@@ -117,20 +117,19 @@ func (t Test) CreateVMs(coord *vm.Coordinator, errF vm.ErrorHandlerFunc) ([]*vm.
 		v.SetErrorHandler(errF)
 		vms = append(vms, v)
 
-		scriptContent, err := script.GetCode()
-		if err != nil {
-			return nil, err
-		}
-
 		if strings.HasSuffix(script.Name, ".nolol") {
 			conv := nolol.NewConverter()
-			dir := filepath.Dir(filepath.Join(filepath.Dir(script.AbsolutePath), script.Name))
-			prog, err := conv.ConvertFromSource(string(scriptContent), nolol.DiskFileSystem{Dir: dir})
+			file := filepath.Join(filepath.Dir(script.AbsolutePath), script.Name)
+			prog, err := conv.ConvertFile(file)
 			if err != nil {
 				return nil, err
 			}
 			v.Run(prog)
 		} else {
+			scriptContent, err := script.GetCode()
+			if err != nil {
+				return nil, err
+			}
 			v.RunSource(string(scriptContent))
 		}
 	}

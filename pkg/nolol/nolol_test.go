@@ -47,9 +47,19 @@ $ z = 0 $
 x = 99
 `
 
+var testProg3 = `
+include "testProg"
+`
+
+var testfs = nolol.MemoryFileSystem{
+	"testProg":  testProg,
+	"testProg2": testProg2,
+	"testProg3": testProg3,
+}
+
 func TestNolol(t *testing.T) {
 	conv := nolol.NewConverter()
-	prog, err := conv.ConvertFromSource(testProg, nil)
+	prog, err := conv.ConvertFileEx("testProg", testfs)
 	if err != nil {
 		t.Error(err)
 	}
@@ -76,9 +86,21 @@ func TestNolol(t *testing.T) {
 	}
 }
 
+func TestInclude(t *testing.T) {
+	conv := nolol.NewConverter()
+	prog, _ := conv.ConvertFileEx("testProg", testfs)
+	prog2, _ := conv.ConvertFileEx("testProg3", testfs)
+	printer := &parser.Printer{}
+	printed, _ := printer.Print(prog)
+	printed2, _ := printer.Print(prog2)
+	if printed != printed2 {
+		t.Fatal("Include does not match original")
+	}
+}
+
 func TestLineHandling(t *testing.T) {
 	conv := nolol.NewConverter()
-	prog, err := conv.ConvertFromSource(testProg2, nil)
+	prog, err := conv.ConvertFileEx("testProg2", testfs)
 	if err != nil {
 		t.Error(err)
 	}
@@ -88,5 +110,4 @@ func TestLineHandling(t *testing.T) {
 	if lines != 8 {
 		t.Fatal("Wrong amount of lines after merging. Expected 8, but got: ", lines)
 	}
-
 }

@@ -92,5 +92,28 @@ YOLOL Output:
 
 [measuring_time.yolol](generated/code/nolol/measuring_time.yolol ':include')
 
+## Including Files
+Nolol files can include other nolol files unsing the ```include "file"``` command. The ```include``` command is replaced during compilation with the contents of the encluded file and the resulting file is then converted to yolol.
+
+This file:
+
+[including.nolol](generated/code/nolol/including.nolol ':include')
+
+which includes this file:
+
+[included.nolol](generated/code/nolol/included.nolol ':include')
+
+will result in this yolol-code:
+
+[including.yolol](generated/code/nolol/including.yolol ':include')
+
+which will output:
+
+```
+hello .......... daniel
+```
+
+Includes can also be placed in the middle of block like ```ìf``` and ```while``` which makes it possible to use included files as some kind of macros.
+
 # Tool support
 NOLOL is fully supported by the yodk and also vscode-yolol. Debugging works just like with yolol. So do automated testing, formatting and syntax-hightlighting.
