@@ -157,8 +157,10 @@ func (c *Converter) Convert(prog *nast.Program, files FileSystem) (*ast.Program,
 // resolveIncludes searches for include-directives and inserts the lines of the included files
 func (c *Converter) resolveIncludes(n ast.Node) error {
 	p := NewParser()
+	repeat := true
 	f := func(node ast.Node, visitType int) error {
 		if include, is := node.(*nast.IncludeDirective); is {
+			repeat = true
 			file, err := c.files.Get(include.File)
 			if err != nil {
 				return &parser.Error{
@@ -188,7 +190,28 @@ func (c *Converter) resolveIncludes(n ast.Node) error {
 		}
 		return nil
 	}
-	return n.Accept(ast.VisitorFunc(f))
+
+	counter := 0
+
+	// if repeat is true, this is either the first run, or a previous run performed an include
+	// if so, there might be unresolved includes, so run the include-resolving function again
+	for repeat {
+		repeat = false
+		err := n.Accept(ast.VisitorFunc(f))
+		if err != nil {
+			return err
+		}
+		counter++
+		if counter > 20 {
+			return &parser.Error{
+				Message:       "Include cycle detected",
+				StartPosition: n.Start(),
+				EndPosition:   n.End(),
+			}
+		}
+	}
+
+	return nil
 }
 
 // findConstantDeclarations searches the programm for constant declarations and stores them for later use
