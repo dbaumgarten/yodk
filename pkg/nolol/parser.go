@@ -28,6 +28,12 @@ func (p *Parser) Debug(b bool) {
 	p.DebugLog = b
 }
 
+// SetFilename sets the filename that is included in the position of every returned ast.node
+// Necessary when parsing an included file to differenciate between positions in different files
+func (p *Parser) SetFilename(name string) {
+	p.Tokenizer.SetFilename(name)
+}
+
 // Parse is the entry point for parsing
 func (p *Parser) Parse(prog string) (*nast.Program, error) {
 	p.Errors = make(parser.Errors, 0)
@@ -52,6 +58,29 @@ func (p *Parser) ParseProgram() *nast.Program {
 		ret.Lines = append(ret.Lines, p.ParseLine())
 	}
 	return &ret
+}
+
+// ParseInclude parses an include directive
+func (p *Parser) ParseInclude() *nast.IncludeDirective {
+	p.Log()
+
+	if p.CurrentToken.Type != ast.TypeKeyword || p.CurrentToken.Value != "include" {
+		return nil
+	}
+	incl := &nast.IncludeDirective{
+		Position: p.CurrentToken.Position,
+	}
+	p.Advance()
+	if p.CurrentToken.Type != ast.TypeString {
+		p.ErrorCurrent("Expected a string-constant after include")
+		return incl
+	}
+	incl.File = p.CurrentToken.Value
+	p.Advance()
+	if p.CurrentToken.Type != ast.TypeEOF {
+		p.Expect(ast.TypeNewline, "")
+	}
+	return incl
 }
 
 // ParseStatementLine parses a statement line
@@ -169,6 +198,11 @@ func (p *Parser) ParseExecutableLine() nast.ExecutableLine {
 		return block
 	}
 
+	include := p.ParseInclude()
+	if include != nil {
+		return include
+	}
+
 	return p.ParseStatementLine()
 }
 
@@ -207,7 +241,7 @@ func (p *Parser) ParseConstantDeclaration() *nast.ConstDeclaration {
 		p.ErrorCurrent("The = of a const declaration must be followed by an expression")
 	}
 	decl.Value = value
-	if p.CurrentToken.Type != ast.TypeNewline {
+	if p.CurrentToken.Type != ast.TypeEOF {
 		p.Expect(ast.TypeNewline, "")
 	}
 	return decl

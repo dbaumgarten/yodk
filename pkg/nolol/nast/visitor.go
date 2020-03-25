@@ -200,6 +200,11 @@ func (s *WaitStatement) Accept(v ast.Visitor) error {
 	return v.Visit(s, ast.PostVisit)
 }
 
+// Accept is used to implement Acceptor
+func (s *IncludeDirective) Accept(v ast.Visitor) error {
+	return v.Visit(s, ast.SingleVisit)
+}
+
 func patchLines(old []Line, position int, repl ast.NodeReplacement) []Line {
 	newv := make([]Line, 0, len(old)+len(repl.Replacement)-1)
 	newv = append(newv, old[:position]...)

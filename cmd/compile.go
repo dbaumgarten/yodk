@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/dbaumgarten/yodk/pkg/nolol"
@@ -25,12 +26,13 @@ var compileCmd = &cobra.Command{
 	Args: cobra.MinimumNArgs(1),
 }
 
-func compileFile(filepath string) {
-	outfile := strings.Replace(filepath, path.Ext(filepath), ".yolol", -1)
-	file := loadInputFile(filepath)
+func compileFile(fpath string) {
+	dir := filepath.Dir(fpath)
+	outfile := strings.Replace(fpath, path.Ext(fpath), ".yolol", -1)
+	file := loadInputFile(fpath)
 	converter := nolol.NewConverter()
 	converter.Debug(debugLog)
-	converted, err := converter.ConvertFromSource(file)
+	converted, err := converter.ConvertFromSource(file, nolol.DiskFileSystem{dir})
 	exitOnError(err, "converting to yolol")
 	gen := parser.Printer{}
 	generated, err := gen.Print(converted)

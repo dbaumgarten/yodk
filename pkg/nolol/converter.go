@@ -25,6 +25,7 @@ type Converter struct {
 	usesTimeTracking bool
 	iflabelcounter   int
 	debug            bool
+	files            FileSystem
 }
 
 // NewConverter creates a new converter
@@ -33,14 +34,15 @@ func NewConverter() *Converter {
 }
 
 // ConvertFromSource is a shortcut that parses and directly convertes a nolol program
-func (c *Converter) ConvertFromSource(prog string) (*ast.Program, error) {
+// includes is an object to access files that are referenced in prog's include directives
+func (c *Converter) ConvertFromSource(prog string, includes FileSystem) (*ast.Program, error) {
 	p := NewParser()
 	p.Debug(c.debug)
 	parsed, err := p.Parse(prog)
 	if err != nil {
 		return nil, err
 	}
-	return c.Convert(parsed)
+	return c.Convert(parsed, includes)
 }
 
 // Debug enables/disables debug logging
@@ -49,9 +51,14 @@ func (c *Converter) Debug(b bool) {
 }
 
 // Convert converts a nolol-program to a yolol-program
-func (c *Converter) Convert(prog *nast.Program) (*ast.Program, error) {
+func (c *Converter) Convert(prog *nast.Program, includes FileSystem) (*ast.Program, error) {
+	c.files = includes
+	err := c.resolveIncludes(prog)
+	if err != nil {
+		return nil, err
+	}
 	// get all constant declarations
-	err := c.findConstantDeclarations(prog)
+	err = c.findConstantDeclarations(prog)
 	if err != nil {
 		return nil, err
 	}
@@ -129,6 +136,43 @@ func (c *Converter) Convert(prog *nast.Program) (*ast.Program, error) {
 	newprog := c.convertLineTypes(prog)
 
 	return newprog, nil
+}
+
+// resolveIncludes searches for include-directives and inserts the lines of the included files
+func (c *Converter) resolveIncludes(n ast.Node) error {
+	p := NewParser()
+	f := func(node ast.Node, visitType int) error {
+		if include, is := node.(*nast.IncludeDirective); is {
+			file, err := c.files.Get(include.File)
+			if err != nil {
+				return &parser.Error{
+					Message:       fmt.Sprintf("Error when opening included file '%s': %s", include.File, err.Error()),
+					StartPosition: include.Start(),
+					EndPosition:   include.End(),
+				}
+			}
+			p.SetFilename(include.File)
+			parsed, err := p.Parse(file)
+			if err != nil {
+				// override the position of the error with the position of the include
+				// this way the error gets displayed at the correct location
+				// the message does contain the original location
+				return &parser.Error{
+					Message:       err.Error(),
+					StartPosition: include.Start(),
+					EndPosition:   include.End(),
+				}
+			}
+
+			replacements := make([]ast.Node, len(parsed.Lines))
+			for i := range parsed.Lines {
+				replacements[i] = parsed.Lines[i]
+			}
+			return ast.NewNodeReplacement(replacements...)
+		}
+		return nil
+	}
+	return n.Accept(ast.VisitorFunc(f))
 }
 
 // findConstantDeclarations searches the programm for constant declarations and stores them for later use

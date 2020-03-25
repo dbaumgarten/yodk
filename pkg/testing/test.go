@@ -3,7 +3,7 @@ package testing
 import (
 	"fmt"
 	"io/ioutil"
-	"path"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -93,7 +93,7 @@ func (c Case) InitializeVariables(coord *vm.Coordinator) {
 
 // GetCode returns the code for script either from the script struct itself or from the referenced file
 func (script Script) GetCode() (string, error) {
-	file := path.Join(path.Dir(script.AbsolutePath), script.Name)
+	file := filepath.Join(filepath.Dir(script.AbsolutePath), script.Name)
 	if script.Content == "" {
 		f, err := ioutil.ReadFile(file)
 		if err != nil {
@@ -124,7 +124,8 @@ func (t Test) CreateVMs(coord *vm.Coordinator, errF vm.ErrorHandlerFunc) ([]*vm.
 
 		if strings.HasSuffix(script.Name, ".nolol") {
 			conv := nolol.NewConverter()
-			prog, err := conv.ConvertFromSource(string(scriptContent))
+			dir := filepath.Dir(filepath.Join(filepath.Dir(script.AbsolutePath), script.Name))
+			prog, err := conv.ConvertFromSource(string(scriptContent), nolol.DiskFileSystem{Dir: dir})
 			if err != nil {
 				return nil, err
 			}

@@ -112,7 +112,8 @@ func loadScripts() {
 			thisVM.RunSource(inputProg)
 		} else if strings.HasSuffix(inputFileName, ".nolol") {
 			converter := nolol.NewConverter()
-			yololcode, err := converter.ConvertFromSource(inputProg)
+			dir := filepath.Dir(inputFileName)
+			yololcode, err := converter.ConvertFromSource(inputProg, nolol.DiskFileSystem{Dir: dir})
 			if err != nil {
 				exitOnError(err, "parsing nolol code")
 			}
@@ -133,7 +134,7 @@ func loadTest() {
 
 	scriptFileNames = make([]string, len(t.Scripts))
 	for i, script := range t.Scripts {
-		scriptFileNames[i] = script.Name
+		scriptFileNames[i] = filepath.Join(filepath.Dir(t.AbsolutePath), script.Name)
 	}
 
 	inputScripts = make([]string, len(t.Scripts))
@@ -374,9 +375,14 @@ func init() {
 			if !strings.HasSuffix(scriptFileNames[currentScript], ".nolol") {
 				debugShell.Print("Disas is only available when debugging nolol code")
 			}
+			dir := filepath.Dir(scriptFileNames[currentScript])
 			current := vms[currentScript].CurrentAstLine()
 			conv := nolol.NewConverter()
-			ast, _ := conv.ConvertFromSource(inputScripts[currentScript])
+			ast, err := conv.ConvertFromSource(inputScripts[currentScript], nolol.DiskFileSystem{Dir: dir})
+			if err != nil {
+				fmt.Println("Error when converting nolol: ", err.Error())
+				return
+			}
 			yolol, _ := (&parser.Printer{}).Print(ast)
 			progLines := strings.Split(yolol, "\n")
 			debugShell.Println("--Programm--")

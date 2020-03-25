@@ -23,19 +23,24 @@ const (
 
 // Position represents the starting-position of a token in the source-code
 type Position struct {
+	File    string
 	Line    int
 	Coloumn int
 }
 
 // NewPosition creates a new position from a given line and coloumn
-func NewPosition(line int, coloumn int) Position {
+func NewPosition(file string, line int, coloumn int) Position {
 	return Position{
+		File:    file,
 		Line:    line,
 		Coloumn: coloumn,
 	}
 }
 
 func (p Position) String() string {
+	if p.File != "" {
+		return fmt.Sprintf("%s:%d:%d", p.File, p.Line, p.Coloumn)
+	}
 	return fmt.Sprintf("Line: %d, Coloumn: %d", p.Line, p.Coloumn)
 }
 
@@ -87,6 +92,7 @@ func (t Token) String() string {
 
 // Tokenizer splits the input source-code into tokens
 type Tokenizer struct {
+	filename  string
 	column    int
 	line      int
 	text      string
@@ -113,11 +119,17 @@ func NewTokenizer() *Tokenizer {
 	}
 }
 
+// SetFilename sets the filename that is set in the position if all returned tokens
+func (t *Tokenizer) SetFilename(name string) {
+	t.filename = name
+}
+
 func (t *Tokenizer) newToken(typ string, val string) *Token {
 	return &Token{
 		Type:  typ,
 		Value: val,
 		Position: Position{
+			File:    t.filename,
 			Line:    t.line,
 			Coloumn: t.column,
 		},

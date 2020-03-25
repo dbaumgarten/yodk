@@ -49,7 +49,7 @@ x = 99
 
 func TestNolol(t *testing.T) {
 	conv := nolol.NewConverter()
-	prog, err := conv.ConvertFromSource(testProg)
+	prog, err := conv.ConvertFromSource(testProg, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -78,7 +78,7 @@ func TestNolol(t *testing.T) {
 
 func TestLineHandling(t *testing.T) {
 	conv := nolol.NewConverter()
-	prog, err := conv.ConvertFromSource(testProg2)
+	prog, err := conv.ConvertFromSource(testProg2, nil)
 	if err != nil {
 		t.Error(err)
 	}

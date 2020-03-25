@@ -3,6 +3,7 @@ package langserver
 import (
 	"context"
 	"log"
+	"path/filepath"
 	"strings"
 
 	"github.com/dbaumgarten/yodk/pkg/nolol"
@@ -13,8 +14,11 @@ import (
 
 func (s *LangServer) Diagnose(ctx context.Context, uri lsp.DocumentURI) {
 
-	go func() {
+	dir := strings.Replace(string(uri), "file://", "", -1)
+	dir = filepath.FromSlash(dir)
+	dir = filepath.Dir(dir)
 
+	go func() {
 		var errs error
 		text, _ := s.cache.Get(uri)
 		if strings.HasSuffix(string(uri), ".yolol") {
@@ -22,7 +26,7 @@ func (s *LangServer) Diagnose(ctx context.Context, uri lsp.DocumentURI) {
 			_, errs = p.Parse(text)
 		} else if strings.HasSuffix(string(uri), ".nolol") {
 			conv := nolol.NewConverter()
-			_, errs = conv.ConvertFromSource(text)
+			_, errs = conv.ConvertFromSource(text, nolol.DiskFileSystem{Dir: dir})
 		} else {
 			return
 		}

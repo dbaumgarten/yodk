@@ -490,8 +490,10 @@ func (v *YololVM) runLine(line *ast.Line) error {
 	}
 
 	for _, stmt := range line.Statements {
-		statementLine := stmt.Start().Line
-		v.currentSourceLine = statementLine
+		// do not change the current statement line, if the statement is not from the main file
+		if stmt.Start().File == "" {
+			v.currentSourceLine = stmt.Start().Line
+		}
 		if v.state == StateStep {
 			v.wait()
 		}
@@ -556,6 +558,8 @@ func (v *YololVM) runStmt(stmt ast.Statement) error {
 		return nil
 	case *ast.GoToStatement:
 		v.currentAstLine = e.Line - 1
+		// goto makes us leave the current line. Reset skipbp
+		v.skipBp = -1
 		return errAbortLine
 	case *ast.Dereference:
 		_, err := v.runDeref(e)

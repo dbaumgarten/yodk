@@ -147,3 +147,19 @@ func (n *WaitStatement) Start() ast.Position {
 func (n *WaitStatement) End() ast.Position {
 	return n.Condition.End()
 }
+
+// IncludeDirective represents the inclusion of another file in the source-file
+type IncludeDirective struct {
+	Position ast.Position
+	File     string
+}
+
+// Start is needed to implement ast.Node
+func (n *IncludeDirective) Start() ast.Position {
+	return n.Position
+}
+
+// End is needed to implement ast.Node
+func (n *IncludeDirective) End() ast.Position {
+	return n.Position.Add(len(n.File) + 3 + len("include"))
+}
