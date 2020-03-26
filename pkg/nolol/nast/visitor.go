@@ -15,14 +15,14 @@ func (p *Program) Accept(v ast.Visitor) error {
 	if err != nil {
 		return err
 	}
-	for i := 0; i < len(p.Lines); i++ {
+	for i := 0; i < len(p.Elements); i++ {
 		err = v.Visit(p, i)
 		if err != nil {
 			return err
 		}
-		err = p.Lines[i].Accept(v)
+		err = p.Elements[i].Accept(v)
 		if repl, is := err.(ast.NodeReplacement); is {
-			p.Lines = patchLines(p.Lines, i, repl)
+			p.Elements = patchElementList(p.Elements, i, repl)
 			i += len(repl.Replacement) - 1
 			err = nil
 		}
@@ -82,14 +82,14 @@ func (s *Block) Accept(v ast.Visitor) error {
 	if err != nil {
 		return err
 	}
-	for i := 0; i < len(s.Lines); i++ {
+	for i := 0; i < len(s.Elements); i++ {
 		err = v.Visit(s, i)
 		if err != nil {
 			return err
 		}
-		err = s.Lines[i].Accept(v)
+		err = s.Elements[i].Accept(v)
 		if repl, is := err.(ast.NodeReplacement); is {
-			s.Lines = patchExecutableLines(s.Lines, i, repl)
+			s.Elements = patchElementList(s.Elements, i, repl)
 			i += len(repl.Replacement) - 1
 			err = nil
 		}
@@ -184,7 +184,7 @@ func (s *WhileLoop) Accept(v ast.Visitor) error {
 }
 
 // Accept is used to implement Acceptor
-func (s *WaitStatement) Accept(v ast.Visitor) error {
+func (s *WaitDirective) Accept(v ast.Visitor) error {
 	err := v.Visit(s, ast.PreVisit)
 	if err != nil {
 		return err
@@ -205,25 +205,11 @@ func (s *IncludeDirective) Accept(v ast.Visitor) error {
 	return v.Visit(s, ast.SingleVisit)
 }
 
-func patchLines(old []Line, position int, repl ast.NodeReplacement) []Line {
-	newv := make([]Line, 0, len(old)+len(repl.Replacement)-1)
+func patchElementList(old []Element, position int, repl ast.NodeReplacement) []Element {
+	newv := make([]Element, 0, len(old)+len(repl.Replacement)-1)
 	newv = append(newv, old[:position]...)
 	for _, elem := range repl.Replacement {
-		if line, is := elem.(Line); is {
-			newv = append(newv, line)
-		} else {
-			panic("Could not patch slice. Wrong type.")
-		}
-	}
-	newv = append(newv, old[position+1:]...)
-	return newv
-}
-
-func patchExecutableLines(old []ExecutableLine, position int, repl ast.NodeReplacement) []ExecutableLine {
-	newv := make([]ExecutableLine, 0, len(old)+len(repl.Replacement)-1)
-	newv = append(newv, old[:position]...)
-	for _, elem := range repl.Replacement {
-		if line, is := elem.(ExecutableLine); is {
+		if line, is := elem.(Element); is {
 			newv = append(newv, line)
 		} else {
 			panic("Could not patch slice. Wrong type.")

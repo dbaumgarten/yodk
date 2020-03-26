@@ -123,7 +123,7 @@ func (p *Printer) Print(prog *nast.Program) (string, error) {
 			}
 		case *nast.Program:
 			return "", nil
-		case *nast.WaitStatement:
+		case *nast.WaitDirective:
 			if visitType == ast.PreVisit {
 				return "wait ", nil
 			}

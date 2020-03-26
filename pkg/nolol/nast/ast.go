@@ -4,28 +4,24 @@ import "github.com/dbaumgarten/yodk/pkg/parser/ast"
 
 // Program represents a complete programm
 type Program struct {
-	// The 'lines' of the program a line can also be multiple lines (if, while)
-	Lines []Line
+	// The parts of the program
+	Elements []Element
 }
 
 // Start is needed to implement ast.Node
 func (n *Program) Start() ast.Position {
-	return n.Lines[0].Start()
+	return n.Elements[0].Start()
 }
 
 // End is needed to implement ast.Node
 func (n *Program) End() ast.Position {
-	return n.Lines[len(n.Lines)-1].End()
+	return n.Elements[len(n.Elements)-1].End()
 }
 
-// Line is the interface for everything that can be a line in nolol
-type Line interface {
+// Element is a top-level part of a nolol-program. This is everything that can appear stand-alone
+// inside a nolol program
+type Element interface {
 	ast.Node
-}
-
-// ExecutableLine a line that is not compile-time only (not a constant declaration etc.)
-type ExecutableLine interface {
-	Line
 }
 
 // StatementLine is a line consisting of yolol-statements
@@ -63,19 +59,19 @@ func (n *ConstDeclaration) End() ast.Position {
 	return n.Value.End()
 }
 
-// Block represents a block/group of lines, for example inside an if
+// Block represents a block/group of elements, for example inside an if
 type Block struct {
-	Lines []ExecutableLine
+	Elements []Element
 }
 
 // Start is needed to implement ast.Node
 func (n *Block) Start() ast.Position {
-	return n.Lines[0].Start()
+	return n.Elements[0].Start()
 }
 
 // End is needed to implement ast.Node
 func (n *Block) End() ast.Position {
-	return n.Lines[len(n.Lines)-1].End()
+	return n.Elements[len(n.Elements)-1].End()
 }
 
 // MultilineIf represents a nolol-style multiline if
@@ -132,19 +128,19 @@ func (n *WhileLoop) End() ast.Position {
 	return n.Block.End()
 }
 
-// WaitStatement blocks execution as long as the condition is true
-type WaitStatement struct {
+// WaitDirective blocks execution as long as the condition is true
+type WaitDirective struct {
 	Position  ast.Position
 	Condition ast.Expression
 }
 
 // Start is needed to implement ast.Node
-func (n *WaitStatement) Start() ast.Position {
+func (n *WaitDirective) Start() ast.Position {
 	return n.Position
 }
 
 // End is needed to implement ast.Node
-func (n *WaitStatement) End() ast.Position {
+func (n *WaitDirective) End() ast.Position {
 	return n.Condition.End()
 }
 

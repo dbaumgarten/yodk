@@ -99,7 +99,7 @@ func (c *Converter) Convert(prog *nast.Program, files FileSystem) (*ast.Program,
 		return nil, err
 	}
 	// remove useless lines
-	err = c.filterLines(prog)
+	err = c.removeEmptyLines(prog)
 	if err != nil {
 		return nil, err
 	}
@@ -127,11 +127,11 @@ func (c *Converter) Convert(prog *nast.Program, files FileSystem) (*ast.Program,
 		return nil, err
 	}
 	// merge lines if possible
-	newlines, err := c.mergeNololLines(prog.Lines)
+	newlines, err := c.mergeElements(prog.Elements)
 	if err != nil {
 		return nil, err
 	}
-	prog.Lines = newlines
+	prog.Elements = newlines
 	// find all line-labels
 	err = c.findJumpLabels(prog)
 	if err != nil {
@@ -149,7 +149,7 @@ func (c *Converter) Convert(prog *nast.Program, files FileSystem) (*ast.Program,
 	}
 
 	// convert remaining nolol-types to yolol types
-	newprog := c.convertLineTypes(prog)
+	newprog := c.elementsToLines(prog)
 
 	return newprog, nil
 }
@@ -182,9 +182,9 @@ func (c *Converter) resolveIncludes(n ast.Node) error {
 				}
 			}
 
-			replacements := make([]ast.Node, len(parsed.Lines))
-			for i := range parsed.Lines {
-				replacements[i] = parsed.Lines[i]
+			replacements := make([]ast.Node, len(parsed.Elements))
+			for i := range parsed.Elements {
+				replacements[i] = parsed.Elements[i]
 			}
 			return ast.NewNodeReplacement(replacements...)
 		}
@@ -242,6 +242,8 @@ func (c *Converter) findConstantDeclarations(p ast.Node) error {
 						EndPosition:   constDecl.End(),
 					}
 				}
+				// remove the element from the ast
+				return ast.NewNodeReplacement()
 			}
 		}
 		return nil
@@ -252,7 +254,7 @@ func (c *Converter) findConstantDeclarations(p ast.Node) error {
 func (c *Converter) convertWaitStatement(p ast.Node) error {
 	counter := 0
 	f := func(node ast.Node, visitType int) error {
-		if wait, is := node.(*nast.WaitStatement); is {
+		if wait, is := node.(*nast.WaitDirective); is {
 			label := fmt.Sprintf("wait%d", counter)
 			return ast.NewNodeReplacement(&nast.StatementLine{
 				Label:  label,
@@ -403,7 +405,7 @@ func (c *Converter) convertIf(p ast.Node) error {
 			}
 
 			if mlif.ElseBlock != nil {
-				for _, elseline := range mlif.ElseBlock.Lines {
+				for _, elseline := range mlif.ElseBlock.Elements {
 					repl = append(repl, elseline)
 				}
 			}
@@ -426,7 +428,7 @@ func (c *Converter) convertIf(p ast.Node) error {
 
 // convertConditionInline converts a single conditional block of a multiline if and tries to produce a single yolol if
 func (c *Converter) convertConditionInline(mlif *nast.MultilineIf, index int, endlabel string) (ast.Node, error) {
-	mergedIfLines, _ := c.mergeExecutableLines(mlif.Blocks[index].Lines)
+	mergedIfLines, _ := c.mergeElements(mlif.Blocks[index].Elements)
 
 	if len(mergedIfLines) > 1 || (len(mergedIfLines) > 0 && mergedIfLines[0].(*nast.StatementLine).Label != "") {
 		return nil, errInlineIfImpossible
@@ -490,7 +492,7 @@ func (c *Converter) convertConditionMultiline(mlif *nast.MultilineIf, index int,
 		},
 	}
 
-	for _, ifblling := range mlif.Blocks[index].Lines {
+	for _, ifblling := range mlif.Blocks[index].Elements {
 		repl = append(repl, ifblling)
 	}
 
@@ -551,7 +553,7 @@ func (c *Converter) convertWhileLoops(p ast.Node) error {
 				},
 			}
 
-			for _, blockline := range loop.Block.Lines {
+			for _, blockline := range loop.Block.Elements {
 				repl = append(repl, blockline)
 			}
 			repl = append(repl, &nast.StatementLine{
@@ -582,25 +584,22 @@ func (c *Converter) convertWhileLoops(p ast.Node) error {
 	return p.Accept(ast.VisitorFunc(f))
 }
 
-// filterLines removes empty lines and constant declarations from the program
-func (c *Converter) filterLines(p ast.Node) error {
+// removeEmptyLines removes empty lines from the program
+func (c *Converter) removeEmptyLines(p ast.Node) error {
 	f := func(node ast.Node, visitType int) error {
-		switch n := node.(type) {
-		case *nast.StatementLine:
+		if n, is := p.(*nast.StatementLine); is {
 			if n.Label == "" && len(n.Statements) == 0 && !n.HasEOL && !n.HasBOL {
-				// empty line
 				return ast.NewNodeReplacement()
 			}
-		case *nast.ConstDeclaration:
-			return ast.NewNodeReplacement()
 		}
 		return nil
 	}
 	return p.Accept(ast.VisitorFunc(f))
 }
 
-// mergeExecutableLines is a type-wrapper for mergeStatementLines
-func (c *Converter) mergeExecutableLines(lines []nast.ExecutableLine) ([]nast.ExecutableLine, error) {
+// mergeElements is a type-wrapper for mergeStatementLines
+// all elements in the list MUST be StatementLines
+func (c *Converter) mergeElements(lines []nast.Element) ([]nast.Element, error) {
 	inp := make([]*nast.StatementLine, len(lines))
 	for i, elem := range lines {
 		inp[i] = elem.(*nast.StatementLine)
@@ -609,24 +608,7 @@ func (c *Converter) mergeExecutableLines(lines []nast.ExecutableLine) ([]nast.Ex
 	if err != nil {
 		return nil, err
 	}
-	outp := make([]nast.ExecutableLine, len(interm))
-	for i, elem := range interm {
-		outp[i] = elem
-	}
-	return outp, nil
-}
-
-// mergeNololLines is a type-wrapper for mergeStatementLines
-func (c *Converter) mergeNololLines(lines []nast.Line) ([]nast.Line, error) {
-	inp := make([]*nast.StatementLine, len(lines))
-	for i, elem := range lines {
-		inp[i] = elem.(*nast.StatementLine)
-	}
-	interm, err := c.mergeStatementLines(inp)
-	if err != nil {
-		return nil, err
-	}
-	outp := make([]nast.Line, len(interm))
+	outp := make([]nast.Element, len(interm))
 	for i, elem := range interm {
 		outp[i] = elem
 	}
@@ -703,7 +685,7 @@ func getLengthOfLine(line ast.Node) int {
 }
 
 func (c *Converter) insertLineCounter(p *nast.Program) {
-	for _, line := range p.Lines {
+	for _, line := range p.Elements {
 		if stmtline, is := line.(*nast.StatementLine); is {
 			stmts := make([]ast.Statement, 1, len(stmtline.Statements)+1)
 			stmts[0] = &ast.Dereference{
@@ -719,12 +701,12 @@ func (c *Converter) insertLineCounter(p *nast.Program) {
 	}
 }
 
-// convertLineTypes converts nolol line-types to yolol-types
-func (c *Converter) convertLineTypes(p *nast.Program) *ast.Program {
+// elementsToLines converts nolol element-types to yolol-types
+func (c *Converter) elementsToLines(p *nast.Program) *ast.Program {
 	newprog := ast.Program{
 		Lines: make([]*ast.Line, 0),
 	}
-	for _, rawline := range p.Lines {
+	for _, rawline := range p.Elements {
 		switch line := rawline.(type) {
 		case *nast.StatementLine:
 			newline := &ast.Line{

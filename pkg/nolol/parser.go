@@ -52,12 +52,44 @@ func (p *Parser) Parse(prog string) (*nast.Program, error) {
 func (p *Parser) ParseProgram() *nast.Program {
 	p.Log()
 	ret := nast.Program{
-		Lines: make([]nast.Line, 0),
+		Elements: make([]nast.Element, 0),
 	}
 	for p.HasNext() {
-		ret.Lines = append(ret.Lines, p.ParseLine())
+		ret.Elements = append(ret.Elements, p.ParseElement())
 	}
 	return &ret
+}
+
+// ParseElement parses a top-level element
+func (p *Parser) ParseElement() nast.Element {
+	p.Log()
+
+	constDecl := p.ParseConstantDeclaration()
+	if constDecl != nil {
+		return constDecl
+	}
+
+	ifline := p.ParseMultilineIf()
+	if ifline != nil {
+		return ifline
+	}
+
+	whileline := p.ParseWhile()
+	if whileline != nil {
+		return whileline
+	}
+
+	block := p.ParseWaitStatement()
+	if block != nil {
+		return block
+	}
+
+	include := p.ParseInclude()
+	if include != nil {
+		return include
+	}
+
+	return p.ParseStatementLine()
 }
 
 // ParseInclude parses an include directive
@@ -161,13 +193,13 @@ func (p *Parser) ParseStatementLine() *nast.StatementLine {
 }
 
 // ParseWaitStatement parses a NOLOL wait-statement
-func (p *Parser) ParseWaitStatement() *nast.WaitStatement {
+func (p *Parser) ParseWaitStatement() *nast.WaitDirective {
 	p.Log()
 	if p.CurrentToken.Type != ast.TypeKeyword || p.CurrentToken.Value != "wait" {
 		return nil
 	}
 	p.Advance()
-	st := &nast.WaitStatement{
+	st := &nast.WaitDirective{
 		Position: p.CurrentToken.Position,
 	}
 
@@ -177,45 +209,6 @@ func (p *Parser) ParseWaitStatement() *nast.WaitStatement {
 	}
 
 	return st
-}
-
-// ParseExecutableLine parses an if, while or statement-line
-func (p *Parser) ParseExecutableLine() nast.ExecutableLine {
-	p.Log()
-
-	ifline := p.ParseMultilineIf()
-	if ifline != nil {
-		return ifline
-	}
-
-	whileline := p.ParseWhile()
-	if whileline != nil {
-		return whileline
-	}
-
-	block := p.ParseWaitStatement()
-	if block != nil {
-		return block
-	}
-
-	include := p.ParseInclude()
-	if include != nil {
-		return include
-	}
-
-	return p.ParseStatementLine()
-}
-
-// ParseLine parses any kind of line
-func (p *Parser) ParseLine() nast.Line {
-	p.Log()
-
-	constDecl := p.ParseConstantDeclaration()
-	if constDecl != nil {
-		return constDecl
-	}
-
-	return p.ParseExecutableLine()
 }
 
 // ParseConstantDeclaration parses a constant declaration
@@ -247,24 +240,8 @@ func (p *Parser) ParseConstantDeclaration() *nast.ConstDeclaration {
 	return decl
 }
 
-// ParseBlock parse lines until stop() returns true
-func (p *Parser) ParseBlock(stop func() bool) *nast.Block {
-	p.Log()
-	lines := make([]nast.ExecutableLine, 0)
-	for p.HasNext() && !stop() {
-		line := p.ParseExecutableLine()
-		if line == nil {
-			break
-		}
-		lines = append(lines, line)
-	}
-	return &nast.Block{
-		Lines: lines,
-	}
-}
-
 // ParseMultilineIf parses a nolol-style multiline if
-func (p *Parser) ParseMultilineIf() nast.Line {
+func (p *Parser) ParseMultilineIf() nast.Element {
 	p.Log()
 	mlif := nast.MultilineIf{
 		Position:   p.CurrentToken.Position,
@@ -322,7 +299,7 @@ func (p *Parser) ParseMultilineIf() nast.Line {
 }
 
 // ParseWhile pasres a nolol while
-func (p *Parser) ParseWhile() nast.Line {
+func (p *Parser) ParseWhile() nast.Element {
 	p.Log()
 	loop := nast.WhileLoop{
 		Position: p.CurrentToken.Position,
@@ -358,6 +335,22 @@ func (p *Parser) ParseIf() ast.Statement {
 	p.Log()
 	//Inline if is not supported by nolol. Always return nil
 	return nil
+}
+
+// ParseBlock parse lines until stop() returns true
+func (p *Parser) ParseBlock(stop func() bool) *nast.Block {
+	p.Log()
+	elements := make([]nast.Element, 0)
+	for p.HasNext() && !stop() {
+		element := p.ParseElement()
+		if elements == nil {
+			break
+		}
+		elements = append(elements, element)
+	}
+	return &nast.Block{
+		Elements: elements,
+	}
 }
 
 // ParseGoto allows labeled-gotos and forbids line-based gotos
