@@ -1,5 +1,7 @@
 package ast
 
+import "fmt"
+
 // Visit() is called multiple times per node. The visitType tells the handler which one
 // of the multiple calls the current one is
 const (
@@ -50,8 +52,12 @@ func (f VisitorFunc) Visit(node Node, visitType int) error {
 // NodeReplacement special error type. If this type is returned by an AST-child during Accept()
 // the parent-node MUST react to this by replacing the child with the nodes in Replacement[] and
 // then discard the error (and NOT relay it to its parent)
+// Also, the new replacement node must be visited again, if Skip==false. If this new visit also reslults in a replacement,
+// the new replacement must be visited again and so on, until no replacement is received anymore.
 type NodeReplacement struct {
 	Replacement []Node
+	// if skip is true, do not re-visit the replaced node
+	Skip bool
 }
 
 // NewNodeReplacement is used to replace the current node
@@ -61,10 +67,21 @@ func NewNodeReplacement(replacement ...Node) NodeReplacement {
 	}
 }
 
+// NewNodeReplacementSkip is used to replace the current node and signals not to re-visit the new node
+func NewNodeReplacementSkip(replacement ...Node) NodeReplacement {
+	return NodeReplacement{
+		Replacement: replacement,
+		Skip:        true,
+	}
+}
+
 // Error() must be implemented for the error-interface
 // Should NEVER be called
 func (e NodeReplacement) Error() string {
-	return "SHOULD NEVER HAPPEN"
+	if len(e.Replacement) > 0 {
+		return fmt.Sprintf("INTERNAL COMPILER ERROR. Node-replacement for %T bubbeled up the ast", e.Replacement[0])
+	}
+	return fmt.Sprintf("INTERNAL COMPILER ERROR. Node-deletion bubbeled up the ast")
 }
 
 // Accept is used to implement Acceptor
@@ -73,22 +90,16 @@ func (p *Program) Accept(v Visitor) error {
 	if err != nil {
 		return err
 	}
-	for i := 0; i < len(p.Lines); i++ {
-		err = v.Visit(p, i)
-		if err != nil {
-			return err
-		}
-		err = p.Lines[i].Accept(v)
-		// if the child wants to be replaced, replace it
-		if repl, is := err.(NodeReplacement); is {
-			p.Lines = PatchLines(p.Lines, i, repl)
-			i += len(repl.Replacement) - 1
-			err = nil
-		}
-		if err != nil {
-			return err
-		}
+
+	if p == nil {
+		return v.Visit(p, PostVisit)
 	}
+
+	p.Lines, err = AcceptChildLines(p, v, p.Lines)
+	if err != nil {
+		return err
+	}
+
 	return v.Visit(p, PostVisit)
 }
 
@@ -98,21 +109,12 @@ func (l *Line) Accept(v Visitor) error {
 	if err != nil {
 		return err
 	}
-	for i := 0; i < len(l.Statements); i++ {
-		err = v.Visit(l, i)
-		if err != nil {
-			return err
-		}
-		err = l.Statements[i].Accept(v)
-		if repl, is := err.(NodeReplacement); is {
-			l.Statements = PatchStatements(l.Statements, i, repl)
-			i += len(repl.Replacement) - 1
-			err = nil
-		}
-		if err != nil {
-			return err
-		}
+
+	l.Statements, err = AcceptChildStatements(l, v, l.Statements)
+	if err != nil {
+		return err
 	}
+
 	return v.Visit(l, PostVisit)
 }
 
@@ -137,11 +139,7 @@ func (u *UnaryOperation) Accept(v Visitor) error {
 	if err != nil {
 		return err
 	}
-	err = u.Exp.Accept(v)
-	if repl, is := err.(NodeReplacement); is {
-		u.Exp = repl.Replacement[0].(Expression)
-		err = nil
-	}
+	u.Exp, err = AcceptChild(v, u.Exp)
 	if err != nil {
 		return err
 	}
@@ -154,20 +152,12 @@ func (o *BinaryOperation) Accept(v Visitor) error {
 	if err != nil {
 		return err
 	}
-	err = o.Exp1.Accept(v)
-	if repl, is := err.(NodeReplacement); is {
-		o.Exp1 = repl.Replacement[0].(Expression)
-		err = nil
-	}
+	o.Exp1, err = AcceptChild(v, o.Exp1)
 	if err != nil {
 		return err
 	}
 	err = v.Visit(o, InterVisit1)
-	err = o.Exp2.Accept(v)
-	if repl, is := err.(NodeReplacement); is {
-		o.Exp2 = repl.Replacement[0].(Expression)
-		err = nil
-	}
+	o.Exp2, err = AcceptChild(v, o.Exp2)
 	if err != nil {
 		return err
 	}
@@ -181,11 +171,7 @@ func (f *FuncCall) Accept(v Visitor) error {
 		return err
 	}
 	if f.Argument != nil {
-		err = f.Argument.Accept(v)
-		if repl, is := err.(NodeReplacement); is {
-			f.Argument = repl.Replacement[0].(Expression)
-			err = nil
-		}
+		f.Argument, err = AcceptChild(v, f.Argument)
 		if err != nil {
 			return err
 		}
@@ -199,11 +185,7 @@ func (a *Assignment) Accept(v Visitor) error {
 	if err != nil {
 		return err
 	}
-	err = a.Value.Accept(v)
-	if repl, is := err.(NodeReplacement); is {
-		a.Value = repl.Replacement[0].(Expression)
-		err = nil
-	}
+	a.Value, err = AcceptChild(v, a.Value)
 	if err != nil {
 		return err
 	}
@@ -216,11 +198,7 @@ func (s *IfStatement) Accept(v Visitor) error {
 	if err != nil {
 		return err
 	}
-	err = s.Condition.Accept(v)
-	if repl, is := err.(NodeReplacement); is {
-		s.Condition = repl.Replacement[0].(Expression)
-		err = nil
-	}
+	s.Condition, err = AcceptChild(v, s.Condition)
 	if err != nil {
 		return err
 	}
@@ -228,41 +206,18 @@ func (s *IfStatement) Accept(v Visitor) error {
 	if err != nil {
 		return err
 	}
-	for i := 0; i < len(s.IfBlock); i++ {
-		err = v.Visit(s, i)
-		if err != nil {
-			return err
-		}
-		err = s.IfBlock[i].Accept(v)
-		if repl, is := err.(NodeReplacement); is {
-			s.IfBlock = PatchStatements(s.IfBlock, i, repl)
-			i += len(repl.Replacement) - 1
-			err = nil
-		}
-		if err != nil {
-			return err
-		}
+
+	s.IfBlock, err = AcceptChildStatements(s, v, s.IfBlock)
+	if err != nil {
+		return err
 	}
+
 	if s.ElseBlock != nil {
 		err = v.Visit(s, InterVisit2)
 		if err != nil {
 			return err
 		}
-		for i := 0; i < len(s.ElseBlock); i++ {
-			err = v.Visit(s, i)
-			if err != nil {
-				return err
-			}
-			err = s.ElseBlock[i].Accept(v)
-			if repl, is := err.(NodeReplacement); is {
-				s.ElseBlock = PatchStatements(s.ElseBlock, i, repl)
-				i += len(repl.Replacement) - 1
-				err = nil
-			}
-			if err != nil {
-				return err
-			}
-		}
+		s.ElseBlock, err = AcceptChildStatements(s, v, s.ElseBlock)
 		if err != nil {
 			return err
 		}
@@ -275,32 +230,84 @@ func (g *GoToStatement) Accept(v Visitor) error {
 	return v.Visit(g, SingleVisit)
 }
 
-// PatchLines is used to replace the element at position in old with the elements in repl
-func PatchLines(old []*Line, position int, repl NodeReplacement) []*Line {
-	newv := make([]*Line, 0, len(old)+len(repl.Replacement)-1)
-	newv = append(newv, old[:position]...)
-	for _, elem := range repl.Replacement {
-		if line, is := elem.(*Line); is {
-			newv = append(newv, line)
-		} else {
-			panic("Could not patch slice. Wrong type.")
+// AcceptChild calls node.Accept(v) and processes any returned NodeReplacements
+// The returned node is either the input node or an appropriate replacement
+func AcceptChild(v Visitor, node Node) (Node, error) {
+	replaced := node
+	err := replaced.Accept(v)
+	repl, is := err.(NodeReplacement)
+	for is {
+		err = nil
+		replaced = repl.Replacement[0]
+		if repl.Skip {
+			err = nil
+			break
 		}
+		err = replaced.Accept(v)
+		repl, is = err.(NodeReplacement)
+
 	}
-	newv = append(newv, old[position+1:]...)
-	return newv
+	return replaced, err
 }
 
-// PatchStatements is used to replace the element at position in old with the elements in repl
-func PatchStatements(old []Statement, position int, repl NodeReplacement) []Statement {
-	newv := make([]Statement, 0, len(old)+len(repl.Replacement)-1)
-	newv = append(newv, old[:position]...)
-	for _, elem := range repl.Replacement {
-		if line, is := elem.(Statement); is {
-			newv = append(newv, line)
-		} else {
-			panic("Could not patch slice. Wrong type.")
+// AcceptChildLines calles Accept for ever element of old and handles node-replacements
+func AcceptChildLines(parent Node, v Visitor, old []*Line) ([]*Line, error) {
+	for i := 0; i < len(old); i++ {
+		err := v.Visit(parent, i)
+		if err != nil {
+			return nil, err
+		}
+		err = old[i].Accept(v)
+		repl, is := err.(NodeReplacement)
+		if is {
+			new := make([]*Line, 0, len(old)+len(repl.Replacement)-1)
+			new = append(new, old[:i]...)
+			for _, el := range repl.Replacement {
+				new = append(new, el.(*Line))
+			}
+			new = append(new, old[i+1:]...)
+			old = new
+			err = nil
+			if repl.Skip {
+				i += len(repl.Replacement) - 1
+			} else {
+				i--
+			}
+		}
+		if err != nil {
+			return nil, err
 		}
 	}
-	newv = append(newv, old[position+1:]...)
-	return newv
+	return old, nil
+}
+
+// AcceptChildStatements calles Accept for ever element of old and handles node-replacements
+func AcceptChildStatements(parent Node, v Visitor, old []Statement) ([]Statement, error) {
+	for i := 0; i < len(old); i++ {
+		err := v.Visit(parent, i)
+		if err != nil {
+			return nil, err
+		}
+		err = old[i].Accept(v)
+		repl, is := err.(NodeReplacement)
+		if is {
+			new := make([]Statement, 0, len(old)+len(repl.Replacement)-1)
+			new = append(new, old[:i]...)
+			for _, el := range repl.Replacement {
+				new = append(new, el.(Statement))
+			}
+			new = append(new, old[i+1:]...)
+			old = new
+			err = nil
+			if repl.Skip {
+				i += len(repl.Replacement) - 1
+			} else {
+				i--
+			}
+		}
+		if err != nil {
+			return nil, err
+		}
+	}
+	return old, nil
 }

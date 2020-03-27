@@ -15,21 +15,12 @@ func (p *Program) Accept(v ast.Visitor) error {
 	if err != nil {
 		return err
 	}
-	for i := 0; i < len(p.Elements); i++ {
-		err = v.Visit(p, i)
-		if err != nil {
-			return err
-		}
-		err = p.Elements[i].Accept(v)
-		if repl, is := err.(ast.NodeReplacement); is {
-			p.Elements = patchElementList(p.Elements, i, repl)
-			i += len(repl.Replacement) - 1
-			err = nil
-		}
-		if err != nil {
-			return err
-		}
+
+	p.Elements, err = AcceptElementList(p, v, p.Elements)
+	if err != nil {
+		return err
 	}
+
 	return v.Visit(p, ast.PostVisit)
 }
 
@@ -40,20 +31,9 @@ func (l *StatementLine) Accept(v ast.Visitor) error {
 		return err
 	}
 
-	for i := 0; i < len(l.Statements); i++ {
-		err = v.Visit(l, i)
-		if err != nil {
-			return err
-		}
-		err = l.Statements[i].Accept(v)
-		if repl, is := err.(ast.NodeReplacement); is {
-			l.Statements = ast.PatchStatements(l.Statements, i, repl)
-			i += len(repl.Replacement) - 1
-			err = nil
-		}
-		if err != nil {
-			return err
-		}
+	l.Statements, err = ast.AcceptChildStatements(l, v, l.Statements)
+	if err != nil {
+		return err
 	}
 
 	return v.Visit(l, ast.PostVisit)
@@ -65,11 +45,7 @@ func (l *ConstDeclaration) Accept(v ast.Visitor) error {
 	if err != nil {
 		return err
 	}
-	err = l.Value.Accept(v)
-	if repl, is := err.(ast.NodeReplacement); is {
-		l.Value = repl.Replacement[0].(ast.Expression)
-		err = nil
-	}
+	l.Value, err = ast.AcceptChild(v, l.Value)
 	if err != nil {
 		return err
 	}
@@ -82,21 +58,12 @@ func (s *Block) Accept(v ast.Visitor) error {
 	if err != nil {
 		return err
 	}
-	for i := 0; i < len(s.Elements); i++ {
-		err = v.Visit(s, i)
-		if err != nil {
-			return err
-		}
-		err = s.Elements[i].Accept(v)
-		if repl, is := err.(ast.NodeReplacement); is {
-			s.Elements = patchElementList(s.Elements, i, repl)
-			i += len(repl.Replacement) - 1
-			err = nil
-		}
-		if err != nil {
-			return err
-		}
+
+	s.Elements, err = AcceptElementList(s, v, s.Elements)
+	if err != nil {
+		return err
 	}
+
 	err = v.Visit(s, ast.PostVisit)
 	if err != nil {
 		return err
@@ -116,11 +83,7 @@ func (s *MultilineIf) Accept(v ast.Visitor) error {
 		if err != nil {
 			return err
 		}
-		err = s.Conditions[i].Accept(v)
-		if repl, is := err.(ast.NodeReplacement); is {
-			s.Conditions[i] = repl.Replacement[0].(ast.Expression)
-			err = nil
-		}
+		s.Conditions[i], err = ast.AcceptChild(v, s.Conditions[i])
 		if err != nil {
 			return err
 		}
@@ -128,11 +91,8 @@ func (s *MultilineIf) Accept(v ast.Visitor) error {
 		if err != nil {
 			return err
 		}
-		err = s.Blocks[i].Accept(v)
-		if repl, is := err.(ast.NodeReplacement); is {
-			s.Blocks[i] = repl.Replacement[0].(*Block)
-			err = nil
-		}
+		repl, err := ast.AcceptChild(v, s.Blocks[i])
+		s.Blocks[i] = repl.(*Block)
 		if err != nil {
 			return err
 		}
@@ -142,11 +102,8 @@ func (s *MultilineIf) Accept(v ast.Visitor) error {
 		if err != nil {
 			return err
 		}
-		err = s.ElseBlock.Accept(v)
-		if repl, is := err.(ast.NodeReplacement); is {
-			s.ElseBlock = repl.Replacement[0].(*Block)
-			err = nil
-		}
+		repl, err := ast.AcceptChild(v, s.ElseBlock)
+		s.ElseBlock = repl.(*Block)
 		if err != nil {
 			return err
 		}
@@ -160,11 +117,7 @@ func (s *WhileLoop) Accept(v ast.Visitor) error {
 	if err != nil {
 		return err
 	}
-	err = s.Condition.Accept(v)
-	if repl, is := err.(ast.NodeReplacement); is {
-		s.Condition = repl.Replacement[0].(ast.Expression)
-		err = nil
-	}
+	s.Condition, err = ast.AcceptChild(v, s.Condition)
 	if err != nil {
 		return err
 	}
@@ -172,11 +125,8 @@ func (s *WhileLoop) Accept(v ast.Visitor) error {
 	if err != nil {
 		return err
 	}
-	err = s.Block.Accept(v)
-	if repl, is := err.(ast.NodeReplacement); is {
-		s.Block = repl.Replacement[0].(*Block)
-		err = nil
-	}
+	repl, err := ast.AcceptChild(v, s.Block)
+	s.Block = repl.(*Block)
 	if err != nil {
 		return err
 	}
@@ -189,11 +139,7 @@ func (s *WaitDirective) Accept(v ast.Visitor) error {
 	if err != nil {
 		return err
 	}
-	err = s.Condition.Accept(v)
-	if repl, is := err.(ast.NodeReplacement); is {
-		s.Condition = repl.Replacement[0].(ast.Expression)
-		err = nil
-	}
+	s.Condition, err = ast.AcceptChild(v, s.Condition)
 	if err != nil {
 		return err
 	}
@@ -205,16 +151,33 @@ func (s *IncludeDirective) Accept(v ast.Visitor) error {
 	return v.Visit(s, ast.SingleVisit)
 }
 
-func patchElementList(old []Element, position int, repl ast.NodeReplacement) []Element {
-	newv := make([]Element, 0, len(old)+len(repl.Replacement)-1)
-	newv = append(newv, old[:position]...)
-	for _, elem := range repl.Replacement {
-		if line, is := elem.(Element); is {
-			newv = append(newv, line)
-		} else {
-			panic("Could not patch slice. Wrong type.")
+// AcceptElementList calles Accept for ever element of old and handles node-replacements
+func AcceptElementList(parent ast.Node, v ast.Visitor, old []Element) ([]Element, error) {
+	for i := 0; i < len(old); i++ {
+		err := v.Visit(parent, i)
+		if err != nil {
+			return nil, err
+		}
+		err = old[i].Accept(v)
+		repl, is := err.(ast.NodeReplacement)
+		if is {
+			new := make([]Element, 0, len(old)+len(repl.Replacement)-1)
+			new = append(new, old[:i]...)
+			for _, el := range repl.Replacement {
+				new = append(new, el.(Element))
+			}
+			new = append(new, old[i+1:]...)
+			old = new
+			err = nil
+			if repl.Skip {
+				i += len(repl.Replacement) - 1
+			} else {
+				i--
+			}
+		}
+		if err != nil {
+			return nil, err
 		}
 	}
-	newv = append(newv, old[position+1:]...)
-	return newv
+	return old, nil
 }

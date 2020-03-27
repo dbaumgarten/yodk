@@ -27,6 +27,14 @@ func (o ExpressionInversionOptimizer) Optimize(prog ast.Node) error {
 	return prog.Accept(o)
 }
 
+// OptimizeExpression optimizes a single expression
+// Optimize() in contrast can only optimize whole programms
+func (o ExpressionInversionOptimizer) OptimizeExpression(e ast.Expression) ast.Expression {
+	//return bubbleUpNots(pushDownNots(e))
+	//return bubbleUpNots(e)
+	return e
+}
+
 func pushDownNots(node ast.Expression) ast.Expression {
 	if op, is := node.(*ast.UnaryOperation); is {
 		if op.Operator == "not" {
@@ -38,14 +46,14 @@ func pushDownNots(node ast.Expression) ast.Expression {
 				}
 				if opposite, is := andor[inner.Operator]; is {
 					inner.Operator = opposite
-					inner.Exp1 = pushDownNots(&ast.UnaryOperation{
+					inner.Exp1 = &ast.UnaryOperation{
 						Operator: "not",
 						Exp:      inner.Exp1,
-					})
-					inner.Exp2 = pushDownNots(&ast.UnaryOperation{
+					}
+					inner.Exp2 = &ast.UnaryOperation{
 						Operator: "not",
 						Exp:      inner.Exp2,
-					})
+					}
 					return inner
 				}
 			case *ast.UnaryOperation:
@@ -55,13 +63,11 @@ func pushDownNots(node ast.Expression) ast.Expression {
 			}
 		}
 	}
-	return node
+	return nil
 }
 
 func bubbleUpNots(node ast.Expression) ast.Expression {
 	if bin, isbinary := node.(*ast.BinaryOperation); isbinary {
-		bin.Exp1 = bubbleUpNots(bin.Exp1)
-		bin.Exp2 = bubbleUpNots(bin.Exp2)
 		l, lisunary := bin.Exp1.(*ast.UnaryOperation)
 		r, risunary := bin.Exp2.(*ast.UnaryOperation)
 		if lisunary && risunary && l.Operator == "not" && r.Operator == "not" {
@@ -76,21 +82,21 @@ func bubbleUpNots(node ast.Expression) ast.Expression {
 			}
 		}
 	}
-	return node
-}
-
-// OptimizeExpression optimizes a single expression
-// Optimize() in contrast can only optimize whole programms
-func (o ExpressionInversionOptimizer) OptimizeExpression(e ast.Expression) ast.Expression {
-	return bubbleUpNots(pushDownNots(e))
+	return nil
 }
 
 // Visit is needed to implement Visitor
 func (o ExpressionInversionOptimizer) Visit(node ast.Node, visitType int) error {
-	if visitType == ast.PreVisit || visitType == ast.SingleVisit {
-		replace := o.OptimizeExpression(node)
-		if replace != node {
+	if visitType == ast.PreVisit {
+		replace := pushDownNots(node)
+		if replace != nil {
 			return ast.NewNodeReplacement(replace)
+		}
+	}
+	if visitType == ast.PostVisit {
+		replace := bubbleUpNots(node)
+		if replace != nil {
+			return ast.NewNodeReplacementSkip(replace)
 		}
 	}
 	return nil
