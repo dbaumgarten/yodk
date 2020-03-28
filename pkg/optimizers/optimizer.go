@@ -5,7 +5,13 @@ import "github.com/dbaumgarten/yodk/pkg/parser/ast"
 // Optimizer is the common interface for all optimizers
 type Optimizer interface {
 	// Optimize optimizes the given ast. The ast is mutated (obviously)
-	Optimize(prog *ast.Program) error
+	Optimize(prog ast.Node) error
+}
+
+// ExpressionOptimizer is an additional optimizer interface, for optimizing single expressions
+type ExpressionOptimizer interface {
+	// OptimizeExpression optimizes the given expression. The expression is mutated
+	OptimizeExpression(prog ast.Expression) ast.Expression
 }
 
 // CompoundOptimizer wraps all other optimizers and executes them

@@ -30,8 +30,7 @@ func (o ExpressionInversionOptimizer) Optimize(prog ast.Node) error {
 // OptimizeExpression optimizes a single expression
 // Optimize() in contrast can only optimize whole programms
 func (o ExpressionInversionOptimizer) OptimizeExpression(e ast.Expression) ast.Expression {
-	//return bubbleUpNots(pushDownNots(e))
-	//return bubbleUpNots(e)
+	e, _ = ast.AcceptChild(o, e)
 	return e
 }
 

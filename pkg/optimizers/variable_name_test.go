@@ -44,31 +44,21 @@ func TestGetNextVarName(t *testing.T) {
 
 func TestOptName(t *testing.T) {
 	vno := NewVariableNameOptimizer()
-	vno.SpecialReplacement("foo", "bar")
-	vno.SpecialReplacement("xxx", "c")
 
-	if vno.replaceVarName(":extvar") != ":extvar" {
+	if vno.OptimizeVarName(":extvar") != ":extvar" {
 		t.Fatal("Replaced external var")
 	}
 
-	if vno.replaceVarName("abc") != "a" {
+	if vno.OptimizeVarName("abc") != "a" {
 		t.Fatal("Wrong replacement for first variable")
 	}
 
-	if vno.replaceVarName("abcd") != "b" {
+	if vno.OptimizeVarName("abcd") != "b" {
 		t.Fatal("Wrong replacement for second variable")
 	}
 
-	if vno.replaceVarName("abc") != "a" {
+	if vno.OptimizeVarName("abc") != "a" {
 		t.Fatal("Did not remember first variable")
-	}
-
-	if vno.replaceVarName("foo") != "bar" {
-		t.Fatal("Did not honor special replacement")
-	}
-
-	if vno.replaceVarName("xyz") != "d" {
-		t.Fatal("Did not skip replacement that is already used by special replacement")
 	}
 }
 

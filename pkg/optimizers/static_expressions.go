@@ -22,20 +22,28 @@ func (o *StaticExpressionOptimizer) Optimize(prog ast.Node) error {
 	return prog.Accept(o)
 }
 
+// OptimizeExpression optimizes a single expression recursively
+func (o *StaticExpressionOptimizer) OptimizeExpression(e ast.Expression) ast.Expression {
+	e, _ = ast.AcceptChild(o, e)
+	return e
+}
+
 // Visit is needed to implement the Visitor interface
 func (o *StaticExpressionOptimizer) Visit(node ast.Node, visitType int) error {
 	if visitType == ast.PostVisit {
 		if exp, isexp := node.(ast.Expression); isexp {
-			optimized := optimizeExpression(exp)
+			optimized := o.OptimizeExpressionNonRecursive(exp)
 			if optimized != nil {
-				return ast.NewNodeReplacement(optimized)
+				return ast.NewNodeReplacementSkip(optimized)
 			}
 		}
 	}
 	return nil
 }
 
-func optimizeExpression(exp ast.Expression) ast.Expression {
+// OptimizeExpressionNonRecursive optimizes a single expression
+// if no optimization is possible, nil is returned
+func (o *StaticExpressionOptimizer) OptimizeExpressionNonRecursive(exp ast.Expression) ast.Expression {
 	switch n := exp.(type) {
 	case *ast.FuncCall:
 		if !isConstant(n.Argument) {
