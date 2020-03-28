@@ -82,7 +82,7 @@ func TestNolol(t *testing.T) {
 	}
 
 	if result.String() != expected {
-		t.Fatal("Output is wrong")
+		t.Fatal("Output is wrong:", result.String())
 	}
 }
 

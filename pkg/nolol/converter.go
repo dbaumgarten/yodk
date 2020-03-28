@@ -16,22 +16,31 @@ var errInlineIfImpossible = fmt.Errorf("Can not convert to inline if")
 // reservedTimeVariable is the variable used to track passed time
 var reservedTimeVariable = "_time"
 
-// reservedTimeVariableReplaced is the name of reservedTimeVariable after variable name optimization
-var reservedTimeVariableReplaced = "t"
-
 // Converter can convert a nolol-ast to a yolol-ast
 type Converter struct {
-	jumpLabels       map[string]int
-	constants        map[string]interface{}
-	usesTimeTracking bool
-	iflabelcounter   int
-	debug            bool
-	files            FileSystem
+	files             FileSystem
+	jumpLabels        map[string]int
+	constants         map[string]interface{}
+	usesTimeTracking  bool
+	iflabelcounter    int
+	waitlabelcounter  int
+	whilelabelcounter int
+	sexpOptimizer     *optimizers.StaticExpressionOptimizer
+	boolexpOptimizer  *optimizers.ExpressionInversionOptimizer
+	varnameOptimizer  *optimizers.VariableNameOptimizer
+	includecount      int
+	debug             bool
 }
 
 // NewConverter creates a new converter
 func NewConverter() *Converter {
-	return &Converter{}
+	return &Converter{
+		jumpLabels:       make(map[string]int),
+		constants:        make(map[string]interface{}),
+		sexpOptimizer:    optimizers.NewStaticExpressionOptimizer(),
+		boolexpOptimizer: &optimizers.ExpressionInversionOptimizer{},
+		varnameOptimizer: optimizers.NewVariableNameOptimizer(),
+	}
 }
 
 // ConvertFile is a shortcut that loads a file from the file-system, parses it and directly convertes it.
@@ -69,265 +78,254 @@ func (c *Converter) Debug(b bool) {
 // files is an object to access files that are referenced in prog's include directives
 func (c *Converter) Convert(prog *nast.Program, files FileSystem) (*ast.Program, error) {
 	c.files = files
-	err := c.resolveIncludes(prog)
+
+	c.usesTimeTracking = usesTimeTracking(prog)
+	// reserve a name for use in time-tracking
+	c.varnameOptimizer.OptimizeVarName(reservedTimeVariable)
+
+	err := c.convertNodes(prog)
 	if err != nil {
 		return nil, err
 	}
-	// get all constant declarations
-	err = c.findConstantDeclarations(prog)
+
+	// merge the statemens of the program as good as possible
+	merged, err := c.mergeNololElements(prog.Elements)
 	if err != nil {
 		return nil, err
 	}
-	// fill all constants with the declared values
-	err = c.insertConstants(prog)
-	if err != nil {
-		return nil, err
-	}
-	// replace builtin functions with their yolol code
-	err = c.insertBuiltinFunctions(prog)
-	if err != nil {
-		return nil, err
-	}
-	// optimize static expressions
-	err = optimizers.NewStaticExpressionOptimizer().Optimize(prog)
-	if err != nil {
-		return nil, err
-	}
-	// optimize boolean expressions
-	err = optimizers.ExpressionInversionOptimizer{}.Optimize(prog)
-	if err != nil {
-		return nil, err
-	}
-	// remove useless lines
-	err = c.removeEmptyLines(prog)
-	if err != nil {
-		return nil, err
-	}
-	// shorten variable names
-	opt := optimizers.NewVariableNameOptimizer()
-	// take special care that the special variables are replaced correctly
-	opt.SpecialReplacement(reservedTimeVariable, reservedTimeVariableReplaced)
-	err = opt.Optimize(prog)
-	if err != nil {
-		return nil, err
-	}
-	// convert wait statements to yolol code
-	err = c.convertWaitStatement(prog)
-	if err != nil {
-		return nil, err
-	}
-	// convert nolol ifs to yolol code
-	err = c.convertIf(prog)
-	if err != nil {
-		return nil, err
-	}
-	// convert while to yolol code
-	err = c.convertWhileLoops(prog)
-	if err != nil {
-		return nil, err
-	}
-	// merge lines if possible
-	newlines, err := c.mergeElements(prog.Elements)
-	if err != nil {
-		return nil, err
-	}
-	prog.Elements = newlines
+	prog.Elements = merged
+
 	// find all line-labels
 	err = c.findJumpLabels(prog)
 	if err != nil {
 		return nil, err
 	}
+
 	// resolve jump-labels
-	err = c.convertLabelGoto(prog)
+	err = c.replaceGotoLabels(prog)
 	if err != nil {
 		return nil, err
 	}
 
 	if c.usesTimeTracking {
-		// inset line counter at the beginning of each line
 		c.insertLineCounter(prog)
 	}
 
-	// convert remaining nolol-types to yolol types
-	newprog := c.elementsToLines(prog)
+	// at this point the program consists entirely of statement-lines which contain pure yolol-code
+	out := &ast.Program{
+		Lines: make([]*ast.Line, len(prog.Elements)),
+	}
 
-	return newprog, nil
+	for i, element := range prog.Elements {
+		line := element.(*nast.StatementLine)
+		out.Lines[i] = &ast.Line{
+			Position:   line.Position,
+			Statements: line.Statements,
+		}
+	}
+
+	return out, nil
 }
 
-// resolveIncludes searches for include-directives and inserts the lines of the included files
-func (c *Converter) resolveIncludes(n ast.Node) error {
-	p := NewParser()
-	repeat := true
-	f := func(node ast.Node, visitType int) error {
-		if include, is := node.(*nast.IncludeDirective); is {
-			repeat = true
-			file, err := c.files.Get(include.File)
-			if err != nil {
-				return &parser.Error{
-					Message:       fmt.Sprintf("Error when opening included file '%s': %s", include.File, err.Error()),
-					StartPosition: include.Start(),
-					EndPosition:   include.End(),
-				}
-			}
-			p.SetFilename(include.File)
-			parsed, err := p.Parse(file)
-			if err != nil {
-				// override the position of the error with the position of the include
-				// this way the error gets displayed at the correct location
-				// the message does contain the original location
-				return &parser.Error{
-					Message:       err.Error(),
-					StartPosition: include.Start(),
-					EndPosition:   include.End(),
-				}
-			}
+func (c *Converter) maxLineLength() int {
+	if !c.usesTimeTracking {
+		return 70
+	}
+	return 70 - 4
+}
 
-			replacements := make([]ast.Node, len(parsed.Elements))
-			for i := range parsed.Elements {
-				replacements[i] = parsed.Elements[i]
+func (c *Converter) convertNodes(node ast.Node) error {
+	f := func(node ast.Node, visitType int) error {
+		switch n := node.(type) {
+		case *ast.Assignment:
+			if visitType == ast.PostVisit {
+				return c.convertAssignment(n)
 			}
-			return ast.NewNodeReplacement(replacements...)
+		case *nast.ConstDeclaration:
+			return c.convertConstDecl(n)
+		case *nast.IncludeDirective:
+			return c.convertInclude(n)
+		case *nast.WaitDirective:
+			if visitType == ast.PostVisit {
+				return c.convertWait(n)
+			}
+		case *ast.FuncCall:
+			if visitType == ast.PostVisit {
+				return c.convertBuiltinFunction(n)
+			}
+		case *ast.Dereference:
+			return c.convertDereference(n)
+		case *nast.MultilineIf:
+			if visitType == ast.PostVisit {
+				return c.convertIf(n)
+			}
+		case *nast.WhileLoop:
+			if visitType == ast.PostVisit {
+				return c.convertWhileLoop(n)
+			}
+		case *ast.UnaryOperation:
+		case *ast.BinaryOperation:
+			if visitType == ast.PostVisit {
+				repl := c.sexpOptimizer.OptimizeExpressionNonRecursive(n)
+				if repl != nil {
+					return ast.NewNodeReplacementSkip(repl)
+				}
+				return nil
+			}
 		}
+
 		return nil
 	}
+	return node.Accept(ast.VisitorFunc(f))
+}
 
-	counter := 0
-
-	// if repeat is true, this is either the first run, or a previous run performed an include
-	// if so, there might be unresolved includes, so run the include-resolving function again
-	for repeat {
-		repeat = false
-		err := n.Accept(ast.VisitorFunc(f))
-		if err != nil {
-			return err
-		}
-		counter++
-		if counter > 20 {
-			return &parser.Error{
-				Message:       "Include cycle detected",
-				StartPosition: n.Start(),
-				EndPosition:   n.End(),
-			}
-		}
-	}
-
+// convertAssignment optimizes the variable name and the expression of an assignment
+func (c *Converter) convertAssignment(ass *ast.Assignment) error {
+	ass.VariableDisplayName = c.varnameOptimizer.OptimizeVarName(ass.Variable)
 	return nil
 }
 
-// findConstantDeclarations searches the programm for constant declarations and stores them for later use
-func (c *Converter) findConstantDeclarations(p ast.Node) error {
-	c.constants = make(map[string]interface{}, 0)
-	f := func(node ast.Node, visitType int) error {
-		if visitType == ast.PreVisit {
-			if constDecl, is := node.(*nast.ConstDeclaration); is {
-				_, exists := c.constants[constDecl.Name]
-				if exists {
-					return &parser.Error{
-						Message:       fmt.Sprintf("Duplicate declaration of constant: %s", constDecl.Name),
-						StartPosition: constDecl.Start(),
-						EndPosition:   constDecl.End(),
-					}
-				}
-				switch val := constDecl.Value.(type) {
-				case *ast.StringConstant:
-					c.constants[constDecl.Name] = val
-					break
-				case *ast.NumberConstant:
-					c.constants[constDecl.Name] = val
-					break
-				default:
-					return &parser.Error{
-						Message:       "Only constant values can be the value of a constant declaration",
-						StartPosition: constDecl.Start(),
-						EndPosition:   constDecl.End(),
-					}
-				}
-				// remove the element from the ast
-				return ast.NewNodeReplacement()
-			}
+// convertConstDecl converts a const declarationto yolol by discarding it, but saving the declared value
+func (c *Converter) convertConstDecl(decl *nast.ConstDeclaration) error {
+	switch val := decl.Value.(type) {
+	case *ast.StringConstant:
+		c.constants[decl.Name] = val
+		break
+	case *ast.NumberConstant:
+		c.constants[decl.Name] = val
+		break
+	default:
+		return &parser.Error{
+			Message:       "Only constant values can be the value of a constant declaration",
+			StartPosition: decl.Start(),
+			EndPosition:   decl.End(),
 		}
-		return nil
 	}
-	return p.Accept(ast.VisitorFunc(f))
+	return ast.NewNodeReplacement()
 }
 
-func (c *Converter) convertWaitStatement(p ast.Node) error {
-	counter := 0
-	f := func(node ast.Node, visitType int) error {
-		if wait, is := node.(*nast.WaitDirective); is {
-			label := fmt.Sprintf("wait%d", counter)
-			return ast.NewNodeReplacement(&nast.StatementLine{
-				Label:  label,
-				HasEOL: true,
-				Line: ast.Line{
-					Position: node.Start(),
-					Statements: []ast.Statement{
-						&ast.IfStatement{
-							Position:  node.Start(),
-							Condition: wait.Condition,
-							IfBlock: []ast.Statement{
-								&nast.GoToLabelStatement{
-									Label: label,
-								},
-							},
+// resolveIncludes searches for include-directives and inserts the lines of the included files
+func (c *Converter) convertInclude(include *nast.IncludeDirective) error {
+	p := NewParser()
+
+	c.includecount++
+	if c.includecount > 20 {
+		return &parser.Error{
+			Message:       "Error when processing includes: Include-loop detected",
+			StartPosition: ast.NewPosition("", 1, 1),
+			EndPosition:   ast.NewPosition("", 20, 70),
+		}
+	}
+
+	file, err := c.files.Get(include.File)
+	if err != nil {
+		return &parser.Error{
+			Message:       fmt.Sprintf("Error when opening included file '%s': %s", include.File, err.Error()),
+			StartPosition: include.Start(),
+			EndPosition:   include.End(),
+		}
+	}
+	p.SetFilename(include.File)
+	parsed, err := p.Parse(file)
+	if err != nil {
+		// override the position of the error with the position of the include
+		// this way the error gets displayed at the correct location
+		// the message does contain the original location
+		return &parser.Error{
+			Message:       err.Error(),
+			StartPosition: include.Start(),
+			EndPosition:   include.End(),
+		}
+	}
+
+	if usesTimeTracking(parsed) {
+		c.usesTimeTracking = true
+	}
+
+	replacements := make([]ast.Node, len(parsed.Elements))
+	for i := range parsed.Elements {
+		replacements[i] = parsed.Elements[i]
+	}
+	return ast.NewNodeReplacement(replacements...)
+}
+
+// convert a wait directive to yolol
+func (c *Converter) convertWait(wait *nast.WaitDirective) error {
+	label := fmt.Sprintf("wait%d", c.waitlabelcounter)
+	return ast.NewNodeReplacement(&nast.StatementLine{
+		Label:  label,
+		HasEOL: true,
+		Line: ast.Line{
+			Position: wait.Start(),
+			Statements: []ast.Statement{
+				&ast.IfStatement{
+					Position:  wait.Start(),
+					Condition: wait.Condition,
+					IfBlock: []ast.Statement{
+						&nast.GoToLabelStatement{
+							Label: label,
 						},
 					},
 				},
-			})
-		}
-		return nil
-	}
-	return p.Accept(ast.VisitorFunc(f))
+			},
+		},
+	})
 }
 
-func (c *Converter) insertBuiltinFunctions(p ast.Node) error {
+// convert a built-in function to yolol
+func (c *Converter) convertBuiltinFunction(function *ast.FuncCall) error {
+	switch function.Function {
+	case "time":
+		c.usesTimeTracking = true
+		return ast.NewNodeReplacementSkip(&ast.Dereference{
+			Variable:            reservedTimeVariable,
+			VariableDisplayName: c.varnameOptimizer.OptimizeVarName(reservedTimeVariable),
+		})
+	}
+	return nil
+}
 
+// checkes, if the program uses nolols time-tracking feature
+func usesTimeTracking(n ast.Node) bool {
+	uses := false
 	f := func(node ast.Node, visitType int) error {
-		if function, isFunction := node.(*ast.FuncCall); isFunction {
-			switch function.Function {
-			case "time":
-				c.usesTimeTracking = true
-				return ast.NewNodeReplacement(&ast.Dereference{
-					Variable:            reservedTimeVariable,
-					VariableDisplayName: reservedTimeVariable,
-				})
+		if function, is := node.(*ast.FuncCall); is {
+			if function.Function == "time" {
+				uses = true
 			}
 		}
 		return nil
 	}
-	return p.Accept(ast.VisitorFunc(f))
+	n.Accept(ast.VisitorFunc(f))
+	return uses
 }
 
-// insertConstants fills in the values of defined constants
-func (c *Converter) insertConstants(p ast.Node) error {
-	f := func(node ast.Node, visitType int) error {
-		if visitType == ast.SingleVisit {
-			if deref, is := node.(*ast.Dereference); is {
-				if deref.Operator == "" {
-					if value, exists := c.constants[deref.Variable]; exists {
-						var replacement ast.Expression
-						switch val := value.(type) {
-						case *ast.StringConstant:
-							replacement = &ast.StringConstant{
-								Value:    val.Value,
-								Position: deref.Position,
-							}
-							break
-						case *ast.NumberConstant:
-							replacement = &ast.NumberConstant{
-								Value:    val.Value,
-								Position: deref.Position,
-							}
-							break
-						}
-						return ast.NewNodeReplacement(replacement)
-					}
+// convertDereference replaces mentionings of constants with the value of the constant
+func (c *Converter) convertDereference(deref *ast.Dereference) error {
+	if deref.Operator == "" {
+		// we are dereferencing a constant
+		if value, exists := c.constants[deref.Variable]; exists {
+			var replacement ast.Expression
+			switch val := value.(type) {
+			case *ast.StringConstant:
+				replacement = &ast.StringConstant{
+					Value:    val.Value,
+					Position: deref.Position,
 				}
+				break
+			case *ast.NumberConstant:
+				replacement = &ast.NumberConstant{
+					Value:    val.Value,
+					Position: deref.Position,
+				}
+				break
 			}
+			return ast.NewNodeReplacement(replacement)
 		}
-		return nil
 	}
-	return p.Accept(ast.VisitorFunc(f))
+	// we are dereferencing a variable
+	deref.VariableDisplayName = c.varnameOptimizer.OptimizeVarName(deref.Variable)
+	return nil
 }
 
 // findJumpLabels finds all line-labels in the program
@@ -335,7 +333,7 @@ func (c *Converter) findJumpLabels(p ast.Node) error {
 	c.jumpLabels = make(map[string]int)
 	linecounter := 0
 	f := func(node ast.Node, visitType int) error {
-		if line, isExecutableLine := node.(*nast.StatementLine); isExecutableLine {
+		if line, isLine := node.(*nast.StatementLine); isLine {
 			if visitType == ast.PreVisit {
 				linecounter++
 				if line.Label != "" {
@@ -361,8 +359,8 @@ func (c *Converter) findJumpLabels(p ast.Node) error {
 	return p.Accept(ast.VisitorFunc(f))
 }
 
-// convertLabelGoto converts a nolol-style label-goto to a plain yolol-goto
-func (c *Converter) convertLabelGoto(p ast.Node) error {
+// replaceGotoLabels replaces all goto labels with the appropriate line-number
+func (c *Converter) replaceGotoLabels(p ast.Node) error {
 	f := func(node ast.Node, visitType int) error {
 		if gotostmt, is := node.(*nast.GoToLabelStatement); is {
 			line, exists := c.jumpLabels[gotostmt.Label]
@@ -385,58 +383,52 @@ func (c *Converter) convertLabelGoto(p ast.Node) error {
 }
 
 // convertIf converts nolol multiline-ifs to yolol
-func (c *Converter) convertIf(p ast.Node) error {
-	f := func(node ast.Node, visitType int) error {
-		if mlif, is := node.(*nast.MultilineIf); is && visitType == ast.PostVisit {
-			endif := fmt.Sprintf("endif%d", c.iflabelcounter)
-			repl := []ast.Node{}
-			for i := range mlif.Conditions {
-				endlabel := ""
-				if mlif.ElseBlock != nil || i < len(mlif.Conditions)-1 {
-					endlabel = endif
-				}
-				condline, err := c.convertConditionInline(mlif, i, endlabel)
-				if err == nil {
-					repl = append(repl, condline)
-				} else {
-					condlines := c.convertConditionMultiline(mlif, i, endlabel)
-					repl = append(repl, condlines...)
-				}
-			}
-
-			if mlif.ElseBlock != nil {
-				for _, elseline := range mlif.ElseBlock.Elements {
-					repl = append(repl, elseline)
-				}
-			}
-
-			repl = append(repl, &nast.StatementLine{
-				Position: mlif.Position,
-				Label:    endif,
-				Line: ast.Line{
-					Statements: []ast.Statement{},
-				},
-			})
-
-			c.iflabelcounter++
-			return ast.NewNodeReplacement(repl...)
+func (c *Converter) convertIf(mlif *nast.MultilineIf) error {
+	endif := fmt.Sprintf("endif%d", c.iflabelcounter)
+	repl := []ast.Node{}
+	for i := range mlif.Conditions {
+		endlabel := ""
+		if mlif.ElseBlock != nil || i < len(mlif.Conditions)-1 {
+			endlabel = endif
 		}
-		return nil
+		condline, err := c.convertConditionInline(mlif, i, endlabel)
+		if err == nil {
+			repl = append(repl, condline)
+		} else {
+			condlines := c.convertConditionMultiline(mlif, i, endlabel)
+			repl = append(repl, condlines...)
+		}
 	}
-	return p.Accept(ast.VisitorFunc(f))
+
+	if mlif.ElseBlock != nil {
+		for _, elseline := range mlif.ElseBlock.Elements {
+			repl = append(repl, elseline)
+		}
+	}
+
+	repl = append(repl, &nast.StatementLine{
+		Position: mlif.Position,
+		Label:    endif,
+		Line: ast.Line{
+			Statements: []ast.Statement{},
+		},
+	})
+
+	c.iflabelcounter++
+	return ast.NewNodeReplacement(repl...)
 }
 
 // convertConditionInline converts a single conditional block of a multiline if and tries to produce a single yolol if
 func (c *Converter) convertConditionInline(mlif *nast.MultilineIf, index int, endlabel string) (ast.Node, error) {
-	mergedIfLines, _ := c.mergeElements(mlif.Blocks[index].Elements)
+	mergedIfElements, _ := c.mergeNololElements(mlif.Blocks[index].Elements)
 
-	if len(mergedIfLines) > 1 || (len(mergedIfLines) > 0 && mergedIfLines[0].(*nast.StatementLine).Label != "") {
+	if len(mergedIfElements) > 1 || (len(mergedIfElements) > 0 && mergedIfElements[0].(*nast.StatementLine).Label != "") {
 		return nil, errInlineIfImpossible
 	}
 
 	statements := []ast.Statement{}
-	if len(mergedIfLines) > 0 {
-		statements = mergedIfLines[0].(*nast.StatementLine).Line.Statements
+	if len(mergedIfElements) > 0 {
+		statements = mergedIfElements[0].(*nast.StatementLine).Line.Statements
 		if endlabel != "" {
 			statements = append(statements, &nast.GoToLabelStatement{
 				Label: endlabel,
@@ -457,7 +449,7 @@ func (c *Converter) convertConditionInline(mlif *nast.MultilineIf, index int, en
 		},
 	}
 
-	if getLengthOfLine(&repl.Line) > 70 {
+	if getLengthOfLine(&repl.Line) > c.maxLineLength() {
 		return nil, errInlineIfImpossible
 	}
 
@@ -468,7 +460,7 @@ func (c *Converter) convertConditionInline(mlif *nast.MultilineIf, index int, en
 // multiple lines, because a single-line if would become too long
 func (c *Converter) convertConditionMultiline(mlif *nast.MultilineIf, index int, endlabel string) []ast.Node {
 	skipIf := fmt.Sprintf("iflbl%d-%d", c.iflabelcounter, index)
-	condition := optimizers.ExpressionInversionOptimizer{}.OptimizeExpression(&ast.UnaryOperation{
+	condition := c.boolexpOptimizer.OptimizeExpression(&ast.UnaryOperation{
 		Operator: "not",
 		Exp:      mlif.Conditions[index],
 	})
@@ -521,90 +513,76 @@ func (c *Converter) convertConditionMultiline(mlif *nast.MultilineIf, index int,
 	return repl
 }
 
-// convertWhileLoops converts while loops into yolol-code
-func (c *Converter) convertWhileLoops(p ast.Node) error {
-	counter := 0
-	f := func(node ast.Node, visitType int) error {
-		if loop, is := node.(*nast.WhileLoop); is && visitType == ast.PostVisit {
-			startLabel := fmt.Sprintf("while%d", counter)
-			endLabel := fmt.Sprintf("endwhile%d", counter)
-			condition := optimizers.ExpressionInversionOptimizer{}.OptimizeExpression(&ast.UnaryOperation{
-				Operator: "not",
-				Exp:      loop.Condition,
-			})
-			repl := []ast.Node{
-				&nast.StatementLine{
-					Position: loop.Position,
-					Label:    startLabel,
-					Line: ast.Line{
-						Statements: []ast.Statement{
-							&ast.IfStatement{
-								Position:  loop.Condition.Start(),
-								Condition: condition,
-								IfBlock: []ast.Statement{
-									&nast.GoToLabelStatement{
-										Position: loop.Position,
-										Label:    endLabel,
-									},
-								},
+// convertWhileLoop converts while loops into yolol-code
+func (c *Converter) convertWhileLoop(loop *nast.WhileLoop) error {
+	startLabel := fmt.Sprintf("while%d", c.whilelabelcounter)
+	endLabel := fmt.Sprintf("endwhile%d", c.whilelabelcounter)
+	condition := c.boolexpOptimizer.OptimizeExpression(&ast.UnaryOperation{
+		Operator: "not",
+		Exp:      loop.Condition,
+	})
+	repl := []ast.Node{
+		&nast.StatementLine{
+			Position: loop.Position,
+			Label:    startLabel,
+			Line: ast.Line{
+				Statements: []ast.Statement{
+					&ast.IfStatement{
+						Position:  loop.Condition.Start(),
+						Condition: condition,
+						IfBlock: []ast.Statement{
+							&nast.GoToLabelStatement{
+								Position: loop.Position,
+								Label:    endLabel,
 							},
 						},
 					},
 				},
-			}
-
-			for _, blockline := range loop.Block.Elements {
-				repl = append(repl, blockline)
-			}
-			repl = append(repl, &nast.StatementLine{
-				Position: loop.Position,
-				Line: ast.Line{
-					Statements: []ast.Statement{
-						&nast.GoToLabelStatement{
-							Position: loop.Position,
-							Label:    startLabel,
-						},
-					},
-				},
-			})
-
-			repl = append(repl, &nast.StatementLine{
-				Position: loop.Position,
-				Label:    endLabel,
-				Line: ast.Line{
-					Statements: []ast.Statement{},
-				},
-			})
-
-			counter++
-			return ast.NewNodeReplacement(repl...)
-		}
-		return nil
+			},
+		},
 	}
-	return p.Accept(ast.VisitorFunc(f))
+
+	for _, blockline := range loop.Block.Elements {
+		repl = append(repl, blockline)
+	}
+	repl = append(repl, &nast.StatementLine{
+		Position: loop.Position,
+		Line: ast.Line{
+			Statements: []ast.Statement{
+				&nast.GoToLabelStatement{
+					Position: loop.Position,
+					Label:    startLabel,
+				},
+			},
+		},
+	})
+
+	repl = append(repl, &nast.StatementLine{
+		Position: loop.Position,
+		Label:    endLabel,
+		Line: ast.Line{
+			Statements: []ast.Statement{},
+		},
+	})
+
+	c.whilelabelcounter++
+	return ast.NewNodeReplacement(repl...)
+
 }
 
-// removeEmptyLines removes empty lines from the program
-func (c *Converter) removeEmptyLines(p ast.Node) error {
-	f := func(node ast.Node, visitType int) error {
-		if n, is := p.(*nast.StatementLine); is {
-			if n.Label == "" && len(n.Statements) == 0 && !n.HasEOL && !n.HasBOL {
-				return ast.NewNodeReplacement()
-			}
-		}
-		return nil
-	}
-	return p.Accept(ast.VisitorFunc(f))
-}
-
-// mergeElements is a type-wrapper for mergeStatementLines
-// all elements in the list MUST be StatementLines
-func (c *Converter) mergeElements(lines []nast.Element) ([]nast.Element, error) {
+// mergeNololElements is a type-wrapper for mergeStatementElements
+func (c *Converter) mergeNololElements(lines []nast.Element) ([]nast.Element, error) {
 	inp := make([]*nast.StatementLine, len(lines))
 	for i, elem := range lines {
-		inp[i] = elem.(*nast.StatementLine)
+		line, isline := elem.(*nast.StatementLine)
+		if !isline {
+			return nil, parser.Error{
+				Message: fmt.Sprintf("Err: Found unconverted nolol-element: %T", elem),
+			}
+		}
+		inp[i] = line
 	}
-	interm, err := c.mergeStatementLines(inp)
+	interm, err := c.mergeStatementElements(inp)
 	if err != nil {
 		return nil, err
 	}
@@ -615,10 +593,10 @@ func (c *Converter) mergeElements(lines []nast.Element) ([]nast.Element, error) 
 	return outp, nil
 }
 
-// mergeStatementLines merges consectuive statementlines into as few lines as possible
-func (c *Converter) mergeStatementLines(lines []*nast.StatementLine) ([]*nast.StatementLine, error) {
-	maxlen := 70
-	newLines := make([]*nast.StatementLine, 0, len(lines))
+// mergeStatementElements merges consectuive statementlines into as few lines as possible
+func (c *Converter) mergeStatementElements(lines []*nast.StatementLine) ([]*nast.StatementLine, error) {
+	maxlen := c.maxLineLength()
+	newElements := make([]*nast.StatementLine, 0, len(lines))
 	i := 0
 	for i < len(lines) {
 		current := &nast.StatementLine{
@@ -630,7 +608,7 @@ func (c *Converter) mergeStatementLines(lines []*nast.StatementLine) ([]*nast.St
 			HasEOL:   lines[i].HasEOL,
 		}
 		current.Statements = append(current.Statements, lines[i].Statements...)
-		newLines = append(newLines, current)
+		newElements = append(newElements, current)
 
 		if current.HasEOL {
 			// no lines may MUST be appended to a line having EOL
@@ -642,7 +620,7 @@ func (c *Converter) mergeStatementLines(lines []*nast.StatementLine) ([]*nast.St
 			currlen := getLengthOfLine(&current.Line)
 
 			if currlen > maxlen {
-				return newLines, &parser.Error{
+				return newElements, &parser.Error{
 					Message:       "The line is too long (>70 characters) to be converted to yolol, even after optimization.",
 					StartPosition: current.Start(),
 					EndPosition:   current.End(),
@@ -664,10 +642,10 @@ func (c *Converter) mergeStatementLines(lines []*nast.StatementLine) ([]*nast.St
 		}
 		i++
 	}
-	return newLines, nil
+	return newElements, nil
 }
 
-// getLengthOfLine returns the amount of characters needed to represent the given line as yolol-code
+//getLengthOfLine returns the amount of characters needed to represent the given line as yolol-code
 func getLengthOfLine(line ast.Node) int {
 	ygen := parser.Printer{}
 	ygen.UnknownHandlerFunc = func(node ast.Node, visitType int) (string, error) {
@@ -684,13 +662,14 @@ func getLengthOfLine(line ast.Node) int {
 	return len(generated)
 }
 
+// inserts the line-counting statement into the beginning of each line
 func (c *Converter) insertLineCounter(p *nast.Program) {
 	for _, line := range p.Elements {
 		if stmtline, is := line.(*nast.StatementLine); is {
 			stmts := make([]ast.Statement, 1, len(stmtline.Statements)+1)
 			stmts[0] = &ast.Dereference{
 				Variable:            reservedTimeVariable,
-				VariableDisplayName: reservedTimeVariableReplaced,
+				VariableDisplayName: c.varnameOptimizer.OptimizeVarName(reservedTimeVariable),
 				Operator:            "++",
 				PrePost:             "Post",
 				IsStatement:         true,
@@ -699,25 +678,4 @@ func (c *Converter) insertLineCounter(p *nast.Program) {
 			stmtline.Statements = stmts
 		}
 	}
-}
-
-// elementsToLines converts nolol element-types to yolol-types
-func (c *Converter) elementsToLines(p *nast.Program) *ast.Program {
-	newprog := ast.Program{
-		Lines: make([]*ast.Line, 0),
-	}
-	for _, rawline := range p.Elements {
-		switch line := rawline.(type) {
-		case *nast.StatementLine:
-			newline := &ast.Line{
-				Statements: line.Statements,
-			}
-			newprog.Lines = append(newprog.Lines, newline)
-			break
-		default:
-			fmt.Printf("Unexpected type: %T\n", rawline)
-		}
-
-	}
-	return &newprog
 }

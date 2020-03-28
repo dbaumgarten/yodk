@@ -41,6 +41,17 @@ During the compilation various optimizations like:
 
 are performed automatically for you. (This is the same as running ```yodk optimize``` on a yolol-file)
 
+## Compile-time constants
+NOLOL has compile time constants. Mentionings of the constant will be replaced with their value when compiling. This is usefull for configuration purposes, especially when combined with the [include-feature](/nolol?id=including-files). This way you can seperate and therefore easier re-use configuration and code.
+
+[const_override.nolol](generated/code/nolol/const_override.nolol ':include')
+
+will result in:
+
+```
+hello world
+```
+
 ## Labeled Gotos
 As NOLOL moves statements around during compilation to generate as compact code as possible, using goto with line numbers would not work. Instead goto no jump to labeled lines.
 
@@ -112,6 +123,12 @@ which will output:
 ```
 hello .......... daniel
 ```
+
+Includes can be chained. Which means you can include a files, that includes another file, that includes another file. Circular-includes are not possible.  
+
+Included files are optimized with the rest of the code (variable-renaming, statement re-lining etc.) happens as if the included code had been in the file right from the start.  
+
+Constants and variables in the included file are not scoped. They remain defined for all of the code after the ```include```. In most cases, this is exactly what you want (when you include a file containing constants as a kind of config file), but can also lead to unexpected behavior if you include a file in the middle of your code and it overrides your previously defined values.
 
 Includes can also be placed in the middle of block like ```ìf``` and ```while``` which makes it possible to use included files as some kind of macros.
 

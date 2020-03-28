@@ -1,0 +1,10 @@
+// define constant values using the const-keyword
+const foo = "hello"
+:out=foo
+
+// constant values can be re-defined
+// all lines below the re-definition will get the new value
+// this is useful in combination with includes
+const foo = " world"
+:out+=foo
+

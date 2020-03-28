@@ -1,5 +1,3 @@
-// nolol has compile-time constants
-// mentionings of these constants will be replaced with their value during compilation
 const fizz = "fizz"
 const buzz = "buzz"
 const sep = " "
