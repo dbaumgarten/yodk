@@ -22,7 +22,7 @@ func NewPrinter() *Printer {
 }
 
 // Print returns the nolol-code for the given ast
-func (p *Printer) Print(prog *nast.Program) (string, error) {
+func (p *Printer) Print(prog ast.Node) (string, error) {
 	indentLevel := 0
 
 	indentation := func(amount int) string {
@@ -52,6 +52,17 @@ func (p *Printer) Print(prog *nast.Program) (string, error) {
 			default:
 				return indentation(indentLevel), nil
 			}
+
+		case *nast.MacroDefinition:
+			switch visitType {
+			case ast.PreVisit:
+				return "macro " + n.Name + "\n", nil
+			case ast.PostVisit:
+				return "end", nil
+			}
+
+		case *nast.MacroInsetion:
+			return "insert " + n.Name + "\n", nil
 
 		case *nast.MultilineIf:
 			switch visitType {

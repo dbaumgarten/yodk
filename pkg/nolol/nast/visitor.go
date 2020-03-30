@@ -59,7 +59,7 @@ func (s *Block) Accept(v ast.Visitor) error {
 		return err
 	}
 
-	s.Elements, err = AcceptElementList(s, v, s.Elements)
+	s.Elements, err = AcceptNestableElementList(s, v, s.Elements)
 	if err != nil {
 		return err
 	}
@@ -151,6 +151,27 @@ func (s *IncludeDirective) Accept(v ast.Visitor) error {
 	return v.Visit(s, ast.SingleVisit)
 }
 
+// Accept is used to implement Acceptor
+func (s *MacroDefinition) Accept(v ast.Visitor) error {
+	err := v.Visit(s, ast.PreVisit)
+	if err != nil {
+		return err
+	}
+
+	rv, err := ast.AcceptChild(v, s.Block)
+	if err != nil {
+		return err
+	}
+	s.Block = rv.(*Block)
+
+	return v.Visit(s, ast.PostVisit)
+}
+
+// Accept is used to implement Acceptor
+func (s *MacroInsetion) Accept(v ast.Visitor) error {
+	return v.Visit(s, ast.SingleVisit)
+}
+
 // AcceptElementList calles Accept for ever element of old and handles node-replacements
 func AcceptElementList(parent ast.Node, v ast.Visitor, old []Element) ([]Element, error) {
 	for i := 0; i < len(old); i++ {
@@ -165,6 +186,37 @@ func AcceptElementList(parent ast.Node, v ast.Visitor, old []Element) ([]Element
 			new = append(new, old[:i]...)
 			for _, el := range repl.Replacement {
 				new = append(new, el.(Element))
+			}
+			new = append(new, old[i+1:]...)
+			old = new
+			err = nil
+			if repl.Skip {
+				i += len(repl.Replacement) - 1
+			} else {
+				i--
+			}
+		}
+		if err != nil {
+			return nil, err
+		}
+	}
+	return old, nil
+}
+
+// AcceptNestableElementList calles Accept for every element of old and handles node-replacements
+func AcceptNestableElementList(parent ast.Node, v ast.Visitor, old []NestableElement) ([]NestableElement, error) {
+	for i := 0; i < len(old); i++ {
+		err := v.Visit(parent, i)
+		if err != nil {
+			return nil, err
+		}
+		err = old[i].Accept(v)
+		repl, is := err.(ast.NodeReplacement)
+		if is {
+			new := make([]NestableElement, 0, len(old)+len(repl.Replacement)-1)
+			new = append(new, old[:i]...)
+			for _, el := range repl.Replacement {
+				new = append(new, el.(NestableElement))
 			}
 			new = append(new, old[i+1:]...)
 			old = new

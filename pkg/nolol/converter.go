@@ -29,6 +29,7 @@ type Converter struct {
 	boolexpOptimizer  *optimizers.ExpressionInversionOptimizer
 	varnameOptimizer  *optimizers.VariableNameOptimizer
 	includecount      int
+	macros            map[string]*nast.MacroDefinition
 	debug             bool
 }
 
@@ -37,6 +38,7 @@ func NewConverter() *Converter {
 	return &Converter{
 		jumpLabels:       make(map[string]int),
 		constants:        make(map[string]interface{}),
+		macros:           make(map[string]*nast.MacroDefinition),
 		sexpOptimizer:    optimizers.NewStaticExpressionOptimizer(),
 		boolexpOptimizer: &optimizers.ExpressionInversionOptimizer{},
 		varnameOptimizer: optimizers.NewVariableNameOptimizer(),
@@ -143,6 +145,14 @@ func (c *Converter) convertNodes(node ast.Node) error {
 			}
 		case *nast.ConstDeclaration:
 			return c.convertConstDecl(n)
+		case *nast.MacroDefinition:
+			// using pre-visit here is important
+			// the definition must be resolved, BEFORE its contents are processed
+			if visitType == ast.PreVisit {
+				return c.convertMacroDef(n)
+			}
+		case *nast.MacroInsetion:
+			return c.convertMacroInsertion(n)
 		case *nast.IncludeDirective:
 			return c.convertInclude(n)
 		case *nast.WaitDirective:
@@ -183,6 +193,35 @@ func (c *Converter) convertNodes(node ast.Node) error {
 func (c *Converter) convertAssignment(ass *ast.Assignment) error {
 	ass.VariableDisplayName = c.varnameOptimizer.OptimizeVarName(ass.Variable)
 	return nil
+}
+
+// convertMacroDef takes a macro definition, stores it for later use and removes the definition from the code
+func (c *Converter) convertMacroDef(def *nast.MacroDefinition) error {
+	c.macros[def.Name] = def
+	// remove the node from the output-code
+	return ast.NewNodeReplacementSkip()
+}
+
+// convert a macro insetion, by inserting the code defined by the macro
+func (c *Converter) convertMacroInsertion(def *nast.MacroInsetion) error {
+	m, defined := c.macros[def.Name]
+	if !defined {
+		return &parser.Error{
+			Message:       fmt.Sprintf("No macro named '%s' defined", def.Name),
+			StartPosition: m.Start(),
+			EndPosition:   m.End(),
+		}
+	}
+
+	copy := nast.CopyAst(m).(*nast.MacroDefinition)
+
+	nodes := make([]ast.Node, len(copy.Block.Elements))
+	for i, el := range copy.Block.Elements {
+		nodes[i] = el
+	}
+
+	// remove the node from the output-code
+	return ast.NewNodeReplacement(nodes...)
 }
 
 // convertConstDecl converts a const declarationto yolol by discarding it, but saving the declared value
@@ -420,7 +459,7 @@ func (c *Converter) convertIf(mlif *nast.MultilineIf) error {
 
 // convertConditionInline converts a single conditional block of a multiline if and tries to produce a single yolol if
 func (c *Converter) convertConditionInline(mlif *nast.MultilineIf, index int, endlabel string) (ast.Node, error) {
-	mergedIfElements, _ := c.mergeNololElements(mlif.Blocks[index].Elements)
+	mergedIfElements, _ := c.mergeNololNestableElements(mlif.Blocks[index].Elements)
 
 	if len(mergedIfElements) > 1 || (len(mergedIfElements) > 0 && mergedIfElements[0].(*nast.StatementLine).Label != "") {
 		return nil, errInlineIfImpossible
@@ -517,6 +556,7 @@ func (c *Converter) convertConditionMultiline(mlif *nast.MultilineIf, index int,
 func (c *Converter) convertWhileLoop(loop *nast.WhileLoop) error {
 	startLabel := fmt.Sprintf("while%d", c.whilelabelcounter)
 	endLabel := fmt.Sprintf("endwhile%d", c.whilelabelcounter)
+
 	condition := c.boolexpOptimizer.OptimizeExpression(&ast.UnaryOperation{
 		Operator: "not",
 		Exp:      loop.Condition,
@@ -568,6 +608,29 @@ func (c *Converter) convertWhileLoop(loop *nast.WhileLoop) error {
 	c.whilelabelcounter++
 	return ast.NewNodeReplacement(repl...)
 
+}
+
+// mergeNololNestableElements is a type-wrapper for mergeStatementElements
+func (c *Converter) mergeNololNestableElements(lines []nast.NestableElement) ([]nast.NestableElement, error) {
+	inp := make([]*nast.StatementLine, len(lines))
+	for i, elem := range lines {
+		line, isline := elem.(*nast.StatementLine)
+		if !isline {
+			return nil, parser.Error{
+				Message: fmt.Sprintf("Err: Found unconverted nolol-element: %T", elem),
+			}
+		}
+		inp[i] = line
+	}
+	interm, err := c.mergeStatementElements(inp)
+	if err != nil {
+		return nil, err
+	}
+	outp := make([]nast.NestableElement, len(interm))
+	for i, elem := range interm {
+		outp[i] = elem
+	}
+	return outp, nil
 }
 
 // mergeNololElements is a type-wrapper for mergeStatementElements

@@ -44,6 +44,8 @@ are performed automatically for you. (This is the same as running ```yodk optimi
 ## Compile-time constants
 NOLOL has compile time constants. Mentionings of the constant will be replaced with their value when compiling. This is usefull for configuration purposes, especially when combined with the [include-feature](/nolol?id=including-files). This way you can seperate and therefore easier re-use configuration and code.
 
+Constants must can not be defined inside blocks (if, while or macro), but must always be on the top-level of a file.
+
 [const_override.nolol](generated/code/nolol/const_override.nolol ':include')
 
 will result in:
@@ -130,7 +132,7 @@ Included files are optimized with the rest of the code (variable-renaming, state
 
 Constants and variables in the included file are not scoped. They remain defined for all of the code after the ```include```. In most cases, this is exactly what you want (when you include a file containing constants as a kind of config file), but can also lead to unexpected behavior if you include a file in the middle of your code and it overrides your previously defined values.
 
-Includes can also be placed in the middle of block like ```ìf``` and ```while``` which makes it possible to use included files as some kind of macros.
+Includes can NOT be placed in the middle of block like ```ìf``` and ```while```. Includes MUST always be on the top-level of the program.
 
 # Tool support
 NOLOL is fully supported by the yodk and also vscode-yolol. Debugging works just like with yolol. So do automated testing, formatting and syntax-hightlighting.

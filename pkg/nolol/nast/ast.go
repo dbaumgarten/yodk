@@ -24,6 +24,11 @@ type Element interface {
 	ast.Node
 }
 
+// NestableElement describes a special kind of element, that can appear inside blocks (and not only on the top-level)
+type NestableElement interface {
+	Element
+}
+
 // StatementLine is a line consisting of yolol-statements
 type StatementLine struct {
 	ast.Line
@@ -61,7 +66,7 @@ func (n *ConstDeclaration) End() ast.Position {
 
 // Block represents a block/group of elements, for example inside an if
 type Block struct {
-	Elements []Element
+	Elements []NestableElement
 }
 
 // Start is needed to implement ast.Node
@@ -158,4 +163,37 @@ func (n *IncludeDirective) Start() ast.Position {
 // End is needed to implement ast.Node
 func (n *IncludeDirective) End() ast.Position {
 	return n.Position.Add(len(n.File) + 3 + len("include"))
+}
+
+// MacroDefinition represents the definition of a macro
+type MacroDefinition struct {
+	Position ast.Position
+	Name     string
+	Block    *Block
+}
+
+// Start is needed to implement ast.Node
+func (n *MacroDefinition) Start() ast.Position {
+	return n.Position
+}
+
+// End is needed to implement ast.Node
+func (n *MacroDefinition) End() ast.Position {
+	return n.Block.End()
+}
+
+// MacroInsetion represents the use of a macro
+type MacroInsetion struct {
+	Position ast.Position
+	Name     string
+}
+
+// Start is needed to implement ast.Node
+func (n *MacroInsetion) Start() ast.Position {
+	return n.Position
+}
+
+// End is needed to implement ast.Node
+func (n *MacroInsetion) End() ast.Position {
+	return n.Position.Add(len("insert ") + len(n.Name))
 }

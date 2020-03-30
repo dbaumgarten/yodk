@@ -60,14 +60,9 @@ func (p *Parser) ParseProgram() *nast.Program {
 	return &ret
 }
 
-// ParseElement parses a top-level element
-func (p *Parser) ParseElement() nast.Element {
+// ParseNestableElement parses a NOLOL-Element which can appear inside a blocl
+func (p *Parser) ParseNestableElement() nast.NestableElement {
 	p.Log()
-
-	constDecl := p.ParseConstantDeclaration()
-	if constDecl != nil {
-		return constDecl
-	}
 
 	ifline := p.ParseMultilineIf()
 	if ifline != nil {
@@ -84,12 +79,35 @@ func (p *Parser) ParseElement() nast.Element {
 		return block
 	}
 
+	mIns := p.ParseMacroInsertion()
+	if mIns != nil {
+		return mIns
+	}
+
+	return p.ParseStatementLine()
+}
+
+// ParseElement parses an element
+func (p *Parser) ParseElement() nast.Element {
+	p.Log()
+
 	include := p.ParseInclude()
 	if include != nil {
 		return include
 	}
 
-	return p.ParseStatementLine()
+	constDecl := p.ParseConstantDeclaration()
+	if constDecl != nil {
+		return constDecl
+	}
+
+	mDef := p.ParseMacroDefinition()
+	if mDef != nil {
+		return mDef
+	}
+
+	// NestableElements are also elements
+	return p.ParseNestableElement()
 }
 
 // ParseInclude parses an include directive
@@ -113,6 +131,50 @@ func (p *Parser) ParseInclude() *nast.IncludeDirective {
 		p.Expect(ast.TypeNewline, "")
 	}
 	return incl
+}
+
+// ParseMacroDefinition parses the definition of a macro
+func (p *Parser) ParseMacroDefinition() *nast.MacroDefinition {
+	if p.CurrentToken.Type != ast.TypeKeyword || p.CurrentToken.Value != "macro" {
+		return nil
+	}
+	p.Advance()
+	mdef := &nast.MacroDefinition{}
+	if p.CurrentToken.Type != ast.TypeID {
+		p.ErrorCurrent("Expected an idantifier after the macro keyword")
+		return mdef
+	}
+	mdef.Name = p.CurrentToken.Value
+	p.Advance()
+	p.Expect(ast.TypeNewline, "")
+
+	mdef.Block = p.ParseBlock(func() bool {
+		return p.CurrentToken.Type == ast.TypeKeyword && p.CurrentToken.Value == "end"
+	})
+	p.Expect(ast.TypeKeyword, "end")
+
+	return mdef
+}
+
+// ParseMacroInsertion parses a macro insertion
+func (p *Parser) ParseMacroInsertion() *nast.MacroInsetion {
+	if p.CurrentToken.Type != ast.TypeKeyword || p.CurrentToken.Value != "insert" {
+		return nil
+	}
+	p.Advance()
+	mins := &nast.MacroInsetion{}
+	if p.CurrentToken.Type != ast.TypeID {
+		p.ErrorCurrent("Expected an idantifier after the macro keyword")
+		return mins
+	}
+	mins.Name = p.CurrentToken.Value
+	p.Advance()
+
+	if p.CurrentToken.Type != ast.TypeEOF {
+		p.Expect(ast.TypeNewline, "")
+	}
+
+	return mins
 }
 
 // ParseStatementLine parses a statement line
@@ -340,9 +402,9 @@ func (p *Parser) ParseIf() ast.Statement {
 // ParseBlock parse lines until stop() returns true
 func (p *Parser) ParseBlock(stop func() bool) *nast.Block {
 	p.Log()
-	elements := make([]nast.Element, 0)
+	elements := make([]nast.NestableElement, 0)
 	for p.HasNext() && !stop() {
-		element := p.ParseElement()
+		element := p.ParseNestableElement()
 		if elements == nil {
 			break
 		}

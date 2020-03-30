@@ -1,0 +1,22 @@
+macro greet
+	i=0
+	:out+="Hallo"
+	while i++ <5 do
+		:out+="."
+	end
+	:out+=name
+end
+
+:out=""
+name="you"
+insert greet
+
+name="world"
+insert greet
+
+i=0
+:out+="Hallo"
+while i++ <5 do
+    :out+="."
+end
+:out+=name
