@@ -85,10 +85,14 @@ func CopyAst(inp ast.Node) ast.Node {
 			case *MacroDefinition:
 				m := &MacroDefinition{}
 				copier.Copy(m, n)
+				m.Arguments = make([]string, len(n.Arguments))
+				copy(m.Arguments, n.Arguments)
 				newnode = m
 			case *MacroInsetion:
 				m := &MacroInsetion{}
 				copier.Copy(m, n)
+				m.Arguments = make([]ast.Expression, len(n.Arguments))
+				copy(m.Arguments, n.Arguments)
 				newnode = m
 			case *MultilineIf:
 				m := &MultilineIf{}

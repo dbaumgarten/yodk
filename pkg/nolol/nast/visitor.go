@@ -169,7 +169,17 @@ func (s *MacroDefinition) Accept(v ast.Visitor) error {
 
 // Accept is used to implement Acceptor
 func (s *MacroInsetion) Accept(v ast.Visitor) error {
-	return v.Visit(s, ast.SingleVisit)
+	err := v.Visit(s, ast.PreVisit)
+	if err != nil {
+		return err
+	}
+
+	s.Arguments, err = AcceptExpressionList(s, v, s.Arguments)
+	if err != nil {
+		return err
+	}
+
+	return v.Visit(s, ast.PostVisit)
 }
 
 // AcceptElementList calles Accept for ever element of old and handles node-replacements
@@ -214,6 +224,37 @@ func AcceptNestableElementList(parent ast.Node, v ast.Visitor, old []NestableEle
 		repl, is := err.(ast.NodeReplacement)
 		if is {
 			new := make([]NestableElement, 0, len(old)+len(repl.Replacement)-1)
+			new = append(new, old[:i]...)
+			for _, el := range repl.Replacement {
+				new = append(new, el.(NestableElement))
+			}
+			new = append(new, old[i+1:]...)
+			old = new
+			err = nil
+			if repl.Skip {
+				i += len(repl.Replacement) - 1
+			} else {
+				i--
+			}
+		}
+		if err != nil {
+			return nil, err
+		}
+	}
+	return old, nil
+}
+
+// AcceptExpressionList calls Accept for every element of old and handles node-replacements
+func AcceptExpressionList(parent ast.Node, v ast.Visitor, old []ast.Expression) ([]ast.Expression, error) {
+	for i := 0; i < len(old); i++ {
+		err := v.Visit(parent, i)
+		if err != nil {
+			return nil, err
+		}
+		err = old[i].Accept(v)
+		repl, is := err.(ast.NodeReplacement)
+		if is {
+			new := make([]ast.Expression, 0, len(old)+len(repl.Replacement)-1)
 			new = append(new, old[:i]...)
 			for _, el := range repl.Replacement {
 				new = append(new, el.(NestableElement))

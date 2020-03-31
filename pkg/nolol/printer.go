@@ -2,6 +2,7 @@ package nolol
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/dbaumgarten/yodk/pkg/nolol/nast"
 	"github.com/dbaumgarten/yodk/pkg/parser"
@@ -56,13 +57,24 @@ func (p *Printer) Print(prog ast.Node) (string, error) {
 		case *nast.MacroDefinition:
 			switch visitType {
 			case ast.PreVisit:
-				return "macro " + n.Name + "\n", nil
+				arglist := strings.Join(n.Arguments, ",")
+				return "macro " + n.Name + "(" + arglist + ")\n", nil
 			case ast.PostVisit:
 				return "end", nil
 			}
 
 		case *nast.MacroInsetion:
-			return "insert " + n.Name + "\n", nil
+			switch visitType {
+			case ast.PreVisit:
+				return "insert " + n.Name + "(", nil
+			case ast.PostVisit:
+				return ")\n", nil
+			default:
+				if visitType > 0 {
+					return ",", nil
+				}
+				return "", nil
+			}
 
 		case *nast.MultilineIf:
 			switch visitType {

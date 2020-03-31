@@ -1,0 +1,8 @@
+scripts: 
+  - name: macros.nolol
+    iterations: 1
+cases:
+  - name: TestGreetings
+    outputs:
+      out1: "Hello.....world"
+      out2: "Hello.....you"

@@ -167,9 +167,10 @@ func (n *IncludeDirective) End() ast.Position {
 
 // MacroDefinition represents the definition of a macro
 type MacroDefinition struct {
-	Position ast.Position
-	Name     string
-	Block    *Block
+	Position  ast.Position
+	Name      string
+	Arguments []string
+	Block     *Block
 }
 
 // Start is needed to implement ast.Node
@@ -184,8 +185,9 @@ func (n *MacroDefinition) End() ast.Position {
 
 // MacroInsetion represents the use of a macro
 type MacroInsetion struct {
-	Position ast.Position
-	Name     string
+	Position  ast.Position
+	Arguments []ast.Expression
+	Name      string
 }
 
 // Start is needed to implement ast.Node

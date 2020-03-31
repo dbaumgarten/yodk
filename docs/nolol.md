@@ -134,5 +134,32 @@ Constants and variables in the included file are not scoped. They remain defined
 
 Includes can NOT be placed in the middle of block like ```ìf``` and ```while```. Includes MUST always be on the top-level of the program.
 
+## Macros
+Reusability is a key-indicator of good programing style. Usually functions are really helpful here, but as yolol has no concept of a stack, real functions can just not be implemented. The next-best thing are macros. A macro is a defined block of code, that is inserted directly into the code, where ever it is mentioned (c programmers are familiar with the concept).  
+
+This way you have to write code that you need multiple times only once (as a macro) and can then use this macro as often as you want.  
+
+A macro that always has the exact same code would not be totally useful. Often they must be modified  slightly for each use. This is archived using arguments. When defining a macro, you can specify a set of arguments. These arguments must be supplied when actually using the macro. All mentionings of a particular argument inside a macro are then replaced using the value provided when using ther macro. This way you can for example tell a macro which variables to work on, or provide them values to work with.  
+
+As arguments work by straigh replacing the mentionings of the argument with the given value, arguments behave just like passing an argument by reference. The macro works with the original variable, and not a copy of it. If you pass a variable as argument and the macro modifies this variable, the changes will be visible outside of the macro.  
+
+All non-global variables inside a macro, that are no arguments, are "scoped" to the use of a macro. This means, if the macro works with such a variable named "foo", it will NOT modify the variable outside of the macro that is also called "foo". This way, accidental collisions between macro internal variables and your variables are prevented. Also, subsequent insertions of the same macro will work on different variables and will not interfere with each other.
+
+[macros.nolol](generated/code/nolol/macros.nolol ':include')
+
+Is compiled to:
+
+[macros.yolol](generated/code/nolol/macros.yolol ':include')
+
+and will result in:
+
+```
+out1="Hello.....world"
+out2="Hello.....you"
+```
+
+Macros are especially useful when combined with [includes](/nolol?id=including-files). You can create a file full of macro-definitions, include it and then use the macros you need for the specific program.
+
+
 # Tool support
 NOLOL is fully supported by the yodk and also vscode-yolol. Debugging works just like with yolol. So do automated testing, formatting and syntax-hightlighting.

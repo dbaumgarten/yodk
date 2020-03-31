@@ -139,13 +139,35 @@ func (p *Parser) ParseMacroDefinition() *nast.MacroDefinition {
 		return nil
 	}
 	p.Advance()
-	mdef := &nast.MacroDefinition{}
+	mdef := &nast.MacroDefinition{
+		Position:  p.CurrentToken.Position,
+		Arguments: []string{},
+	}
 	if p.CurrentToken.Type != ast.TypeID {
 		p.ErrorCurrent("Expected an idantifier after the macro keyword")
 		return mdef
 	}
 	mdef.Name = p.CurrentToken.Value
 	p.Advance()
+
+	p.Expect(ast.TypeSymbol, "(")
+
+	for p.CurrentToken.Type != ast.TypeSymbol || p.CurrentToken.Value != ")" {
+		if p.CurrentToken.Type != ast.TypeID {
+			p.ErrorCurrent("Only comma separated identifiers are allowed as arguments in a macro definition")
+			break
+		}
+		mdef.Arguments = append(mdef.Arguments, p.CurrentToken.Value)
+		p.Advance()
+		if p.CurrentToken.Type == ast.TypeSymbol && p.CurrentToken.Value == "," {
+			p.Advance()
+			continue
+		}
+		break
+	}
+
+	p.Expect(ast.TypeSymbol, ")")
+
 	p.Expect(ast.TypeNewline, "")
 
 	mdef.Block = p.ParseBlock(func() bool {
@@ -162,13 +184,34 @@ func (p *Parser) ParseMacroInsertion() *nast.MacroInsetion {
 		return nil
 	}
 	p.Advance()
-	mins := &nast.MacroInsetion{}
+	mins := &nast.MacroInsetion{
+		Position:  p.CurrentToken.Position,
+		Arguments: []ast.Expression{},
+	}
 	if p.CurrentToken.Type != ast.TypeID {
 		p.ErrorCurrent("Expected an idantifier after the macro keyword")
 		return mins
 	}
 	mins.Name = p.CurrentToken.Value
 	p.Advance()
+
+	p.Expect(ast.TypeSymbol, "(")
+
+	for p.CurrentToken.Type != ast.TypeSymbol || p.CurrentToken.Value != ")" {
+		exp := p.ParseExpression()
+		if exp == nil {
+			p.ErrorCurrent("Expected expression(s) as argument to the macro")
+			break
+		}
+		mins.Arguments = append(mins.Arguments, exp)
+		if p.CurrentToken.Type == ast.TypeSymbol && p.CurrentToken.Value == "," {
+			p.Advance()
+			continue
+		}
+		break
+	}
+
+	p.Expect(ast.TypeSymbol, ")")
 
 	if p.CurrentToken.Type != ast.TypeEOF {
 		p.Expect(ast.TypeNewline, "")

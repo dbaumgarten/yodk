@@ -1,22 +1,19 @@
-macro greet
-	i=0
-	:out+="Hallo"
+
+//macros are defined using the macro-keyword, followed by a list of arguments and a block of line
+//macros must be defined at the top-level of the program (can not be nested)
+//arguments work, by replacing every instance of the name, by the value that is provided when using the insert-keyword
+macro greet(output,name)
+	// "output" is replaced by the first argument provided when inserting the macro
+	output="Hello"
+	// i is a macro-local variable. Changes to i are local to macro-insertions
 	while i++ <5 do
-		:out+="."
+		output+="."
 	end
-	:out+=name
+	// "name" is replaced by the second argument provided when inserting the macro
+	output+=name
 end
 
-:out=""
-name="you"
-insert greet
+// macros are used with the insert-keyword, followed by the macro-name and the arguments to use
+insert greet(:out1,"world")
 
-name="world"
-insert greet
-
-i=0
-:out+="Hallo"
-while i++ <5 do
-    :out+="."
-end
-:out+=name
+insert greet(:out2,"you")

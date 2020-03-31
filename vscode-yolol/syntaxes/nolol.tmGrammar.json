@@ -38,7 +38,7 @@
 			]
 		},
 		"keyword": {
-			"match": "\\b(if|then|else|end|const|while|do|wait|goto|include)\\b",
+			"match": "\\b(if|then|else|end|const|while|do|wait|goto|include|macro|insert)\\b",
 			"name": "keyword.control"
 		},
 		"label": {

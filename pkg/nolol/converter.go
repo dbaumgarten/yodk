@@ -3,6 +3,8 @@ package nolol
 import (
 	"fmt"
 	"path/filepath"
+	"strconv"
+	"strings"
 
 	"github.com/dbaumgarten/yodk/pkg/nolol/nast"
 	"github.com/dbaumgarten/yodk/pkg/optimizers"
@@ -152,7 +154,9 @@ func (c *Converter) convertNodes(node ast.Node) error {
 				return c.convertMacroDef(n)
 			}
 		case *nast.MacroInsetion:
-			return c.convertMacroInsertion(n)
+			if visitType == ast.PreVisit {
+				return c.convertMacroInsertion(n)
+			}
 		case *nast.IncludeDirective:
 			return c.convertInclude(n)
 		case *nast.WaitDirective:
@@ -203,17 +207,86 @@ func (c *Converter) convertMacroDef(def *nast.MacroDefinition) error {
 }
 
 // convert a macro insetion, by inserting the code defined by the macro
-func (c *Converter) convertMacroInsertion(def *nast.MacroInsetion) error {
-	m, defined := c.macros[def.Name]
+func (c *Converter) convertMacroInsertion(ins *nast.MacroInsetion) error {
+	m, defined := c.macros[ins.Name]
 	if !defined {
 		return &parser.Error{
-			Message:       fmt.Sprintf("No macro named '%s' defined", def.Name),
-			StartPosition: m.Start(),
-			EndPosition:   m.End(),
+			Message:       fmt.Sprintf("No macro named '%s' defined", ins.Name),
+			StartPosition: ins.Start(),
+			EndPosition:   ins.End(),
+		}
+	}
+
+	if len(m.Arguments) != len(ins.Arguments) {
+		return &parser.Error{
+			Message:       fmt.Sprintf("Wrong number of arguments for %s, got %d but want %d", ins.Name, len(ins.Arguments), len(m.Arguments)),
+			StartPosition: ins.Start(),
+			EndPosition:   ins.End(),
 		}
 	}
 
 	copy := nast.CopyAst(m).(*nast.MacroDefinition)
+
+	// gather replacements
+	replacements := make(map[string]ast.Expression)
+	for i := range ins.Arguments {
+		replacements[m.Arguments[i]] = ins.Arguments[i]
+	}
+
+	performReplacements := func(node ast.Node, visitType int) error {
+		// replace the variable name inside assignments
+		if ass, is := node.(*ast.Assignment); is && visitType == ast.PreVisit {
+			if replacement, exists := replacements[ass.VariableDisplayName]; exists {
+				if replacementVariable, isvar := replacement.(*ast.Dereference); isvar && replacementVariable.Operator == "" {
+					ass.Variable = replacementVariable.Variable
+					ass.VariableDisplayName = replacementVariable.VariableDisplayName
+				} else {
+					return &parser.Error{
+						Message:       "This argument must be a variable name (and not any other expression)",
+						StartPosition: replacement.Start(),
+						EndPosition:   replacement.End(),
+					}
+				}
+			} else if !strings.HasPrefix(ass.Variable, ":") {
+				// replace non-global vars (which are not arguments) with a insertion-scoped version
+				ass.Variable = ins.Name + "_l" + strconv.Itoa(ins.Start().Line) + "_" + ass.Variable
+			}
+		}
+		// replace the variable name of dereferences
+		if deref, is := node.(*ast.Dereference); is && visitType == ast.SingleVisit {
+			if replacement, exists := replacements[deref.VariableDisplayName]; exists {
+				if replacementVariable, isvar := replacement.(*ast.Dereference); isvar {
+					if deref.Operator != "" && replacementVariable.Operator != "" {
+						return &parser.Error{
+							Message:       "You can not use pre/post-operators for this particular argument",
+							StartPosition: replacement.Start(),
+							EndPosition:   replacement.End(),
+						}
+					}
+					if deref.Operator != "" {
+						replacementVariable.Operator = deref.Operator
+						replacementVariable.PrePost = deref.PrePost
+					}
+				} else if deref.Operator != "" {
+					return &parser.Error{
+						Message:       "This argument must be a variable name (and not any other expression)",
+						StartPosition: replacement.Start(),
+						EndPosition:   replacement.End(),
+					}
+				}
+				return ast.NewNodeReplacementSkip(replacement)
+			} else if !strings.HasPrefix(deref.Variable, ":") {
+				// replace non-global vars (which are not arguments) with a insertion-scoped version
+				deref.Variable = ins.Name + "_l" + strconv.Itoa(ins.Start().Line) + "_" + deref.Variable
+			}
+		}
+		return nil
+	}
+
+	err := copy.Accept(ast.VisitorFunc(performReplacements))
+	if err != nil {
+		return err
+	}
 
 	nodes := make([]ast.Node, len(copy.Block.Elements))
 	for i, el := range copy.Block.Elements {
