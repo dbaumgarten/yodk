@@ -1,3 +1,4 @@
+const separator = "."
 
 //macros are defined using the macro-keyword, followed by a list of arguments and a block of line
 //macros must be defined at the top-level of the program (can not be nested)
@@ -7,7 +8,7 @@ macro greet(output,name)
 	output="Hello"
 	// i is a macro-local variable. Changes to i are local to macro-insertions
 	while i++ <5 do
-		output+="."
+		output+=separator
 	end
 	// "name" is replaced by the second argument provided when inserting the macro
 	output+=name
@@ -15,5 +16,10 @@ end
 
 // macros are used with the insert-keyword, followed by the macro-name and the arguments to use
 insert greet(:out1,"world")
+
+// constants are resolved when inserting a macro (and not when defining it) 
+// Also, new const definitions override old ones
+// Therefore constant definitions can be used to configure the behavior of macros
+const separator = "_"
 
 insert greet(:out2,"you")

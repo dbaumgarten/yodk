@@ -155,10 +155,12 @@ and will result in:
 
 ```
 out1="Hello.....world"
-out2="Hello.....you"
+out2="Hello_____you"
 ```
 
-Macros are especially useful when combined with [includes](/nolol?id=including-files). You can create a file full of macro-definitions, include it and then use the macros you need for the specific program.
+Macros are especially useful when combined with [includes](/nolol?id=including-files). You can create a file full of macro-definitions, include it and then use the macros you need for the specific program.  
+
+Macro-definitions can contain insertions for macros (a macro can itself use another macro). However, macros can not be used to implement recursion (a macro can not include itself) as this would result in an infinite insertion-loop.
 
 
 # Tool support

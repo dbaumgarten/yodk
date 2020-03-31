@@ -199,3 +199,20 @@ func (n *MacroInsetion) Start() ast.Position {
 func (n *MacroInsetion) End() ast.Position {
 	return n.Position.Add(len("insert ") + len(n.Name))
 }
+
+// Trigger is a special kind of node, that is sometimes inserted during code-generation
+// It is used to tigger certain events when reached by a visitor and is created typically by nodes that
+// replace themselves, but want to perform a certain action when a specific point in the ast is visited again.
+type Trigger struct {
+	Kind string
+}
+
+// Start is needed to implement ast.Node
+func (n *Trigger) Start() ast.Position {
+	return ast.Position{}
+}
+
+// End is needed to implement ast.Node
+func (n *Trigger) End() ast.Position {
+	return ast.Position{}
+}

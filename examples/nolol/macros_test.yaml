@@ -5,4 +5,4 @@ cases:
   - name: TestGreetings
     outputs:
       out1: "Hello.....world"
-      out2: "Hello.....you"
+      out2: "Hello_____you"

@@ -20,19 +20,21 @@ var reservedTimeVariable = "_time"
 
 // Converter can convert a nolol-ast to a yolol-ast
 type Converter struct {
-	files             FileSystem
-	jumpLabels        map[string]int
-	constants         map[string]interface{}
-	usesTimeTracking  bool
-	iflabelcounter    int
-	waitlabelcounter  int
-	whilelabelcounter int
-	sexpOptimizer     *optimizers.StaticExpressionOptimizer
-	boolexpOptimizer  *optimizers.ExpressionInversionOptimizer
-	varnameOptimizer  *optimizers.VariableNameOptimizer
-	includecount      int
-	macros            map[string]*nast.MacroDefinition
-	debug             bool
+	files               FileSystem
+	jumpLabels          map[string]int
+	constants           map[string]interface{}
+	usesTimeTracking    bool
+	iflabelcounter      int
+	waitlabelcounter    int
+	whilelabelcounter   int
+	sexpOptimizer       *optimizers.StaticExpressionOptimizer
+	boolexpOptimizer    *optimizers.ExpressionInversionOptimizer
+	varnameOptimizer    *optimizers.VariableNameOptimizer
+	includecount        int
+	macros              map[string]*nast.MacroDefinition
+	macroLevel          []string
+	macroInsertionCount int
+	debug               bool
 }
 
 // NewConverter creates a new converter
@@ -41,6 +43,7 @@ func NewConverter() *Converter {
 		jumpLabels:       make(map[string]int),
 		constants:        make(map[string]interface{}),
 		macros:           make(map[string]*nast.MacroDefinition),
+		macroLevel:       make([]string, 0),
 		sexpOptimizer:    optimizers.NewStaticExpressionOptimizer(),
 		boolexpOptimizer: &optimizers.ExpressionInversionOptimizer{},
 		varnameOptimizer: optimizers.NewVariableNameOptimizer(),
@@ -155,6 +158,7 @@ func (c *Converter) convertNodes(node ast.Node) error {
 			}
 		case *nast.MacroInsetion:
 			if visitType == ast.PreVisit {
+				c.macroLevel = append(c.macroLevel, n.Name+":"+strconv.Itoa(n.Start().Line))
 				return c.convertMacroInsertion(n)
 			}
 		case *nast.IncludeDirective:
@@ -186,6 +190,11 @@ func (c *Converter) convertNodes(node ast.Node) error {
 				}
 				return nil
 			}
+		case *nast.Trigger:
+			if n.Kind == "macroleft" {
+				c.macroLevel = c.macroLevel[:len(c.macroLevel)-1]
+				return ast.NewNodeReplacement()
+			}
 		}
 
 		return nil
@@ -208,6 +217,16 @@ func (c *Converter) convertMacroDef(def *nast.MacroDefinition) error {
 
 // convert a macro insetion, by inserting the code defined by the macro
 func (c *Converter) convertMacroInsertion(ins *nast.MacroInsetion) error {
+	c.macroInsertionCount++
+
+	if c.macroInsertionCount > 20 {
+		return &parser.Error{
+			Message:       "Error when processing macros: Macro-loop detected",
+			StartPosition: ast.NewPosition("", 1, 1),
+			EndPosition:   ast.NewPosition("", 20, 70),
+		}
+	}
+
 	m, defined := c.macros[ins.Name]
 	if !defined {
 		return &parser.Error{
@@ -249,7 +268,7 @@ func (c *Converter) convertMacroInsertion(ins *nast.MacroInsetion) error {
 				}
 			} else if !strings.HasPrefix(ass.Variable, ":") {
 				// replace non-global vars (which are not arguments) with a insertion-scoped version
-				ass.Variable = ins.Name + "_l" + strconv.Itoa(ins.Start().Line) + "_" + ass.Variable
+				ass.Variable = strings.Join(c.macroLevel, "_") + "_" + ass.Variable
 			}
 		}
 		// replace the variable name of dereferences
@@ -276,8 +295,10 @@ func (c *Converter) convertMacroInsertion(ins *nast.MacroInsetion) error {
 				}
 				return ast.NewNodeReplacementSkip(replacement)
 			} else if !strings.HasPrefix(deref.Variable, ":") {
-				// replace non-global vars (which are not arguments) with a insertion-scoped version
-				deref.Variable = ins.Name + "_l" + strconv.Itoa(ins.Start().Line) + "_" + deref.Variable
+				if _, isConst := c.constants[deref.VariableDisplayName]; !isConst {
+					// replace non-global vars (which are not arguments) with a insertion-scoped version
+					deref.Variable = strings.Join(c.macroLevel, "_") + "_" + deref.Variable
+				}
 			}
 		}
 		return nil
@@ -288,9 +309,12 @@ func (c *Converter) convertMacroInsertion(ins *nast.MacroInsetion) error {
 		return err
 	}
 
-	nodes := make([]ast.Node, len(copy.Block.Elements))
+	nodes := make([]ast.Node, len(copy.Block.Elements)+1)
 	for i, el := range copy.Block.Elements {
 		nodes[i] = el
+	}
+	nodes[len(nodes)-1] = &nast.Trigger{
+		Kind: "macroleft",
 	}
 
 	// remove the node from the output-code
@@ -416,7 +440,7 @@ func usesTimeTracking(n ast.Node) bool {
 func (c *Converter) convertDereference(deref *ast.Dereference) error {
 	if deref.Operator == "" {
 		// we are dereferencing a constant
-		if value, exists := c.constants[deref.Variable]; exists {
+		if value, exists := c.constants[deref.VariableDisplayName]; exists {
 			var replacement ast.Expression
 			switch val := value.(type) {
 			case *ast.StringConstant:

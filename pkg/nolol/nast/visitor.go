@@ -182,6 +182,11 @@ func (s *MacroInsetion) Accept(v ast.Visitor) error {
 	return v.Visit(s, ast.PostVisit)
 }
 
+// Accept is used to implement Acceptor
+func (s *Trigger) Accept(v ast.Visitor) error {
+	return v.Visit(s, ast.SingleVisit)
+}
+
 // AcceptElementList calles Accept for ever element of old and handles node-replacements
 func AcceptElementList(parent ast.Node, v ast.Visitor, old []Element) ([]Element, error) {
 	for i := 0; i < len(old); i++ {
