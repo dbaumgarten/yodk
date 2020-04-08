@@ -96,7 +96,7 @@ func (p *Parser) ParseElement() nast.Element {
 		return include
 	}
 
-	constDecl := p.ParseConstantDeclaration()
+	constDecl := p.ParseDefinition()
 	if constDecl != nil {
 		return constDecl
 	}
@@ -316,10 +316,10 @@ func (p *Parser) ParseWaitStatement() *nast.WaitDirective {
 	return st
 }
 
-// ParseConstantDeclaration parses a constant declaration
-func (p *Parser) ParseConstantDeclaration() *nast.ConstDeclaration {
+// ParseDefinition parses a constant declaration
+func (p *Parser) ParseDefinition() *nast.Definition {
 	p.Log()
-	if p.CurrentToken.Type != ast.TypeKeyword || p.CurrentToken.Value != "const" {
+	if p.CurrentToken.Type != ast.TypeKeyword || p.CurrentToken.Value != "define" {
 		return nil
 	}
 	startpos := p.CurrentToken.Position
@@ -327,14 +327,14 @@ func (p *Parser) ParseConstantDeclaration() *nast.ConstDeclaration {
 	if p.CurrentToken.Type != ast.TypeID {
 		p.ErrorCurrent("const keyword must be followed by an identifier")
 	}
-	decl := &nast.ConstDeclaration{
+	decl := &nast.Definition{
 		Name:        strings.ToLower(p.CurrentToken.Value),
 		DisplayName: p.CurrentToken.Value,
 		Position:    startpos,
 	}
 	p.Advance()
 	p.Expect(ast.TypeSymbol, "=")
-	value := p.ParseSingleExpression()
+	value := p.ParseExpression()
 	if value == nil {
 		p.ErrorCurrent("The = of a const declaration must be followed by an expression")
 	}

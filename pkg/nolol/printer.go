@@ -137,10 +137,10 @@ func (p *Printer) Print(prog ast.Node) (string, error) {
 			return "", nil
 		case *nast.IncludeDirective:
 			return "include \"" + n.File + "\"\n", nil
-		case *nast.ConstDeclaration:
+		case *nast.Definition:
 			switch visitType {
 			case ast.PreVisit:
-				return "const " + n.Name + " = ", nil
+				return "define " + n.Name + " = ", nil
 			case ast.PostVisit:
 				return "\n", nil
 			}

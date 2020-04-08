@@ -1,5 +1,5 @@
-const width = 5
-const height = 5
+define width = 5
+define height = 5
 
 // nolol features loops
 // currenty only while-loops are suppored

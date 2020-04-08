@@ -1,7 +1,0 @@
-scripts: 
-  - name: const_override.nolol
-    iterations: 1
-cases:
-  - name: TestOverrid
-    outputs:
-      out: "hello world"

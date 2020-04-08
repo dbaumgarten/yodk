@@ -40,7 +40,7 @@ func (l *StatementLine) Accept(v ast.Visitor) error {
 }
 
 // Accept is used to implement Acceptor
-func (l *ConstDeclaration) Accept(v ast.Visitor) error {
+func (l *Definition) Accept(v ast.Visitor) error {
 	err := v.Visit(l, ast.PreVisit)
 	if err != nil {
 		return err

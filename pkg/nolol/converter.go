@@ -22,7 +22,7 @@ var reservedTimeVariable = "_time"
 type Converter struct {
 	files               FileSystem
 	jumpLabels          map[string]int
-	constants           map[string]interface{}
+	definitions         map[string]ast.Expression
 	usesTimeTracking    bool
 	iflabelcounter      int
 	waitlabelcounter    int
@@ -41,7 +41,7 @@ type Converter struct {
 func NewConverter() *Converter {
 	return &Converter{
 		jumpLabels:       make(map[string]int),
-		constants:        make(map[string]interface{}),
+		definitions:      make(map[string]ast.Expression),
 		macros:           make(map[string]*nast.MacroDefinition),
 		macroLevel:       make([]string, 0),
 		sexpOptimizer:    optimizers.NewStaticExpressionOptimizer(),
@@ -148,8 +148,10 @@ func (c *Converter) convertNodes(node ast.Node) error {
 			if visitType == ast.PostVisit {
 				return c.convertAssignment(n)
 			}
-		case *nast.ConstDeclaration:
-			return c.convertConstDecl(n)
+		case *nast.Definition:
+			if visitType == ast.PostVisit {
+				return c.convertDefinition(n)
+			}
 		case *nast.MacroDefinition:
 			// using pre-visit here is important
 			// the definition must be resolved, BEFORE its contents are processed
@@ -204,7 +206,20 @@ func (c *Converter) convertNodes(node ast.Node) error {
 
 // convertAssignment optimizes the variable name and the expression of an assignment
 func (c *Converter) convertAssignment(ass *ast.Assignment) error {
-	ass.VariableDisplayName = c.varnameOptimizer.OptimizeVarName(ass.Variable)
+	if replacement, exists := c.definitions[ass.VariableDisplayName]; exists {
+		if replacementVariable, isvar := replacement.(*ast.Dereference); isvar && replacementVariable.Operator == "" {
+			ass.Variable = replacementVariable.Variable
+			ass.VariableDisplayName = replacementVariable.VariableDisplayName
+		} else {
+			return &parser.Error{
+				Message:       "Can not assign to a definition that is an expression (need a single variable name)",
+				StartPosition: ass.Start(),
+				EndPosition:   ass.End(),
+			}
+		}
+	} else {
+		ass.VariableDisplayName = c.varnameOptimizer.OptimizeVarName(ass.Variable)
+	}
 	return nil
 }
 
@@ -267,8 +282,10 @@ func (c *Converter) convertMacroInsertion(ins *nast.MacroInsetion) error {
 					}
 				}
 			} else if !strings.HasPrefix(ass.Variable, ":") {
-				// replace non-global vars (which are not arguments) with a insertion-scoped version
-				ass.Variable = strings.Join(c.macroLevel, "_") + "_" + ass.Variable
+				if _, isDefinition := c.definitions[ass.VariableDisplayName]; !isDefinition {
+					// replace local vars with a insertion-scoped version
+					ass.Variable = strings.Join(c.macroLevel, "_") + "_" + ass.Variable
+				}
 			}
 		}
 		// replace the variable name of dereferences
@@ -295,8 +312,8 @@ func (c *Converter) convertMacroInsertion(ins *nast.MacroInsetion) error {
 				}
 				return ast.NewNodeReplacementSkip(replacement)
 			} else if !strings.HasPrefix(deref.Variable, ":") {
-				if _, isConst := c.constants[deref.VariableDisplayName]; !isConst {
-					// replace non-global vars (which are not arguments) with a insertion-scoped version
+				if _, isDefinition := c.definitions[deref.VariableDisplayName]; !isDefinition {
+					// replace local vars with a insertion-scoped version
 					deref.Variable = strings.Join(c.macroLevel, "_") + "_" + deref.Variable
 				}
 			}
@@ -321,22 +338,9 @@ func (c *Converter) convertMacroInsertion(ins *nast.MacroInsetion) error {
 	return ast.NewNodeReplacement(nodes...)
 }
 
-// convertConstDecl converts a const declarationto yolol by discarding it, but saving the declared value
-func (c *Converter) convertConstDecl(decl *nast.ConstDeclaration) error {
-	switch val := decl.Value.(type) {
-	case *ast.StringConstant:
-		c.constants[decl.Name] = val
-		break
-	case *ast.NumberConstant:
-		c.constants[decl.Name] = val
-		break
-	default:
-		return &parser.Error{
-			Message:       "Only constant values can be the value of a constant declaration",
-			StartPosition: decl.Start(),
-			EndPosition:   decl.End(),
-		}
-	}
+// convertDefinitions converts a definition to yolol by discarding it, but saving the defined value
+func (c *Converter) convertDefinition(decl *nast.Definition) error {
+	c.definitions[decl.Name] = decl.Value
 	return ast.NewNodeReplacement()
 }
 
@@ -438,26 +442,28 @@ func usesTimeTracking(n ast.Node) bool {
 
 // convertDereference replaces mentionings of constants with the value of the constant
 func (c *Converter) convertDereference(deref *ast.Dereference) error {
-	if deref.Operator == "" {
-		// we are dereferencing a constant
-		if value, exists := c.constants[deref.VariableDisplayName]; exists {
-			var replacement ast.Expression
-			switch val := value.(type) {
-			case *ast.StringConstant:
-				replacement = &ast.StringConstant{
-					Value:    val.Value,
-					Position: deref.Position,
+	if replacement, exists := c.definitions[deref.VariableDisplayName]; exists {
+		replacement = nast.CopyAst(replacement)
+		if replacementVariable, isvar := replacement.(*ast.Dereference); isvar {
+			if deref.Operator != "" && replacementVariable.Operator != "" {
+				return &parser.Error{
+					Message:       "You can not use pre/post-operators on defitions that use the operator themselves",
+					StartPosition: deref.Start(),
+					EndPosition:   deref.End(),
 				}
-				break
-			case *ast.NumberConstant:
-				replacement = &ast.NumberConstant{
-					Value:    val.Value,
-					Position: deref.Position,
-				}
-				break
 			}
-			return ast.NewNodeReplacement(replacement)
+			if deref.Operator != "" {
+				replacementVariable.Operator = deref.Operator
+				replacementVariable.PrePost = deref.PrePost
+			}
+		} else if deref.Operator != "" {
+			return &parser.Error{
+				Message:       "Con not use pre/port-operators on expressions",
+				StartPosition: deref.Start(),
+				EndPosition:   deref.End(),
+			}
 		}
+		return ast.NewNodeReplacementSkip(replacement)
 	}
 	// we are dereferencing a variable
 	deref.VariableDisplayName = c.varnameOptimizer.OptimizeVarName(deref.Variable)

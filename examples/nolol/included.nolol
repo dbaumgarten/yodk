@@ -1,4 +1,4 @@
-const stop = 10
+define stop = 10
 
 while i++ <stop do
 	:hello+="."

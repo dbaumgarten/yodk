@@ -46,8 +46,8 @@ func (n *StatementLine) Start() ast.Position {
 	return n.Position
 }
 
-// ConstDeclaration declares a constant
-type ConstDeclaration struct {
+// Definition declares a constant
+type Definition struct {
 	Position    ast.Position
 	Name        string
 	DisplayName string
@@ -55,12 +55,12 @@ type ConstDeclaration struct {
 }
 
 // Start is needed to implement ast.Node
-func (n *ConstDeclaration) Start() ast.Position {
+func (n *Definition) Start() ast.Position {
 	return n.Position
 }
 
 // End is needed to implement ast.Node
-func (n *ConstDeclaration) End() ast.Position {
+func (n *Definition) End() ast.Position {
 	return n.Value.End()
 }
 

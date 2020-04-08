@@ -116,8 +116,8 @@ func CopyAst(inp ast.Node) ast.Node {
 				m := &IncludeDirective{}
 				copier.Copy(m, n)
 				newnode = m
-			case *ConstDeclaration:
-				m := &ConstDeclaration{}
+			case *Definition:
+				m := &Definition{}
 				copier.Copy(m, n)
 				newnode = m
 			case *Program:

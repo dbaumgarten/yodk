@@ -41,18 +41,18 @@ During the compilation various optimizations like:
 
 are performed automatically for you. (This is the same as running ```yodk optimize``` on a yolol-file)
 
-## Compile-time constants
-NOLOL has compile time constants. Mentionings of the constant will be replaced with their value when compiling. This is usefull for configuration purposes, especially when combined with the [include-feature](/nolol?id=including-files). This way you can seperate and therefore easier re-use configuration and code.
+## Compile-time definitions
+NOLOL has compile time definitions. Mentionings of the definitions will be replaced with their value when compiling. This is usefull for configuration purposes, especially when combined with the [include-feature](/nolol?id=including-files). This way you can seperate and therefore easier re-use configuration and code.
 
-Constants must can not be defined inside blocks (if, while or macro), but must always be on the top-level of a file.
+Definitions must not appear inside blocks (if, while or macro), but must always be on the top-level of a file.
 
-[const_override.nolol](generated/code/nolol/const_override.nolol ':include')
+[definitions.nolol](generated/code/nolol/definitions.nolol ':include')
 
 will result in:
 
-```
-hello world
-```
+[definitions.yolol](generated/code/nolol/definitions.yolol ':include')
+
+The feature to re-define variable names is usefull if you want to be able to easily change what global variables a script works on. Just use define to create an alias for the global variable and then use the alias in your code. If you want to exchange the undelaying global var, just change to definition.
 
 ## Labeled Gotos
 As NOLOL moves statements around during compilation to generate as compact code as possible, using goto with line numbers would not work. Instead goto no jump to labeled lines.
@@ -142,6 +142,8 @@ This way you have to write code that you need multiple times only once (as a mac
 A macro that always has the exact same code would not be totally useful. Often they must be modified  slightly for each use. This is archived using arguments. When defining a macro, you can specify a set of arguments. These arguments must be supplied when actually using the macro. All mentionings of a particular argument inside a macro are then replaced using the value provided when using ther macro. This way you can for example tell a macro which variables to work on, or provide them values to work with.  
 
 As arguments work by straigh replacing the mentionings of the argument with the given value, arguments behave just like passing an argument by reference. The macro works with the original variable, and not a copy of it. If you pass a variable as argument and the macro modifies this variable, the changes will be visible outside of the macro.  
+
+In the end, arguments behave like [definitions](/nolol?id=cimpile-time-definitions) that are scoped to the specific macro usage. 
 
 All non-global variables inside a macro, that are no arguments, are "scoped" to the use of a macro. This means, if the macro works with such a variable named "foo", it will NOT modify the variable outside of the macro that is also called "foo". This way, accidental collisions between macro internal variables and your variables are prevented. Also, subsequent insertions of the same macro will work on different variables and will not interfere with each other.
 

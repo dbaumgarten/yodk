@@ -198,6 +198,9 @@ func (n *Assignment) Start() Position {
 
 // End is needed to implement Node
 func (n *Assignment) End() Position {
+	if n.Value.End().Before(n.Position) {
+		return n.Position.Add(70)
+	}
 	return n.Value.End()
 }
 

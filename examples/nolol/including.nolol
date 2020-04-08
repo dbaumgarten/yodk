@@ -1,4 +1,4 @@
-const name = "daniel"
+define name = "daniel"
 :hello="hello "
 // other nolol files can be included into nolol files
 // the content of the included file will be pasted right where the include instruction was placed in the code

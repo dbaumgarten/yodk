@@ -1,7 +1,7 @@
-const fizz = "fizz"
-const buzz = "buzz"
-const sep = " "
-const upto = 100
+define fizz = "fizz"
+define buzz = "buzz"
+define sep = " "
+define upto = 100
 
 if :out==0 then
 	:out=""

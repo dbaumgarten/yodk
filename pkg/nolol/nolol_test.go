@@ -9,10 +9,10 @@ import (
 )
 
 var testProg = `
-const fizz = "fizz"
-const buzz = "buzz"
-const sep = " "
-const upto = 100
+define fizz = "fizz"
+define buzz = "buzz"
+define sep = " "
+define upto = 100
 :out = ""
 number = 0
 while number<=upto do
