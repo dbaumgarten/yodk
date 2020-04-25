@@ -33,6 +33,11 @@ NOLOL offers a range of features which are explained briefly with the following 
 ## Comments
 NOLOL does support comments, either as whole lines, or as a line-trailer. All comments are automatically removed during compilation. This way you can extensively comment your code, without wasting precious lines and characters in the generated code.
 
+## Case insensitivity
+In YOLOL everything is case insensitive. I personally think that this is a stupid decision. But consistency is key for a good programming-language and as NOLOL builds on top of YOLOL, everything in NOLOL is also case-insensitive.  
+
+While even the keywords (if, while etc.) are case insensitive, the casing of the keywords is not retained when formatting code. This would require tremendous implementation effort and also I think that it is good to enforce a somewhat uniform formatting for a language. Casing of identifiers (variable names, function names etc.) however is preserved when formatting.
+
 ## Automatic optimizations
 During the compilation various optimizations like:
 - Shortening of variable names

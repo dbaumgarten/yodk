@@ -38,7 +38,7 @@
 			]
 		},
 		"keyword": {
-			"match": "\\b(if|then|else|end|define|while|do|wait|goto|include|macro|insert)\\b",
+			"match": "(?i)\\b(if|then|else|end|define|while|do|wait|goto|include|macro|insert)\\b",
 			"name": "keyword.control"
 		},
 		"label": {
@@ -62,7 +62,7 @@
 			}
 		},
 		"operator": {
-			"match": "\\b(and|or|not)\\b",
+			"match": "(?i)\\b(and|or|not)\\b",
 			"name": "keyword.operator"
 		},
 		"extvariable": {

@@ -114,20 +114,20 @@ func (p *Parser) ParseElement() nast.Element {
 func (p *Parser) ParseInclude() *nast.IncludeDirective {
 	p.Log()
 
-	if p.CurrentToken.Type != ast.TypeKeyword || p.CurrentToken.Value != "include" {
+	if !p.IsCurrent(ast.TypeKeyword, "include") {
 		return nil
 	}
 	incl := &nast.IncludeDirective{
 		Position: p.CurrentToken.Position,
 	}
 	p.Advance()
-	if p.CurrentToken.Type != ast.TypeString {
+	if !p.IsCurrentType(ast.TypeString) {
 		p.ErrorCurrent("Expected a string-constant after include")
 		return incl
 	}
 	incl.File = p.CurrentToken.Value
 	p.Advance()
-	if p.CurrentToken.Type != ast.TypeEOF {
+	if !p.IsCurrentType(ast.TypeEOF) {
 		p.Expect(ast.TypeNewline, "")
 	}
 	return incl
@@ -135,7 +135,7 @@ func (p *Parser) ParseInclude() *nast.IncludeDirective {
 
 // ParseMacroDefinition parses the definition of a macro
 func (p *Parser) ParseMacroDefinition() *nast.MacroDefinition {
-	if p.CurrentToken.Type != ast.TypeKeyword || p.CurrentToken.Value != "macro" {
+	if !p.IsCurrent(ast.TypeKeyword, "macro") {
 		return nil
 	}
 	p.Advance()
@@ -143,7 +143,7 @@ func (p *Parser) ParseMacroDefinition() *nast.MacroDefinition {
 		Position:  p.CurrentToken.Position,
 		Arguments: []string{},
 	}
-	if p.CurrentToken.Type != ast.TypeID {
+	if !p.IsCurrentType(ast.TypeID) {
 		p.ErrorCurrent("Expected an idantifier after the macro keyword")
 		return mdef
 	}
@@ -152,14 +152,14 @@ func (p *Parser) ParseMacroDefinition() *nast.MacroDefinition {
 
 	p.Expect(ast.TypeSymbol, "(")
 
-	for p.CurrentToken.Type != ast.TypeSymbol || p.CurrentToken.Value != ")" {
-		if p.CurrentToken.Type != ast.TypeID {
+	for !p.IsCurrent(ast.TypeSymbol, ")") {
+		if !p.IsCurrentType(ast.TypeID) {
 			p.ErrorCurrent("Only comma separated identifiers are allowed as arguments in a macro definition")
 			break
 		}
 		mdef.Arguments = append(mdef.Arguments, p.CurrentToken.Value)
 		p.Advance()
-		if p.CurrentToken.Type == ast.TypeSymbol && p.CurrentToken.Value == "," {
+		if p.IsCurrent(ast.TypeSymbol, ",") {
 			p.Advance()
 			continue
 		}
@@ -171,7 +171,7 @@ func (p *Parser) ParseMacroDefinition() *nast.MacroDefinition {
 	p.Expect(ast.TypeNewline, "")
 
 	mdef.Block = p.ParseBlock(func() bool {
-		return p.CurrentToken.Type == ast.TypeKeyword && p.CurrentToken.Value == "end"
+		return p.IsCurrent(ast.TypeKeyword, "end")
 	})
 	p.Expect(ast.TypeKeyword, "end")
 
@@ -180,7 +180,7 @@ func (p *Parser) ParseMacroDefinition() *nast.MacroDefinition {
 
 // ParseMacroInsertion parses a macro insertion
 func (p *Parser) ParseMacroInsertion() *nast.MacroInsetion {
-	if p.CurrentToken.Type != ast.TypeKeyword || p.CurrentToken.Value != "insert" {
+	if !p.IsCurrent(ast.TypeKeyword, "insert") {
 		return nil
 	}
 	p.Advance()
@@ -188,7 +188,7 @@ func (p *Parser) ParseMacroInsertion() *nast.MacroInsetion {
 		Position:  p.CurrentToken.Position,
 		Arguments: []ast.Expression{},
 	}
-	if p.CurrentToken.Type != ast.TypeID {
+	if !p.IsCurrentType(ast.TypeID) {
 		p.ErrorCurrent("Expected an idantifier after the macro keyword")
 		return mins
 	}
@@ -197,14 +197,14 @@ func (p *Parser) ParseMacroInsertion() *nast.MacroInsetion {
 
 	p.Expect(ast.TypeSymbol, "(")
 
-	for p.CurrentToken.Type != ast.TypeSymbol || p.CurrentToken.Value != ")" {
+	for !p.IsCurrent(ast.TypeSymbol, ")") {
 		exp := p.ParseExpression()
 		if exp == nil {
 			p.ErrorCurrent("Expected expression(s) as argument to the macro")
 			break
 		}
 		mins.Arguments = append(mins.Arguments, exp)
-		if p.CurrentToken.Type == ast.TypeSymbol && p.CurrentToken.Value == "," {
+		if p.IsCurrent(ast.TypeSymbol, ",") {
 			p.Advance()
 			continue
 		}
@@ -213,7 +213,7 @@ func (p *Parser) ParseMacroInsertion() *nast.MacroInsetion {
 
 	p.Expect(ast.TypeSymbol, ")")
 
-	if p.CurrentToken.Type != ast.TypeEOF {
+	if !p.IsCurrentType(ast.TypeEOF) {
 		p.Expect(ast.TypeNewline, "")
 	}
 
@@ -231,26 +231,26 @@ func (p *Parser) ParseStatementLine() *nast.StatementLine {
 	}
 
 	// get line-label if it exists
-	if p.CurrentToken.Type == ast.TypeID && (p.NextToken.Type == ast.TypeSymbol && p.NextToken.Value == ">") {
+	if p.IsCurrentType(ast.TypeID) && (p.NextToken.Type == ast.TypeSymbol && p.NextToken.Value == ">") {
 		ret.Label = strings.ToLower(p.CurrentToken.Value)
 		p.Advance()
 		p.Advance()
 	}
 
 	// this line has no statements, only a comment
-	if p.CurrentToken.Type == ast.TypeComment {
+	if p.IsCurrentType(ast.TypeComment) {
 		ret.Comment = p.CurrentToken.Value
 		p.Advance()
 	}
 
-	if p.CurrentToken.Type == ast.TypeSymbol && p.CurrentToken.Value == "$" {
+	if p.IsCurrent(ast.TypeSymbol, "$") {
 		ret.HasBOL = true
 		p.Advance()
 	}
 
 	// the line has no statements
-	if p.CurrentToken.Type == ast.TypeEOF || p.CurrentToken.Type == ast.TypeNewline || p.CurrentToken.Type == ast.TypeComment {
-		if p.CurrentToken.Type == ast.TypeComment {
+	if p.IsCurrentType(ast.TypeEOF) || p.IsCurrentType(ast.TypeNewline) || p.IsCurrentType(ast.TypeComment) {
+		if p.IsCurrentType(ast.TypeComment) {
 			ret.Comment = p.CurrentToken.Value
 		}
 		p.Advance()
@@ -269,7 +269,7 @@ func (p *Parser) ParseStatementLine() *nast.StatementLine {
 		return &ret
 	}
 
-	for p.CurrentToken.Type == ast.TypeSymbol && p.CurrentToken.Value == ";" {
+	for p.IsCurrent(ast.TypeSymbol, ";") {
 		p.Advance()
 		stmt = p.This.ParseStatement()
 		if stmt != nil {
@@ -279,18 +279,18 @@ func (p *Parser) ParseStatementLine() *nast.StatementLine {
 		}
 	}
 
-	if p.CurrentToken.Type == ast.TypeSymbol && p.CurrentToken.Value == "$" {
+	if p.IsCurrent(ast.TypeSymbol, "$") {
 		ret.HasEOL = true
 		p.Advance()
 	}
 
 	// This line has statements and a comment at the end
-	if p.CurrentToken.Type == ast.TypeComment {
+	if p.IsCurrentType(ast.TypeComment) {
 		ret.Comment = p.CurrentToken.Value
 		p.Advance()
 	}
 
-	if p.CurrentToken.Type != ast.TypeEOF {
+	if !p.IsCurrentType(ast.TypeEOF) {
 		p.Expect(ast.TypeNewline, "")
 	}
 
@@ -300,7 +300,7 @@ func (p *Parser) ParseStatementLine() *nast.StatementLine {
 // ParseWaitStatement parses a NOLOL wait-statement
 func (p *Parser) ParseWaitStatement() *nast.WaitDirective {
 	p.Log()
-	if p.CurrentToken.Type != ast.TypeKeyword || p.CurrentToken.Value != "wait" {
+	if !p.IsCurrent(ast.TypeKeyword, "wait") {
 		return nil
 	}
 	p.Advance()
@@ -319,12 +319,12 @@ func (p *Parser) ParseWaitStatement() *nast.WaitDirective {
 // ParseDefinition parses a constant declaration
 func (p *Parser) ParseDefinition() *nast.Definition {
 	p.Log()
-	if p.CurrentToken.Type != ast.TypeKeyword || p.CurrentToken.Value != "define" {
+	if !p.IsCurrent(ast.TypeKeyword, "define") {
 		return nil
 	}
 	startpos := p.CurrentToken.Position
 	p.Advance()
-	if p.CurrentToken.Type != ast.TypeID {
+	if !p.IsCurrentType(ast.TypeID) {
 		p.ErrorCurrent("const keyword must be followed by an identifier")
 	}
 	decl := &nast.Definition{
@@ -338,7 +338,7 @@ func (p *Parser) ParseDefinition() *nast.Definition {
 		p.ErrorCurrent("The = of a const declaration must be followed by an expression")
 	}
 	decl.Value = value
-	if p.CurrentToken.Type != ast.TypeEOF {
+	if !p.IsCurrentType(ast.TypeEOF) {
 		p.Expect(ast.TypeNewline, "")
 	}
 	return decl
@@ -352,7 +352,7 @@ func (p *Parser) ParseMultilineIf() nast.Element {
 		Conditions: make([]ast.Expression, 0),
 		Blocks:     make([]*nast.Block, 0),
 	}
-	if p.CurrentToken.Type != ast.TypeKeyword || p.CurrentToken.Value != "if" {
+	if !p.IsCurrent(ast.TypeKeyword, "if") {
 		return nil
 	}
 	p.Advance()
@@ -368,26 +368,26 @@ func (p *Parser) ParseMultilineIf() nast.Element {
 		p.Expect(ast.TypeNewline, "")
 
 		block := p.ParseBlock(func() bool {
-			return p.CurrentToken.Type == ast.TypeKeyword && (p.CurrentToken.Value == "end" || p.CurrentToken.Value == "else")
+			return p.IsCurrentType(ast.TypeKeyword) && (p.IsCurrentValue("end") || p.IsCurrentValue("else"))
 		})
 		mlif.Conditions = append(mlif.Conditions, condition)
 		mlif.Blocks = append(mlif.Blocks, block)
 
-		if p.CurrentToken.Type == ast.TypeKeyword && p.CurrentToken.Value == "end" {
+		if p.IsCurrent(ast.TypeKeyword, "end") {
 			break
 		}
 
-		if p.CurrentToken.Type == ast.TypeKeyword && p.CurrentToken.Value == "else" {
+		if p.IsCurrent(ast.TypeKeyword, "else") {
 			p.Advance()
 		}
 
-		if p.CurrentToken.Type == ast.TypeKeyword && p.CurrentToken.Value == "if" {
+		if p.IsCurrent(ast.TypeKeyword, "if") {
 			p.Advance()
 			continue
 		} else {
 			p.Expect(ast.TypeNewline, "")
 			mlif.ElseBlock = p.ParseBlock(func() bool {
-				return p.CurrentToken.Type == ast.TypeKeyword && p.CurrentToken.Value == "end"
+				return p.IsCurrent(ast.TypeKeyword, "end")
 			})
 			break
 		}
@@ -395,7 +395,7 @@ func (p *Parser) ParseMultilineIf() nast.Element {
 
 	p.Expect(ast.TypeKeyword, "end")
 
-	if p.CurrentToken.Type != ast.TypeEOF {
+	if !p.IsCurrentType(ast.TypeEOF) {
 		p.Expect(ast.TypeNewline, "")
 	}
 
@@ -408,7 +408,7 @@ func (p *Parser) ParseWhile() nast.Element {
 	loop := nast.WhileLoop{
 		Position: p.CurrentToken.Position,
 	}
-	if p.CurrentToken.Type != ast.TypeKeyword || p.CurrentToken.Value != "while" {
+	if !p.IsCurrent(ast.TypeKeyword, "while") {
 		return nil
 	}
 	p.Advance()
@@ -422,12 +422,12 @@ func (p *Parser) ParseWhile() nast.Element {
 	p.Expect(ast.TypeNewline, "")
 
 	loop.Block = p.ParseBlock(func() bool {
-		return p.CurrentToken.Type == ast.TypeKeyword && p.CurrentToken.Value == "end"
+		return p.IsCurrent(ast.TypeKeyword, "end")
 	})
 
 	p.Expect(ast.TypeKeyword, "end")
 
-	if p.CurrentToken.Type != ast.TypeEOF {
+	if !p.IsCurrentType(ast.TypeEOF) {
 		p.Expect(ast.TypeNewline, "")
 	}
 
@@ -460,7 +460,7 @@ func (p *Parser) ParseBlock(stop func() bool) *nast.Block {
 // ParseGoto allows labeled-gotos and forbids line-based gotos
 func (p *Parser) ParseGoto() ast.Statement {
 	p.Log()
-	if p.CurrentToken.Type == ast.TypeKeyword && p.CurrentToken.Value == "goto" {
+	if p.IsCurrent(ast.TypeKeyword, "goto") {
 		p.Advance()
 
 		stmt := &nast.GoToLabelStatement{
@@ -468,7 +468,7 @@ func (p *Parser) ParseGoto() ast.Statement {
 			Label:    strings.ToLower(p.CurrentToken.Value),
 		}
 
-		if p.CurrentToken.Type != ast.TypeID {
+		if !p.IsCurrentType(ast.TypeID) {
 			p.ErrorCurrent("Goto must be followed by an identifier")
 		} else {
 			p.Advance()
@@ -482,7 +482,7 @@ func (p *Parser) ParseGoto() ast.Statement {
 // ParseFuncCall parse a function call
 func (p *Parser) ParseFuncCall() ast.Expression {
 	p.Log()
-	if p.CurrentToken.Type != ast.TypeID || p.NextToken.Type != ast.TypeSymbol || p.NextToken.Value != "(" {
+	if !p.IsCurrentType(ast.TypeID) || p.NextToken.Type != ast.TypeSymbol || p.NextToken.Value != "(" {
 		return nil
 	}
 	fc := &ast.FuncCall{
@@ -492,7 +492,7 @@ func (p *Parser) ParseFuncCall() ast.Expression {
 	p.Advance()
 	p.Advance()
 
-	if p.CurrentToken.Type == ast.TypeSymbol && p.CurrentToken.Value == ")" {
+	if p.IsCurrent(ast.TypeSymbol, ")") {
 		p.Advance()
 		return fc
 	}

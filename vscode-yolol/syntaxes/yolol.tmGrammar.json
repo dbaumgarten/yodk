@@ -35,7 +35,7 @@
 			]
 		},
 		"keyword": {
-			"match": "\\b(if|then|else|end|goto)\\b",
+			"match": "(?i)\\b(if|then|else|end|goto)\\b",
 			"name": "keyword.control"
 		},
 		"string": {
@@ -55,7 +55,7 @@
 			}
 		},
 		"operator": {
-			"match": "\\b(and|or|not)\\b",
+			"match": "(?i)\\b(and|or|not)\\b",
 			"name": "keyword.operator"
 		},
 		"extvariable": {
