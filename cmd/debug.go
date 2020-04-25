@@ -37,6 +37,10 @@ var scriptFileNames []string
 // list of vms for the running scripts
 var vms []*vm.YololVM
 
+// list of variable translations for the VMs
+// used to undo variable shortening performed by nolol using compilation
+var variableTranslations []map[string]string
+
 // number of the case in the given test to execute
 var caseNumber int
 
@@ -92,6 +96,7 @@ func load() {
 func loadScripts() {
 	scriptFileNames = cliArgs
 	inputScripts = make([]string, len(cliArgs))
+	variableTranslations = make([]map[string]string, len(cliArgs))
 	vms = make([]*vm.YololVM, len(cliArgs))
 	currentScript = 0
 	for i, filename := range cliArgs {
@@ -115,6 +120,7 @@ func loadScripts() {
 			if err != nil {
 				exitOnError(err, "parsing nolol code")
 			}
+			variableTranslations[i] = converter.GetVariableTranslations()
 			thisVM.Run(yololcode)
 		}
 		debugShell.Printf("--Loaded %s--\n", inputFileName)
@@ -145,9 +151,9 @@ func loadTest() {
 	coordinator = vm.NewCoordinator()
 	c.InitializeVariables(coordinator)
 
-	v, err := t.CreateVMs(coordinator, nil)
+	vms, variableTranslations, err = t.CreateVMs(coordinator, nil)
 	exitOnError(err, "creating VMs for test")
-	vms = v
+
 	for i, iv := range vms {
 		prepareVM(iv, scriptFileNames[i])
 	}
@@ -304,6 +310,17 @@ func init() {
 		Func: func(c *ishell.Context) {
 			debugShell.Println("--Variables--")
 			vars := sortVariables(vms[currentScript].GetVariables())
+			// if there is a translation table for this script, translate the internal variable names
+			// back to human-readable names
+			if variableTranslations[currentScript] != nil {
+				for i, v := range vars {
+					translated, exists := variableTranslations[currentScript][v.name]
+					if exists {
+						v.name = fmt.Sprintf("%s (short=%s)", translated, v.name)
+						vars[i] = v
+					}
+				}
+			}
 			for _, variable := range vars {
 				if variable.val.IsString() {
 					debugShell.Println(variable.name, "'"+variable.val.String()+"'")

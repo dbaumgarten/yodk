@@ -91,6 +91,12 @@ func (c *Converter) setMacro(name string, val *nast.MacroDefinition) {
 	c.macros[name] = val
 }
 
+// GetVariableTranslations returns a table that can be used to find the original names
+// of the variables whos names where shortened during conversion
+func (c *Converter) GetVariableTranslations() map[string]string {
+	return c.varnameOptimizer.GetReversalTable()
+}
+
 // ConvertFile is a shortcut that loads a file from the file-system, parses it and directly convertes it.
 // mainfile is the path to the file on the disk.
 // All included are loaded relative to the mainfile.

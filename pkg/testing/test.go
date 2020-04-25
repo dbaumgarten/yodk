@@ -108,32 +108,35 @@ func (script Script) GetCode() (string, error) {
 // coord is the coordinato to use with the VMs
 // Run() has been called on the returned VMs, but they are paused until coord.Run() is called
 // The error handler of the VMs is set to errF
-func (t Test) CreateVMs(coord *vm.Coordinator, errF vm.ErrorHandlerFunc) ([]*vm.YololVM, error) {
-	vms := make([]*vm.YololVM, 0)
-	for _, script := range t.Scripts {
+// Also returns variable-name translation-tables for nolol scripts
+func (t Test) CreateVMs(coord *vm.Coordinator, errF vm.ErrorHandlerFunc) ([]*vm.YololVM, []map[string]string, error) {
+	vms := make([]*vm.YololVM, len(t.Scripts))
+	translationTables := make([]map[string]string, len(t.Scripts))
+	for i, script := range t.Scripts {
 		v := vm.NewYololVMCoordinated(coord)
 		v.SetIterations(script.Iterations)
 		v.SetMaxExecutedLines(script.MaxLines)
 		v.SetErrorHandler(errF)
-		vms = append(vms, v)
+		vms[i] = v
 
 		if strings.HasSuffix(script.Name, ".nolol") {
 			conv := nolol.NewConverter()
 			file := filepath.Join(filepath.Dir(script.AbsolutePath), script.Name)
 			prog, err := conv.ConvertFile(file)
+			translationTables[i] = conv.GetVariableTranslations()
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			v.Run(prog)
 		} else {
 			scriptContent, err := script.GetCode()
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			v.RunSource(string(scriptContent))
 		}
 	}
-	return vms, nil
+	return vms, translationTables, nil
 }
 
 // CheckResults compares the global variables of coord with the expected results for c
@@ -185,7 +188,7 @@ func (t Test) Run(caseCallback func(c Case)) []error {
 
 		c.InitializeVariables(coord)
 
-		_, err := t.CreateVMs(coord, errHandler)
+		_, _, err := t.CreateVMs(coord, errHandler)
 		if err != nil {
 			return []error{err}
 		}

@@ -12,6 +12,7 @@ import (
 // Replacements are case-insensitive. "var" and "VaR" will be replaced with the same replacement
 type VariableNameOptimizer struct {
 	variableMappings map[string]string
+	invertedMappings map[string]string
 	varNumber        int
 }
 
@@ -19,6 +20,7 @@ type VariableNameOptimizer struct {
 func NewVariableNameOptimizer() *VariableNameOptimizer {
 	return &VariableNameOptimizer{
 		variableMappings: make(map[string]string),
+		invertedMappings: make(map[string]string),
 		varNumber:        1,
 	}
 }
@@ -35,13 +37,19 @@ func (o *VariableNameOptimizer) OptimizeVarName(in string) string {
 	if strings.HasPrefix(in, ":") {
 		return in
 	}
-	in = strings.ToLower(in)
-	newName, exists := o.variableMappings[in]
+	lin := strings.ToLower(in)
+	newName, exists := o.variableMappings[lin]
 	if !exists {
 		newName = o.getNextVarName()
-		o.variableMappings[in] = newName
+		o.variableMappings[lin] = newName
+		o.invertedMappings[newName] = in
 	}
 	return newName
+}
+
+// GetReversalTable returns a map that can be used to translated the shortened names back to the original names
+func (o *VariableNameOptimizer) GetReversalTable() map[string]string {
+	return o.invertedMappings
 }
 
 // Visit is needed to implement Visitor
