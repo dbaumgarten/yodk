@@ -1,0 +1,17 @@
+scripts: 
+  # list of scripts to run
+  - name: case_insensitive.nolol
+cases:
+  # list of testcases
+  - name: TestCaseInsensitiv
+    # expected value for global variables after running
+    outputs:
+      assignOK: 1
+      derefOK: 1
+      funcok: 1
+      ifok: 1
+      defineok: 1
+      loopok: 1
+      macrook: 1
+
+      

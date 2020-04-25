@@ -53,6 +53,10 @@ func TestOptName(t *testing.T) {
 		t.Fatal("Wrong replacement for first variable")
 	}
 
+	if vno.OptimizeVarName("aBc") != "a" {
+		t.Fatal("Wrong replacement for other cased variable")
+	}
+
 	if vno.OptimizeVarName("abcd") != "b" {
 		t.Fatal("Wrong replacement for second variable")
 	}

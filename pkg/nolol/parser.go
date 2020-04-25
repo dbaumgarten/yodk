@@ -328,9 +328,8 @@ func (p *Parser) ParseDefinition() *nast.Definition {
 		p.ErrorCurrent("const keyword must be followed by an identifier")
 	}
 	decl := &nast.Definition{
-		Name:        strings.ToLower(p.CurrentToken.Value),
-		DisplayName: p.CurrentToken.Value,
-		Position:    startpos,
+		Name:     p.CurrentToken.Value,
+		Position: startpos,
 	}
 	p.Advance()
 	p.Expect(ast.TypeSymbol, "=")
@@ -488,7 +487,7 @@ func (p *Parser) ParseFuncCall() ast.Expression {
 	}
 	fc := &ast.FuncCall{
 		Position: p.CurrentToken.Position,
-		Function: strings.ToLower(p.CurrentToken.Value),
+		Function: p.CurrentToken.Value,
 	}
 	p.Advance()
 	p.Advance()

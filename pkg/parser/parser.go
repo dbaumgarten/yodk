@@ -317,8 +317,7 @@ func (p *Parser) ParseAssignment() ast.Statement {
 	if p.CurrentToken.Type != ast.TypeID || !contains(assignmentOperators, p.NextToken.Value) {
 		return nil
 	}
-	ret.VariableDisplayName = p.CurrentToken.Value
-	ret.Variable = strings.ToLower(p.CurrentToken.Value)
+	ret.Variable = p.CurrentToken.Value
 	p.Advance()
 	ret.Operator = p.CurrentToken.Value
 	p.Advance()
@@ -551,9 +550,8 @@ func (p *Parser) ParseSingleExpression() ast.Expression {
 	if p.CurrentToken.Type == ast.TypeID {
 		defer p.Advance()
 		return &ast.Dereference{
-			VariableDisplayName: p.CurrentToken.Value,
-			Variable:            strings.ToLower(p.CurrentToken.Value),
-			Position:            p.CurrentToken.Position,
+			Variable: p.CurrentToken.Value,
+			Position: p.CurrentToken.Position,
 		}
 	}
 	if p.CurrentToken.Type == ast.TypeString {
@@ -611,8 +609,7 @@ func (p *Parser) ParsePreOpExpression() ast.Expression {
 		if p.CurrentToken.Type != ast.TypeID {
 			p.Error("Pre- Increment/Decrement must be followed by a variable", exp.Start(), exp.Start())
 		}
-		exp.VariableDisplayName = p.CurrentToken.Value
-		exp.Variable = strings.ToLower(exp.VariableDisplayName)
+		exp.Variable = p.CurrentToken.Value
 		p.Advance()
 		return &exp
 	}
@@ -624,11 +621,10 @@ func (p *Parser) ParsePostOpExpression() ast.Expression {
 	p.Log()
 	if p.NextToken.Type == ast.TypeSymbol && (p.NextToken.Value == "++" || p.NextToken.Value == "--") && p.CurrentToken.Type == ast.TypeID {
 		exp := ast.Dereference{
-			Variable:            strings.ToLower(p.CurrentToken.Value),
-			VariableDisplayName: p.CurrentToken.Value,
-			Operator:            p.NextToken.Value,
-			PrePost:             "Post",
-			Position:            p.CurrentToken.Position,
+			Variable: p.CurrentToken.Value,
+			Operator: p.NextToken.Value,
+			PrePost:  "Post",
+			Position: p.CurrentToken.Position,
 		}
 		p.Advance()
 		p.Advance()

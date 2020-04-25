@@ -93,8 +93,7 @@ func (n *NumberConstant) End() Position {
 // Dereference represents the dereferencing of a variable
 type Dereference struct {
 	Position Position
-	// The internal name of the dereferenced variable.
-	// VariableDisplayName is used, but lowercased so all operations are case insensitive
+	// The name of the dereferenced variable
 	Variable string
 	// Additional operator (++ or --)
 	Operator string
@@ -102,9 +101,6 @@ type Dereference struct {
 	PrePost string
 	// True if this is used as a statement instead of expression
 	IsStatement bool
-	// VariableDisplayName is the name for the variable that is used when generating source code
-	// Initialized with the original name read from the source code (in its original caseing)
-	VariableDisplayName string
 }
 
 // Start is needed to implement Node
@@ -179,16 +175,12 @@ type Statement interface {
 // Assignment represents the assignment to a variable
 type Assignment struct {
 	Position Position
-	// The internal name of the assigned variable.
-	// VariableDisplayName is used, but lowercased so all operations are case insensitive
+	// The name of the variable that is assigned to
 	Variable string
 	// The value to be assigned
 	Value Expression
 	// Operator to use (=,+=,-=, etc.)
 	Operator string
-	// VariableDisplayName is the name for the variable that is used when generating source code
-	// Initialized with the original name read from the source code (in its original caseing)
-	VariableDisplayName string
 }
 
 // Start is needed to implement Node

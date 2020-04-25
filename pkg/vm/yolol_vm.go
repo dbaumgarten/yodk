@@ -309,7 +309,9 @@ func (v *YololVM) SetVariable(name string, value interface{}) error {
 
 // getVariable gets the current state of a variable.
 // Does not use the lock. ONLY USE WHEN LOCK IS ALREADY HELD
+// getting variables is case-insensitive
 func (v *YololVM) getVariable(name string) (*Variable, bool) {
+	name = strings.ToLower(name)
 	if v.coordinator != nil && strings.HasPrefix(name, ":") {
 		return v.coordinator.GetVariable(name)
 	}
@@ -319,7 +321,9 @@ func (v *YololVM) getVariable(name string) (*Variable, bool) {
 
 // setVariable sets the current state of a variable
 // Does not use the lock. ONLY USE WHEN LOCK IS ALREADY HELD
+// setting variables is case-insensitive
 func (v *YololVM) setVariable(name string, value *Variable) error {
+	name = strings.ToLower(name)
 	if v.coordinator != nil && strings.HasPrefix(name, ":") {
 		return v.coordinator.SetVariable(name, value)
 	}

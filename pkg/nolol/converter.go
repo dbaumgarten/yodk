@@ -20,8 +20,10 @@ var reservedTimeVariable = "_time"
 
 // Converter can convert a nolol-ast to a yolol-ast
 type Converter struct {
-	files               FileSystem
-	jumpLabels          map[string]int
+	files      FileSystem
+	jumpLabels map[string]int
+	// the names of definitions are case-insensitive. Keys are converted to lowercase before using them
+	// all lookups MUST also use lowercased keys
 	definitions         map[string]ast.Expression
 	usesTimeTracking    bool
 	iflabelcounter      int
@@ -48,6 +50,45 @@ func NewConverter() *Converter {
 		boolexpOptimizer: &optimizers.ExpressionInversionOptimizer{},
 		varnameOptimizer: optimizers.NewVariableNameOptimizer(),
 	}
+}
+
+// getDefinition is a case-insensitive getter for c.definitions
+func (c *Converter) getDefinition(name string) (ast.Expression, bool) {
+	name = strings.ToLower(name)
+	val, exists := c.definitions[name]
+	return val, exists
+}
+
+// setDefinition is a case-insensitive setter for c.definitions
+func (c *Converter) setDefinition(name string, val ast.Expression) {
+	name = strings.ToLower(name)
+	c.definitions[name] = val
+}
+
+// getJumpLabel is a case-insensitive getter for c.jumpLabels
+func (c *Converter) getJumpLabel(name string) (int, bool) {
+	name = strings.ToLower(name)
+	val, exists := c.jumpLabels[name]
+	return val, exists
+}
+
+// setJumpLabel is a case-insensitive setter for c.jumpLabels
+func (c *Converter) setJumpLabel(name string, val int) {
+	name = strings.ToLower(name)
+	c.jumpLabels[name] = val
+}
+
+// getMacro is a case-insensitive getter for c.macros
+func (c *Converter) getMacro(name string) (*nast.MacroDefinition, bool) {
+	name = strings.ToLower(name)
+	val, exists := c.macros[name]
+	return val, exists
+}
+
+// setMacro is a case-insensitive setter for c.macros
+func (c *Converter) setMacro(name string, val *nast.MacroDefinition) {
+	name = strings.ToLower(name)
+	c.macros[name] = val
 }
 
 // ConvertFile is a shortcut that loads a file from the file-system, parses it and directly convertes it.
@@ -206,10 +247,9 @@ func (c *Converter) convertNodes(node ast.Node) error {
 
 // convertAssignment optimizes the variable name and the expression of an assignment
 func (c *Converter) convertAssignment(ass *ast.Assignment) error {
-	if replacement, exists := c.definitions[ass.VariableDisplayName]; exists {
+	if replacement, exists := c.getDefinition(ass.Variable); exists {
 		if replacementVariable, isvar := replacement.(*ast.Dereference); isvar && replacementVariable.Operator == "" {
 			ass.Variable = replacementVariable.Variable
-			ass.VariableDisplayName = replacementVariable.VariableDisplayName
 		} else {
 			return &parser.Error{
 				Message:       "Can not assign to a definition that is an expression (need a single variable name)",
@@ -218,14 +258,14 @@ func (c *Converter) convertAssignment(ass *ast.Assignment) error {
 			}
 		}
 	} else {
-		ass.VariableDisplayName = c.varnameOptimizer.OptimizeVarName(ass.Variable)
+		ass.Variable = c.varnameOptimizer.OptimizeVarName(ass.Variable)
 	}
 	return nil
 }
 
 // convertMacroDef takes a macro definition, stores it for later use and removes the definition from the code
 func (c *Converter) convertMacroDef(def *nast.MacroDefinition) error {
-	c.macros[def.Name] = def
+	c.setMacro(def.Name, def)
 	// remove the node from the output-code
 	return ast.NewNodeReplacementSkip()
 }
@@ -242,7 +282,7 @@ func (c *Converter) convertMacroInsertion(ins *nast.MacroInsetion) error {
 		}
 	}
 
-	m, defined := c.macros[ins.Name]
+	m, defined := c.getMacro(ins.Name)
 	if !defined {
 		return &parser.Error{
 			Message:       fmt.Sprintf("No macro named '%s' defined", ins.Name),
@@ -264,16 +304,17 @@ func (c *Converter) convertMacroInsertion(ins *nast.MacroInsetion) error {
 	// gather replacements
 	replacements := make(map[string]ast.Expression)
 	for i := range ins.Arguments {
-		replacements[m.Arguments[i]] = ins.Arguments[i]
+		lvarname := strings.ToLower(m.Arguments[i])
+		replacements[lvarname] = ins.Arguments[i]
 	}
 
 	performReplacements := func(node ast.Node, visitType int) error {
 		// replace the variable name inside assignments
 		if ass, is := node.(*ast.Assignment); is && visitType == ast.PreVisit {
-			if replacement, exists := replacements[ass.VariableDisplayName]; exists {
+			lvarname := strings.ToLower(ass.Variable)
+			if replacement, exists := replacements[lvarname]; exists {
 				if replacementVariable, isvar := replacement.(*ast.Dereference); isvar && replacementVariable.Operator == "" {
 					ass.Variable = replacementVariable.Variable
-					ass.VariableDisplayName = replacementVariable.VariableDisplayName
 				} else {
 					return &parser.Error{
 						Message:       "This argument must be a variable name (and not any other expression)",
@@ -282,7 +323,7 @@ func (c *Converter) convertMacroInsertion(ins *nast.MacroInsetion) error {
 					}
 				}
 			} else if !strings.HasPrefix(ass.Variable, ":") {
-				if _, isDefinition := c.definitions[ass.VariableDisplayName]; !isDefinition {
+				if _, isDefinition := c.getDefinition(lvarname); !isDefinition {
 					// replace local vars with a insertion-scoped version
 					ass.Variable = strings.Join(c.macroLevel, "_") + "_" + ass.Variable
 				}
@@ -290,7 +331,8 @@ func (c *Converter) convertMacroInsertion(ins *nast.MacroInsetion) error {
 		}
 		// replace the variable name of dereferences
 		if deref, is := node.(*ast.Dereference); is && visitType == ast.SingleVisit {
-			if replacement, exists := replacements[deref.VariableDisplayName]; exists {
+			lvarname := strings.ToLower(deref.Variable)
+			if replacement, exists := replacements[lvarname]; exists {
 				if replacementVariable, isvar := replacement.(*ast.Dereference); isvar {
 					if deref.Operator != "" && replacementVariable.Operator != "" {
 						return &parser.Error{
@@ -312,7 +354,8 @@ func (c *Converter) convertMacroInsertion(ins *nast.MacroInsetion) error {
 				}
 				return ast.NewNodeReplacementSkip(replacement)
 			} else if !strings.HasPrefix(deref.Variable, ":") {
-				if _, isDefinition := c.definitions[deref.VariableDisplayName]; !isDefinition {
+
+				if _, isDefinition := c.getDefinition(lvarname); !isDefinition {
 					// replace local vars with a insertion-scoped version
 					deref.Variable = strings.Join(c.macroLevel, "_") + "_" + deref.Variable
 				}
@@ -340,7 +383,7 @@ func (c *Converter) convertMacroInsertion(ins *nast.MacroInsetion) error {
 
 // convertDefinitions converts a definition to yolol by discarding it, but saving the defined value
 func (c *Converter) convertDefinition(decl *nast.Definition) error {
-	c.definitions[decl.Name] = decl.Value
+	c.setDefinition(decl.Name, decl.Value)
 	return ast.NewNodeReplacement()
 }
 
@@ -392,7 +435,7 @@ func (c *Converter) convertInclude(include *nast.IncludeDirective) error {
 // convert a wait directive to yolol
 func (c *Converter) convertWait(wait *nast.WaitDirective) error {
 	label := fmt.Sprintf("wait%d", c.waitlabelcounter)
-	return ast.NewNodeReplacement(&nast.StatementLine{
+	return ast.NewNodeReplacementSkip(&nast.StatementLine{
 		Label:  label,
 		HasEOL: true,
 		Line: ast.Line{
@@ -418,8 +461,7 @@ func (c *Converter) convertBuiltinFunction(function *ast.FuncCall) error {
 	case "time":
 		c.usesTimeTracking = true
 		return ast.NewNodeReplacementSkip(&ast.Dereference{
-			Variable:            reservedTimeVariable,
-			VariableDisplayName: c.varnameOptimizer.OptimizeVarName(reservedTimeVariable),
+			Variable: c.varnameOptimizer.OptimizeVarName(reservedTimeVariable),
 		})
 	}
 	return nil
@@ -442,7 +484,7 @@ func usesTimeTracking(n ast.Node) bool {
 
 // convertDereference replaces mentionings of constants with the value of the constant
 func (c *Converter) convertDereference(deref *ast.Dereference) error {
-	if replacement, exists := c.definitions[deref.VariableDisplayName]; exists {
+	if replacement, exists := c.getDefinition(deref.Variable); exists {
 		replacement = nast.CopyAst(replacement)
 		if replacementVariable, isvar := replacement.(*ast.Dereference); isvar {
 			if deref.Operator != "" && replacementVariable.Operator != "" {
@@ -458,7 +500,7 @@ func (c *Converter) convertDereference(deref *ast.Dereference) error {
 			}
 		} else if deref.Operator != "" {
 			return &parser.Error{
-				Message:       "Con not use pre/port-operators on expressions",
+				Message:       "Can not use pre/port-operators on expressions",
 				StartPosition: deref.Start(),
 				EndPosition:   deref.End(),
 			}
@@ -466,7 +508,7 @@ func (c *Converter) convertDereference(deref *ast.Dereference) error {
 		return ast.NewNodeReplacementSkip(replacement)
 	}
 	// we are dereferencing a variable
-	deref.VariableDisplayName = c.varnameOptimizer.OptimizeVarName(deref.Variable)
+	deref.Variable = c.varnameOptimizer.OptimizeVarName(deref.Variable)
 	return nil
 }
 
@@ -479,7 +521,7 @@ func (c *Converter) findJumpLabels(p ast.Node) error {
 			if visitType == ast.PreVisit {
 				linecounter++
 				if line.Label != "" {
-					_, exists := c.jumpLabels[line.Label]
+					_, exists := c.getJumpLabel(line.Label)
 					if exists {
 						return &parser.Error{
 							Message:       fmt.Sprintf("Duplicate declaration of jump-label: %s", line.Label),
@@ -487,7 +529,7 @@ func (c *Converter) findJumpLabels(p ast.Node) error {
 							EndPosition:   line.Start(),
 						}
 					}
-					c.jumpLabels[line.Label] = linecounter
+					c.setJumpLabel(line.Label, linecounter)
 
 					if len(line.Statements) == 0 {
 						linecounter--
@@ -505,7 +547,7 @@ func (c *Converter) findJumpLabels(p ast.Node) error {
 func (c *Converter) replaceGotoLabels(p ast.Node) error {
 	f := func(node ast.Node, visitType int) error {
 		if gotostmt, is := node.(*nast.GoToLabelStatement); is {
-			line, exists := c.jumpLabels[gotostmt.Label]
+			line, exists := c.getJumpLabel(gotostmt.Label)
 			if !exists {
 				return &parser.Error{
 					Message:       "Unknown jump-label: " + gotostmt.Label,
@@ -557,7 +599,7 @@ func (c *Converter) convertIf(mlif *nast.MultilineIf) error {
 	})
 
 	c.iflabelcounter++
-	return ast.NewNodeReplacement(repl...)
+	return ast.NewNodeReplacementSkip(repl...)
 }
 
 // convertConditionInline converts a single conditional block of a multiline if and tries to produce a single yolol if
@@ -709,7 +751,7 @@ func (c *Converter) convertWhileLoop(loop *nast.WhileLoop) error {
 	})
 
 	c.whilelabelcounter++
-	return ast.NewNodeReplacement(repl...)
+	return ast.NewNodeReplacementSkip(repl...)
 
 }
 
@@ -834,11 +876,10 @@ func (c *Converter) insertLineCounter(p *nast.Program) {
 		if stmtline, is := line.(*nast.StatementLine); is {
 			stmts := make([]ast.Statement, 1, len(stmtline.Statements)+1)
 			stmts[0] = &ast.Dereference{
-				Variable:            reservedTimeVariable,
-				VariableDisplayName: c.varnameOptimizer.OptimizeVarName(reservedTimeVariable),
-				Operator:            "++",
-				PrePost:             "Post",
-				IsStatement:         true,
+				Variable:    c.varnameOptimizer.OptimizeVarName(reservedTimeVariable),
+				Operator:    "++",
+				PrePost:     "Post",
+				IsStatement: true,
 			}
 			stmts = append(stmts, stmtline.Statements...)
 			stmtline.Statements = stmts

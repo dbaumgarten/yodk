@@ -9,6 +9,7 @@ import (
 
 // VariableNameOptimizer replaces variable names with sorter names
 // Names of external variables will be left unchanged
+// Replacements are case-insensitive. "var" and "VaR" will be replaced with the same replacement
 type VariableNameOptimizer struct {
 	variableMappings map[string]string
 	varNumber        int
@@ -34,6 +35,7 @@ func (o *VariableNameOptimizer) OptimizeVarName(in string) string {
 	if strings.HasPrefix(in, ":") {
 		return in
 	}
+	in = strings.ToLower(in)
 	newName, exists := o.variableMappings[in]
 	if !exists {
 		newName = o.getNextVarName()
@@ -49,10 +51,10 @@ func (o *VariableNameOptimizer) Visit(node ast.Node, visitType int) error {
 		// only change the display name of the variable
 		// this way, it is shortened when generating code, but remains the same in the debugger
 		case *ast.Assignment:
-			n.VariableDisplayName = o.OptimizeVarName(n.Variable)
+			n.Variable = o.OptimizeVarName(n.Variable)
 			break
 		case *ast.Dereference:
-			n.VariableDisplayName = o.OptimizeVarName(n.Variable)
+			n.Variable = o.OptimizeVarName(n.Variable)
 			break
 		}
 	}

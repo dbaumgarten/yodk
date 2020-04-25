@@ -14,6 +14,7 @@ func RunFunction(arg *Variable, function string) (*Variable, error) {
 		return nil, fmt.Errorf("Function %s expects a number as argument", function)
 	}
 	var result Variable
+	function = strings.ToLower(function)
 	switch function {
 	case "abs":
 		result.Value = arg.Number().Abs()

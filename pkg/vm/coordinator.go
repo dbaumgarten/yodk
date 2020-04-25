@@ -1,6 +1,7 @@
 package vm
 
 import (
+	"strings"
 	"sync"
 )
 
@@ -68,7 +69,9 @@ func (c *Coordinator) WaitForTermination() {
 }
 
 // GetVariable gets the current state of a global variable
+// getting variables is case-insensitive
 func (c *Coordinator) GetVariable(name string) (*Variable, bool) {
+	name = strings.ToLower(name)
 	c.varLock.Lock()
 	defer c.varLock.Unlock()
 	val, exists := c.globalVariables[name]
@@ -76,6 +79,7 @@ func (c *Coordinator) GetVariable(name string) (*Variable, bool) {
 }
 
 // GetVariables gets the current state of all global variables
+// All returned variables have normalized (lowercased) names
 func (c *Coordinator) GetVariables() map[string]Variable {
 	c.varLock.Lock()
 	defer c.varLock.Unlock()
@@ -89,7 +93,9 @@ func (c *Coordinator) GetVariables() map[string]Variable {
 }
 
 // SetVariable sets the current state of a global variable
+// setting variables is case-insensitive
 func (c *Coordinator) SetVariable(name string, value *Variable) error {
+	name = strings.ToLower(name)
 	c.varLock.Lock()
 	defer c.varLock.Unlock()
 	c.globalVariables[name] = value
