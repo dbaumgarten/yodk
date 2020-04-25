@@ -74,7 +74,7 @@ func (p *Parser) ParseNestableElement() nast.NestableElement {
 		return whileline
 	}
 
-	block := p.ParseWaitStatement()
+	block := p.ParseWaitDirective()
 	if block != nil {
 		return block
 	}
@@ -297,8 +297,8 @@ func (p *Parser) ParseStatementLine() *nast.StatementLine {
 	return &ret
 }
 
-// ParseWaitStatement parses a NOLOL wait-statement
-func (p *Parser) ParseWaitStatement() *nast.WaitDirective {
+// ParseWaitDirective parses a NOLOL wait-statement
+func (p *Parser) ParseWaitDirective() *nast.WaitDirective {
 	p.Log()
 	if !p.IsCurrent(ast.TypeKeyword, "wait") {
 		return nil
@@ -311,6 +311,33 @@ func (p *Parser) ParseWaitStatement() *nast.WaitDirective {
 	st.Condition = p.This.ParseExpression()
 	if st.Condition == nil {
 		p.ErrorCurrent("Expected an expression after 'block'")
+	}
+
+	if p.IsCurrent(ast.TypeKeyword, "then") {
+		p.Advance()
+
+		st.Statements = make([]ast.Statement, 0)
+		stmt := p.This.ParseStatement()
+		// at this point, the line must at least have one statement
+		if stmt != nil {
+			st.Statements = append(st.Statements, stmt)
+		} else {
+			p.ErrorCurrent("Expected a statement")
+			p.Advance()
+			return st
+		}
+
+		for p.IsCurrent(ast.TypeSymbol, ";") {
+			p.Advance()
+			stmt = p.This.ParseStatement()
+			if stmt != nil {
+				st.Statements = append(st.Statements, stmt)
+			} else {
+				p.ErrorCurrent(("Expected a statement after ';'"))
+			}
+		}
+
+		p.Expect(ast.TypeKeyword, "end")
 	}
 
 	return st

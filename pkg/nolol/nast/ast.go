@@ -134,8 +134,9 @@ func (n *WhileLoop) End() ast.Position {
 
 // WaitDirective blocks execution as long as the condition is true
 type WaitDirective struct {
-	Position  ast.Position
-	Condition ast.Expression
+	Position   ast.Position
+	Condition  ast.Expression
+	Statements []ast.Statement
 }
 
 // Start is needed to implement ast.Node
@@ -145,7 +146,10 @@ func (n *WaitDirective) Start() ast.Position {
 
 // End is needed to implement ast.Node
 func (n *WaitDirective) End() ast.Position {
-	return n.Condition.End()
+	if n.Statements == nil || len(n.Statements) == 0 {
+		return n.Condition.End()
+	}
+	return n.Statements[len(n.Statements)-1].End()
 }
 
 // IncludeDirective represents the inclusion of another file in the source-file

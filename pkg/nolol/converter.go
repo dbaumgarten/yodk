@@ -441,7 +441,7 @@ func (c *Converter) convertInclude(include *nast.IncludeDirective) error {
 // convert a wait directive to yolol
 func (c *Converter) convertWait(wait *nast.WaitDirective) error {
 	label := fmt.Sprintf("wait%d", c.waitlabelcounter)
-	return ast.NewNodeReplacementSkip(&nast.StatementLine{
+	line := &nast.StatementLine{
 		Label:  label,
 		HasEOL: true,
 		Line: ast.Line{
@@ -458,7 +458,18 @@ func (c *Converter) convertWait(wait *nast.WaitDirective) error {
 				},
 			},
 		},
-	})
+	}
+	if wait.Statements != nil {
+		line.Statements = append(line.Statements, wait.Statements...)
+	}
+	if getLengthOfLine(&line.Line) > c.maxLineLength() {
+		return &parser.Error{
+			Message:       "The line is too long to be converted to yolol",
+			StartPosition: wait.Start(),
+			EndPosition:   wait.End(),
+		}
+	}
+	return ast.NewNodeReplacementSkip(line)
 }
 
 // convert a built-in function to yolol

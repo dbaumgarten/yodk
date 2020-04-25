@@ -150,6 +150,17 @@ func (p *Printer) Print(prog ast.Node) (string, error) {
 			if visitType == ast.PreVisit {
 				return "wait ", nil
 			}
+			if n.Statements != nil {
+				if visitType == ast.InterVisit1 {
+					return " then ", nil
+				}
+				if visitType > 0 {
+					return " ; ", nil
+				}
+				if visitType == ast.PostVisit {
+					return " end", nil
+				}
+			}
 			return "", nil
 		}
 		return "", fmt.Errorf("Unknown node-type: %T", node)

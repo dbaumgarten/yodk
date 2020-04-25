@@ -143,6 +143,17 @@ func (s *WaitDirective) Accept(v ast.Visitor) error {
 	if err != nil {
 		return err
 	}
+
+	err = v.Visit(s, ast.InterVisit1)
+	if err != nil {
+		return err
+	}
+
+	s.Statements, err = ast.AcceptChildStatements(s, v, s.Statements)
+	if err != nil {
+		return err
+	}
+
 	return v.Visit(s, ast.PostVisit)
 }
 
