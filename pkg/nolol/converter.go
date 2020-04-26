@@ -547,11 +547,11 @@ func (c *Converter) findJumpLabels(p ast.Node) error {
 						}
 					}
 					c.setJumpLabel(line.Label, linecounter)
-
-					if len(line.Statements) == 0 {
-						linecounter--
-						return ast.NewNodeReplacement()
-					}
+				}
+				// remove all empty lines
+				if len(line.Statements) == 0 && !line.HasEOL {
+					linecounter--
+					return ast.NewNodeReplacement()
 				}
 			}
 		}
