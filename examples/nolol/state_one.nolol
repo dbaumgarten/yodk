@@ -1,0 +1,11 @@
+include "state_common.nolol"
+
+if :OUTPUT == 0 then
+    :OUTPUT = ""
+end
+
+insert SMBEGIN(STATE_PING)
+
+:OUTPUT += "ping "
+
+insert SMEND(STATE_PONG)

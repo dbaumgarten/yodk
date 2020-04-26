@@ -1,0 +1,9 @@
+scripts: 
+  - name: state_one.nolol
+    maxlines: 20
+  - name: state_two.nolol
+    maxlines: 20
+cases:
+  - name: TestInteraction
+    outputs:
+      out: "ping pong ping pong ping pong ping pong ping pong ping pong ping "
