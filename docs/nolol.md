@@ -28,7 +28,7 @@ And will result in the yolol-code:
 As you can see, the NOLOL-code is readable and easy to understand. And the generated YOLOL-code is as compact as possible
 
 # Features
-NOLOL offers a range of features which are explained briefly with the following examples. All examples can be found in the exmaples folder of the git-repository, which also includes test-cases to verify that the examples are working correctly.
+NOLOL offers a range of features which are explained briefly with the following examples. All examples (and some more) can be [here](https://github.com/dbaumgarten/yodk/tree/master/examples/nolol), which also includes test-cases to verify that the examples are working correctly.
 
 ## Comments
 NOLOL does support comments, either as whole lines, or as a line-trailer. All comments are automatically removed during compilation. This way you can extensively comment your code, without wasting precious lines and characters in the generated code.
@@ -170,6 +170,28 @@ out2="Hello_____you"
 Macros are especially useful when combined with [includes](/nolol?id=including-files). You can create a file full of macro-definitions, include it and then use the macros you need for the specific program.  
 
 Macro-definitions can contain insertions for macros (a macro can itself use another macro). However, macros can not be used to implement recursion (a macro can not include itself) as this would result in an infinite insertion-loop.
+
+# Multi-chip example
+
+NOLOL's features can be used to create complex programs that span multiple yolol-chips, without creating a giant mess of spaghetti code. Here is an example of how a simple state-machine can be built, that spanns across multiple yolol-chips.
+
+First, here is a file that defines constants and a few macros for all the other nolol-scripts. Note, that this script does not contain any actual code. It contains only definitions and macro definitions. It becomes useful only when included into other scripts.
+
+[state_common.nolol](generated/code/nolol/state_common.nolol ':include')
+
+Now there are two more scripts. Both inclide the state_common.nolol file and therefore get the macros and definitions defined there. Both scripts wait for a shared variable to have a specific value, indicating that it is their turn to execute. They then do something, set the value of the stared state-variable to something else and then wait again until it is their turn again.  
+
+[state_one.nolol](generated/code/nolol/state_one.nolol ':include')
+
+[state_two.nolol](generated/code/nolol/state_two.nolol ':include')
+
+Both scripts will alternatingly append to the output-variable and produce a string containing "ping pong ping pong ...".  
+
+Below are the compiled yolol-files. You may be confused, that the compiled YOLOL-Code is so much smaller then the original nolol-code. This is because the nolol-code mainly consists of a lot of definitons. For such a small program all these definitions are overkill, but once the actual program-logic grows larger, the definitions will help to keep the code clean and readable and the ration between definitions and actual code makes more sense.  
+
+[state_one.yolol](generated/code/nolol/state_one.yolol ':include')
+
+[state_two.yolol](generated/code/nolol/state_two.yolol ':include')
 
 
 # Tool support
