@@ -207,7 +207,7 @@ func (c *Converter) convertNodes(node ast.Node) error {
 			}
 		case *nast.MacroInsetion:
 			if visitType == ast.PreVisit {
-				c.macroLevel = append(c.macroLevel, n.Name+":"+strconv.Itoa(n.Start().Line))
+				c.macroLevel = append(c.macroLevel, n.Function+":"+strconv.Itoa(n.Start().Line))
 				return c.convertMacroInsertion(n)
 			}
 		case *nast.IncludeDirective:
@@ -216,9 +216,9 @@ func (c *Converter) convertNodes(node ast.Node) error {
 			if visitType == ast.PostVisit {
 				return c.convertWait(n)
 			}
-		case *ast.FuncCall:
+		case *nast.FuncCall:
 			if visitType == ast.PostVisit {
-				return c.convertBuiltinFunction(n)
+				return c.convertFuncCall(n)
 			}
 		case *ast.Dereference:
 			return c.convertDereference(n)
@@ -288,10 +288,10 @@ func (c *Converter) convertMacroInsertion(ins *nast.MacroInsetion) error {
 		}
 	}
 
-	m, defined := c.getMacro(ins.Name)
+	m, defined := c.getMacro(ins.Function)
 	if !defined {
 		return &parser.Error{
-			Message:       fmt.Sprintf("No macro named '%s' defined", ins.Name),
+			Message:       fmt.Sprintf("No macro named '%s' defined", ins.Function),
 			StartPosition: ins.Start(),
 			EndPosition:   ins.End(),
 		}
@@ -299,7 +299,7 @@ func (c *Converter) convertMacroInsertion(ins *nast.MacroInsetion) error {
 
 	if len(m.Arguments) != len(ins.Arguments) {
 		return &parser.Error{
-			Message:       fmt.Sprintf("Wrong number of arguments for %s, got %d but want %d", ins.Name, len(ins.Arguments), len(m.Arguments)),
+			Message:       fmt.Sprintf("Wrong number of arguments for %s, got %d but want %d", ins.Function, len(ins.Arguments), len(m.Arguments)),
 			StartPosition: ins.Start(),
 			EndPosition:   ins.End(),
 		}
@@ -473,22 +473,45 @@ func (c *Converter) convertWait(wait *nast.WaitDirective) error {
 }
 
 // convert a built-in function to yolol
-func (c *Converter) convertBuiltinFunction(function *ast.FuncCall) error {
-	switch function.Function {
+func (c *Converter) convertFuncCall(function *nast.FuncCall) error {
+	nfunc := strings.ToLower(function.Function)
+	switch nfunc {
 	case "time":
+		// time is a nolol-built-in function
 		c.usesTimeTracking = true
 		return ast.NewNodeReplacementSkip(&ast.Dereference{
 			Variable: c.varnameOptimizer.OptimizeVarName(reservedTimeVariable),
 		})
 	}
-	return nil
+	unaryops := []string{"abs", "sqrt", "sin", "cos", "tan", "asin", "acos", "atan"}
+	for _, unaryop := range unaryops {
+		if unaryop == nfunc {
+			if len(function.Arguments) != 1 {
+				return &parser.Error{
+					Message:       "The yolol-functions all take exactly one argument",
+					StartPosition: function.Start(),
+					EndPosition:   function.End(),
+				}
+			}
+			return ast.NewNodeReplacement(&ast.UnaryOperation{
+				Position: function.Position,
+				Operator: nfunc,
+				Exp:      function.Arguments[0],
+			})
+		}
+	}
+	return &parser.Error{
+		Message:       "Unknown function: " + function.Function,
+		StartPosition: function.Start(),
+		EndPosition:   function.End(),
+	}
 }
 
 // checkes, if the program uses nolols time-tracking feature
 func usesTimeTracking(n ast.Node) bool {
 	uses := false
 	f := func(node ast.Node, visitType int) error {
-		if function, is := node.(*ast.FuncCall); is {
+		if function, is := node.(*nast.FuncCall); is {
 			if function.Function == "time" {
 				uses = true
 			}

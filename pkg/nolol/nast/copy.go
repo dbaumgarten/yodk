@@ -67,10 +67,6 @@ func CopyAst(inp ast.Node) ast.Node {
 				m := &ast.UnaryOperation{}
 				copier.Copy(m, n)
 				newnode = m
-			case *ast.FuncCall:
-				m := &ast.FuncCall{}
-				copier.Copy(m, n)
-				newnode = m
 			// begin nolol nodes
 			case *GoToLabelStatement:
 				m := &GoToLabelStatement{}
@@ -90,6 +86,10 @@ func CopyAst(inp ast.Node) ast.Node {
 				newnode = m
 			case *MacroInsetion:
 				m := &MacroInsetion{}
+				copier.Copy(m, n)
+				newnode = m
+			case *FuncCall:
+				m := &FuncCall{}
 				copier.Copy(m, n)
 				m.Arguments = make([]ast.Expression, len(n.Arguments))
 				copy(m.Arguments, n.Arguments)

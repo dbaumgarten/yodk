@@ -187,10 +187,10 @@ func (n *MacroDefinition) End() ast.Position {
 }
 
 // MacroInsetion represents the use of a macro
+// To reduce code-duplication it re-uses the FuncCall-type
 type MacroInsetion struct {
-	Position  ast.Position
-	Arguments []ast.Expression
-	Name      string
+	Position ast.Position
+	*FuncCall
 }
 
 // Start is needed to implement ast.Node
@@ -200,7 +200,7 @@ func (n *MacroInsetion) Start() ast.Position {
 
 // End is needed to implement ast.Node
 func (n *MacroInsetion) End() ast.Position {
-	return n.Position.Add(len("insert ") + len(n.Name))
+	return n.FuncCall.End()
 }
 
 // Trigger is a special kind of node, that is sometimes inserted during code-generation
@@ -218,4 +218,24 @@ func (n *Trigger) Start() ast.Position {
 // End is needed to implement ast.Node
 func (n *Trigger) End() ast.Position {
 	return ast.Position{}
+}
+
+// FuncCall represents a func-call
+type FuncCall struct {
+	Position  ast.Position
+	Function  string
+	Arguments []ast.Expression
+}
+
+// Start is needed to implement Node
+func (n *FuncCall) Start() ast.Position {
+	return n.Position
+}
+
+// End is needed to implement Node
+func (n *FuncCall) End() ast.Position {
+	if n.Arguments != nil && len(n.Arguments) > 0 {
+		return n.Arguments[len(n.Arguments)-1].End().Add(1)
+	}
+	return n.Position.Add(len(n.Function) + 2)
 }

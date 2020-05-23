@@ -46,6 +46,19 @@ During the compilation various optimizations like:
 
 are performed automatically for you. (This is the same as running ```yodk optimize``` on a yolol-file)
 
+## Functions
+Nearly all the mathematical keywords of YOLOL are implemented as functions in NOLOL. This way it is consistent with progamming-languages that are not completely nuts. To make it short, you have to add parenthesis to the keywords:
+
+```
+// This works in YOLOL, but NOT in NOLOL
+foo = abs 5
+// This is the correct way for NOLOL
+foo = abs(5)
+// The operators "not" and "-" are excluded from this. They can still be used without parenthesis.
+bar = not foo
+baz = -5
+```
+
 ## Compile-time definitions
 NOLOL has compile time definitions. Mentionings of the definitions will be replaced with their value when compiling. This is usefull for configuration purposes, especially when combined with the [include-feature](/nolol?id=including-files). This way you can seperate and therefore easier re-use configuration and code.
 

@@ -185,10 +185,11 @@ func (s *MacroInsetion) Accept(v ast.Visitor) error {
 		return err
 	}
 
-	s.Arguments, err = AcceptExpressionList(s, v, s.Arguments)
+	call, err := ast.AcceptChild(v, s.FuncCall)
 	if err != nil {
 		return err
 	}
+	s.FuncCall = call.(*FuncCall)
 
 	return v.Visit(s, ast.PostVisit)
 }
@@ -196,6 +197,19 @@ func (s *MacroInsetion) Accept(v ast.Visitor) error {
 // Accept is used to implement Acceptor
 func (s *Trigger) Accept(v ast.Visitor) error {
 	return v.Visit(s, ast.SingleVisit)
+}
+
+// Accept is used to implement Acceptor
+func (f *FuncCall) Accept(v ast.Visitor) error {
+	err := v.Visit(f, ast.PreVisit)
+	if err != nil {
+		return err
+	}
+	f.Arguments, err = AcceptExpressionList(f, v, f.Arguments)
+	if err != nil {
+		return err
+	}
+	return v.Visit(f, ast.PostVisit)
 }
 
 // AcceptElementList calles Accept for ever element of old and handles node-replacements

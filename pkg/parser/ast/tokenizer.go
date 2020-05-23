@@ -64,7 +64,7 @@ func (p Position) Before(other Position) bool {
 var symbols = []string{"++", "--", ">=", "<=", "!=", "==", "==", "+=", "-=", "*=", "/=", "%=",
 	"=", ">", "<", "+", "-", "*", "/", "^", "%", ",", "(", ")"}
 
-var keywordRegex = regexp.MustCompile("(?i)^\\b(if|else|end|then|goto|and|or|not)\\b")
+var keywordRegex = regexp.MustCompile("(?i)^\\b(if|else|end|then|goto|and|or|not|abs|sqrt|sin|cos|tan|asin|acos|atan)\\b")
 
 var identifierRegex = regexp.MustCompile("^:?[a-zA-Z]+[a-zA-Z0-9_]*")
 

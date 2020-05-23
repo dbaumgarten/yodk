@@ -8,14 +8,23 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// RunFunction executes the given yolol-function with the given argument and returns the result
-func RunFunction(arg *Variable, function string) (*Variable, error) {
+// RunUnaryOperation executes the given operation with the given argument and returns the result
+func RunUnaryOperation(arg *Variable, operator string) (*Variable, error) {
 	if !arg.IsNumber() {
-		return nil, fmt.Errorf("Function %s expects a number as argument", function)
+		return nil, fmt.Errorf("Unary operator '%s' is only available for numbers", operator)
 	}
 	var result Variable
-	function = strings.ToLower(function)
-	switch function {
+	switch strings.ToLower(operator) {
+	case "-":
+		result.Value = arg.Number().Mul(decimal.NewFromFloat(-1))
+		break
+	case "not":
+		if arg.Number().Equal(decimal.Zero) {
+			result.Value = decimal.NewFromFloat(1)
+		} else {
+			result.Value = decimal.Zero
+		}
+		break
 	case "abs":
 		result.Value = arg.Number().Abs()
 		break
@@ -44,33 +53,9 @@ func RunFunction(arg *Variable, function string) (*Variable, error) {
 		result.Value = arg.Number().Atan()
 		break
 	default:
-		return nil, fmt.Errorf("Unknown function: %s", function)
-	}
-	result.Value = result.Number().Truncate(int32(decimal.DivisionPrecision))
-	return &result, nil
-}
-
-// RunUnaryOperation executes the given operation with the given argument and returns the result
-func RunUnaryOperation(arg *Variable, operator string) (*Variable, error) {
-	if !arg.IsNumber() {
-		return nil, fmt.Errorf("Unary operator '%s' is only available for numbers", operator)
-	}
-	var res Variable
-	switch operator {
-	case "-":
-		res.Value = arg.Number().Mul(decimal.NewFromFloat(-1))
-		break
-	case "not":
-		if arg.Number().Equal(decimal.Zero) {
-			res.Value = decimal.NewFromFloat(1)
-		} else {
-			res.Value = decimal.Zero
-		}
-		break
-	default:
 		return nil, fmt.Errorf("Unknown unary operator for numbers '%s'", operator)
 	}
-	return &res, nil
+	return &result, nil
 }
 
 // RunBinaryOperation executes the given operation with the given arguments and returns the result

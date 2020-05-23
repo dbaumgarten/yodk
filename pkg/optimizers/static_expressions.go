@@ -45,15 +45,6 @@ func (o *StaticExpressionOptimizer) Visit(node ast.Node, visitType int) error {
 // if no optimization is possible, nil is returned
 func (o *StaticExpressionOptimizer) OptimizeExpressionNonRecursive(exp ast.Expression) ast.Expression {
 	switch n := exp.(type) {
-	case *ast.FuncCall:
-		if !isConstant(n.Argument) {
-			break
-		}
-		res, err := vm.RunFunction(constToVar(n.Argument), n.Function)
-		if err != nil {
-			break
-		}
-		return varToConst(res)
 	case *ast.UnaryOperation:
 		if !isConstant(n.Exp) {
 			break

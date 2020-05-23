@@ -86,12 +86,10 @@ func (y *Printer) Print(prog ast.Node) (string, error) {
 			_, childBinary := n.Exp.(*ast.BinaryOperation)
 			if visitType == ast.PreVisit {
 				op := n.Operator
-				if op == "not" {
-					op = " " + op + " "
-				} else if op == "-" {
+				if op == "-" {
 					op = " " + op
 				} else {
-					panic("Unknown operator: " + op)
+					op = op + " "
 				}
 				output += op
 				if childBinary {
@@ -102,13 +100,6 @@ func (y *Printer) Print(prog ast.Node) (string, error) {
 				if childBinary {
 					output += ")"
 				}
-			}
-			break
-		case *ast.FuncCall:
-			if visitType == ast.PreVisit {
-				output += n.Function + "("
-			} else {
-				output += ")"
 			}
 			break
 		default:

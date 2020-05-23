@@ -1,0 +1,6 @@
+:timeok = time()
+:absok = abs(-5) == ABS(5)
+if abs(-2) == abs(2) then
+    :absinifok = 1
+end
+:sqrtok = SQRT(16) == 4

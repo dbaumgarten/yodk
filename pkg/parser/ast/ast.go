@@ -147,26 +147,6 @@ func (n *BinaryOperation) End() Position {
 	return n.Exp2.End()
 }
 
-// FuncCall represents a func-call
-type FuncCall struct {
-	Position Position
-	Function string
-	Argument Expression
-}
-
-// Start is needed to implement Node
-func (n *FuncCall) Start() Position {
-	return n.Position
-}
-
-// End is needed to implement Node
-func (n *FuncCall) End() Position {
-	if n.Argument != nil {
-		return n.Argument.End().Add(1)
-	}
-	return n.Position.Add(len(n.Function) + 2)
-}
-
 // Statement is the interface for all statements
 type Statement interface {
 	Node

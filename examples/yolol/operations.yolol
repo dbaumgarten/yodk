@@ -19,14 +19,14 @@ hw += "world"
 abc = "abc"
 :testssub = hw - "world" == "hello " and abc-- == "abc" and abc == "ab" and --abc == "a" and abc == "a"
 pi = 3.141
-:testsinpi = abs(sin(pi) - 0)<0.01
-:testcospi = abs(cos(pi) - -1)<0.01
-:testtanpi = abs(tan(pi) - 0)<0.01
+:testsinpi = abs(sin pi  - 0)<0.01
+:testcospi = abs(cos pi  - -1)<0.01
+:testtanpi = abs(tan pi - 0)<0.01
 :testasin = abs(asin(sin(pi)) - 0) < 0.1
 :testacos = abs(acos(cos(pi)) - pi) < 0.1
 :testatan = abs(atan(tan(pi)) - 0) < 0.1
 :testsq = sqrt(16) == 4
-:testab = abs(-5) == 5 and abs(5) == 5
+:testab = abs(-5) == 5 and abs(5) == 5 and abs 5 == abs(5)
 :testz = (not 1 and not 10 and not not 0) == 0
 :testor = 20 or 0
 :testif = 0

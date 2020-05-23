@@ -62,7 +62,6 @@ type YololParserFunctions interface {
 	ParseUnaryExpression() ast.Expression
 	ParseBracketExpression() ast.Expression
 	ParseSingleExpression() ast.Expression
-	ParseFuncCall() ast.Expression
 	ParsePreOpExpression() ast.Expression
 	ParsePostOpExpression() ast.Expression
 }
@@ -525,8 +524,8 @@ func (p *Parser) ParseProdExpression() ast.Expression {
 // ParseUnaryExpression parses an unary expression
 func (p *Parser) ParseUnaryExpression() ast.Expression {
 	p.Log()
-	preUnaryOps := []string{"not", "-"}
-	if p.IsCurrentValueIn(preUnaryOps) {
+	preUnaryOps := []string{"not", "abs", "sqrt", "sin", "cos", "tan", "asin", "acos", "atan"}
+	if (p.IsCurrentValueIn(preUnaryOps) && p.IsCurrentType(ast.TypeKeyword)) || p.IsCurrent(ast.TypeSymbol, "-") {
 		unaryExp := &ast.UnaryOperation{
 			Operator: p.CurrentToken.Value,
 			Position: p.CurrentToken.Position,
@@ -571,11 +570,6 @@ func (p *Parser) ParseSingleExpression() ast.Expression {
 		return postOpVarDeref
 	}
 
-	funccall := p.This.ParseFuncCall()
-	if funccall != nil {
-		return funccall
-	}
-
 	if p.IsCurrentType(ast.TypeID) {
 		defer p.Advance()
 		return &ast.Dereference{
@@ -600,29 +594,6 @@ func (p *Parser) ParseSingleExpression() ast.Expression {
 
 	// log error here and remove nil checks in other expression functions?
 	return nil
-}
-
-// ParseFuncCall parse a function call
-func (p *Parser) ParseFuncCall() ast.Expression {
-	p.Log()
-	if !p.IsCurrentType(ast.TypeID) || p.NextToken.Type != ast.TypeSymbol || p.NextToken.Value != "(" {
-		return nil
-	}
-	fc := &ast.FuncCall{
-		Position: p.CurrentToken.Position,
-		Function: p.CurrentToken.Value,
-	}
-	p.Advance()
-	p.Advance()
-	arg := p.This.ParseExpression()
-	fc.Argument = arg
-	if arg == nil {
-		p.ErrorCurrent("Functions need exactly one argument")
-	}
-
-	p.Expect(ast.TypeSymbol, ")")
-
-	return fc
 }
 
 // ParsePreOpExpression parse pre-expression

@@ -612,19 +612,9 @@ func (v *YololVM) runExpr(expr ast.Expression) (*Variable, error) {
 		return v.runUnaryOp(e)
 	case *ast.Dereference:
 		return v.runDeref(e)
-	case *ast.FuncCall:
-		return v.runFuncCall(e)
 	default:
 		return nil, RuntimeError{fmt.Errorf("UNKNWON-EXPRESSION:%T", e), expr}
 	}
-}
-
-func (v *YololVM) runFuncCall(d *ast.FuncCall) (*Variable, error) {
-	arg, err := v.runExpr(d.Argument)
-	if err != nil {
-		return nil, err
-	}
-	return RunFunction(arg, d.Function)
 }
 
 func (v *YololVM) runDeref(d *ast.Dereference) (*Variable, error) {

@@ -1,0 +1,14 @@
+scripts: 
+  # list of scripts to run
+  - name: functions.nolol
+cases:
+  # list of testcases
+  - name: TestFunctions
+    # expected value for global variables after running
+    outputs:
+      timeok: 1
+      absok: 1
+      absinifok: 1
+      sqrtok: 1
+
+      

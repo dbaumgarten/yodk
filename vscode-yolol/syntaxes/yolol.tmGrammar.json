@@ -35,7 +35,7 @@
 			]
 		},
 		"keyword": {
-			"match": "(?i)\\b(if|then|else|end|goto)\\b",
+			"match": "(?i)\\b(if|then|else|end|goto|abs|sqrt|sin|cos|tan|asin|acos|atan)\\b",
 			"name": "keyword.control"
 		},
 		"string": {

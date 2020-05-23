@@ -66,9 +66,19 @@ func (p *Printer) Print(prog ast.Node) (string, error) {
 		case *nast.MacroInsetion:
 			switch visitType {
 			case ast.PreVisit:
-				return "insert " + n.Name + "(", nil
+				return "insert ", nil
 			case ast.PostVisit:
-				return ")\n", nil
+				return "\n", nil
+			default:
+				return "", nil
+			}
+
+		case *nast.FuncCall:
+			switch visitType {
+			case ast.PreVisit:
+				return n.Function + "(", nil
+			case ast.PostVisit:
+				return ")", nil
 			default:
 				if visitType > 0 {
 					return ",", nil

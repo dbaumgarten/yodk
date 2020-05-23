@@ -180,38 +180,21 @@ func (p *Parser) ParseMacroDefinition() *nast.MacroDefinition {
 
 // ParseMacroInsertion parses a macro insertion
 func (p *Parser) ParseMacroInsertion() *nast.MacroInsetion {
+	p.Log()
 	if !p.IsCurrent(ast.TypeKeyword, "insert") {
 		return nil
 	}
 	p.Advance()
 	mins := &nast.MacroInsetion{
-		Position:  p.CurrentToken.Position,
-		Arguments: []ast.Expression{},
+		Position: p.CurrentToken.Position,
 	}
-	if !p.IsCurrentType(ast.TypeID) {
-		p.ErrorCurrent("Expected an idantifier after the macro keyword")
+
+	mins.FuncCall = p.ParseFuncCall()
+
+	if mins.FuncCall == nil {
+		p.ErrorCurrent("Expected a macro instanziation after the insert keyword")
 		return mins
 	}
-	mins.Name = p.CurrentToken.Value
-	p.Advance()
-
-	p.Expect(ast.TypeSymbol, "(")
-
-	for !p.IsCurrent(ast.TypeSymbol, ")") {
-		exp := p.ParseExpression()
-		if exp == nil {
-			p.ErrorCurrent("Expected expression(s) as argument to the macro")
-			break
-		}
-		mins.Arguments = append(mins.Arguments, exp)
-		if p.IsCurrent(ast.TypeSymbol, ",") {
-			p.Advance()
-			continue
-		}
-		break
-	}
-
-	p.Expect(ast.TypeSymbol, ")")
 
 	if !p.IsCurrentType(ast.TypeEOF) {
 		p.Expect(ast.TypeNewline, "")
@@ -507,30 +490,44 @@ func (p *Parser) ParseGoto() ast.Statement {
 }
 
 // ParseFuncCall parse a function call
-func (p *Parser) ParseFuncCall() ast.Expression {
+func (p *Parser) ParseFuncCall() *nast.FuncCall {
 	p.Log()
 	if !p.IsCurrentType(ast.TypeID) || p.NextToken.Type != ast.TypeSymbol || p.NextToken.Value != "(" {
 		return nil
 	}
-	fc := &ast.FuncCall{
-		Position: p.CurrentToken.Position,
-		Function: p.CurrentToken.Value,
+	fc := &nast.FuncCall{
+		Position:  p.CurrentToken.Position,
+		Function:  p.CurrentToken.Value,
+		Arguments: make([]ast.Expression, 0),
 	}
 	p.Advance()
 	p.Advance()
 
-	if p.IsCurrent(ast.TypeSymbol, ")") {
-		p.Advance()
-		return fc
-	}
-
-	arg := p.This.ParseExpression()
-	fc.Argument = arg
-	if arg == nil {
-		p.ErrorCurrent("Expected a function argument or ')'")
+	for !p.IsCurrent(ast.TypeSymbol, ")") {
+		exp := p.ParseExpression()
+		if exp == nil {
+			p.ErrorCurrent("Expected expression(s) as arguments(s)")
+			break
+		}
+		fc.Arguments = append(fc.Arguments, exp)
+		if p.IsCurrent(ast.TypeSymbol, ",") {
+			p.Advance()
+			continue
+		}
+		break
 	}
 
 	p.Expect(ast.TypeSymbol, ")")
 
 	return fc
+}
+
+// ParseSingleExpression wraps the method of the yolol-parser and adds parsing of func-calls
+func (p *Parser) ParseSingleExpression() ast.Expression {
+	p.Log()
+	funccall := p.ParseFuncCall()
+	if funccall != nil {
+		return funccall
+	}
+	return p.Parser.ParseSingleExpression()
 }

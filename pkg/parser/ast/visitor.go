@@ -165,21 +165,6 @@ func (o *BinaryOperation) Accept(v Visitor) error {
 }
 
 // Accept is used to implement Acceptor
-func (f *FuncCall) Accept(v Visitor) error {
-	err := v.Visit(f, PreVisit)
-	if err != nil {
-		return err
-	}
-	if f.Argument != nil {
-		f.Argument, err = AcceptChild(v, f.Argument)
-		if err != nil {
-			return err
-		}
-	}
-	return v.Visit(f, PostVisit)
-}
-
-// Accept is used to implement Acceptor
 func (a *Assignment) Accept(v Visitor) error {
 	err := v.Visit(a, PreVisit)
 	if err != nil {
