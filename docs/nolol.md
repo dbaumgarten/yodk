@@ -81,6 +81,15 @@ YOLOL Output:
 
 [goto.yolol](generated/code/nolol/goto.yolol ':include')
 
+As jumping to line-numbers does not work, jumping to lines by using variables does also not work and is therefor not possible in nolol. The following does NOT work:
+
+```
+linenr = 4
+goto linenr
+```
+
+Features for dynamic gotos (choosing the target-line at runtime) will probably be added in the future.
+
 ## Multiline ifs
 NOLOL features multiline ifs, including else-if blocks. Ifs can be aribitarily nested. YOLOLs on-line ifs are NOT supported anymore, but the multiline ifs are compiled to one-line if, whenever possible (when the compiled if is small enough to fit into one line of yolol).
 

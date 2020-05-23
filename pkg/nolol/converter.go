@@ -597,7 +597,10 @@ func (c *Converter) replaceGotoLabels(p ast.Node) error {
 			}
 			repl := &ast.GoToStatement{
 				Position: gotostmt.Position,
-				Line:     line,
+				Line: &ast.NumberConstant{
+					Position: p.Start(),
+					Value:    strconv.Itoa(line),
+				},
 			}
 			return ast.NewNodeReplacement(repl)
 		}

@@ -46,5 +46,6 @@ cases:
       testsum: 1
       testtanpi: 1
       testz: 1
+      testgotovar: 1
 
       

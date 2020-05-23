@@ -1,6 +1,8 @@
 package ast
 
-import "fmt"
+import (
+	"fmt"
+)
 
 // Visit() is called multiple times per node. The visitType tells the handler which one
 // of the multiple calls the current one is
@@ -212,7 +214,17 @@ func (s *IfStatement) Accept(v Visitor) error {
 
 // Accept is used to implement Acceptor
 func (g *GoToStatement) Accept(v Visitor) error {
-	return v.Visit(g, SingleVisit)
+	err := v.Visit(g, PreVisit)
+	if err != nil {
+		return err
+	}
+
+	g.Line, err = AcceptChild(v, g.Line)
+	if err != nil {
+		return err
+	}
+
+	return v.Visit(g, PostVisit)
 }
 
 // AcceptChild calls node.Accept(v) and processes any returned NodeReplacements

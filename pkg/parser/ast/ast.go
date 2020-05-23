@@ -1,9 +1,5 @@
 package ast
 
-import (
-	"strconv"
-)
-
 // Node is the base interface
 type Node interface {
 	Acceptor
@@ -203,8 +199,8 @@ func (n *IfStatement) End() Position {
 // GoToStatement represents a goto
 type GoToStatement struct {
 	Position Position
-	// Number of the line to go to
-	Line int
+	// The Line to go to
+	Line Expression
 }
 
 // Start is needed to implement Node
@@ -214,5 +210,5 @@ func (n *GoToStatement) Start() Position {
 
 // End is needed to implement Node
 func (n *GoToStatement) End() Position {
-	return n.Position.Add(len(strconv.Itoa(n.Line)) + 1)
+	return n.Line.End()
 }

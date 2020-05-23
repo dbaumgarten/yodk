@@ -561,7 +561,21 @@ func (v *YololVM) runStmt(stmt ast.Statement) error {
 		}
 		return nil
 	case *ast.GoToStatement:
-		v.currentAstLine = e.Line - 1
+		line, err := v.runExpr(e.Line)
+		if err != nil {
+			return RuntimeError{err, stmt}
+		}
+		if !line.IsNumber() {
+			return RuntimeError{fmt.Errorf("Can not goto a string (%s)", line.String()), e}
+		}
+		linenr := line.Number().IntPart()
+		if linenr < 1 {
+			linenr = 1
+		}
+		if linenr > 20 {
+			linenr = 20
+		}
+		v.currentAstLine = int(linenr) - 1
 		// goto makes us leave the current line. Reset skipbp
 		v.skipBp = -1
 		return errAbortLine

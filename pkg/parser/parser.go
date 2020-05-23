@@ -3,7 +3,6 @@ package parser
 import (
 	"fmt"
 	"runtime"
-	"strconv"
 	"strings"
 
 	"github.com/dbaumgarten/yodk/pkg/parser/ast"
@@ -324,12 +323,13 @@ func (p *Parser) ParseGoto() ast.Statement {
 			Position: p.CurrentToken.Position,
 		}
 		p.Advance()
-		line, err := strconv.Atoi(p.CurrentToken.Value)
-		if !p.IsCurrentType(ast.TypeNumber) || err != nil {
-			p.Error("Goto must be followed by a line number", stmt.Start(), stmt.Start())
+		stmt.Line = p.This.ParseExpression()
+		if stmt.Line == nil {
+			p.Error("Goto must be followed by an expression", stmt.Start(), stmt.Start())
 		}
-		stmt.Line = line
-		p.Advance()
+		if _, is := stmt.Line.(*ast.StringConstant); is {
+			p.Error("Can not go to a string", stmt.Start(), stmt.Start())
+		}
 		return &stmt
 	}
 	return nil

@@ -2,7 +2,6 @@ package parser
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/dbaumgarten/yodk/pkg/parser/ast"
@@ -65,7 +64,9 @@ func (y *Printer) Print(prog ast.Node) (string, error) {
 			output += y.printIf(visitType)
 			break
 		case *ast.GoToStatement:
-			output += "goto " + strconv.Itoa(n.Line)
+			if visitType == ast.PreVisit {
+				output += "goto "
+			}
 			break
 		case *ast.Dereference:
 			output += y.printDeref(n)

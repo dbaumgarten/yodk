@@ -13,6 +13,10 @@ var TestProgram = `:testsum = 1 + 2 == 3
 :testmul = 2*5 == 10
 :testdiv = 20 / 10 == 2
 :testmod = 11 % 10 == 1
+counter=0
+counter++
+if counter < 20 then goto 7 end
+:testgoto = counter == 20
 // comment1
 :testexp = 10^2 == 100
 :testeq = 42 == 42 and not (41 == 24)
@@ -43,10 +47,6 @@ pi = 3.141
 if pi > 3 then :testif=1 else :testif = 0 end
 :testnestedif = 0
 if :testif != 1000 then if 1==1 then :testnestedif = 1 end end
-counter=0
-counter++
-if counter < 20 then goto 37 end
-:testgoto = counter == 20
 :testnested = 3+(1+1)*5 == 13
 k = 2
 :testnestedop = (k + 5)*k++ == 14
