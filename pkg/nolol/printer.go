@@ -34,146 +34,210 @@ func (p *Printer) Print(prog ast.Node) (string, error) {
 		return ind
 	}
 
-	p.yololPrinter.UnknownHandlerFunc = func(node ast.Node, visitType int) (string, error) {
+	p.yololPrinter.UnknownHandlerFunc = func(node ast.Node, visitType int, p *parser.Printer) error {
 		switch n := node.(type) {
 		case *nast.GoToLabelStatement:
 			if visitType == ast.SingleVisit {
-				return "goto " + n.Label, nil
+				p.Write("goto")
+				p.Space()
+				p.Write(n.Label)
 			}
-			return "", nil
+			break
 
 		case *nast.Block:
 			switch visitType {
 			case ast.PreVisit:
 				indentLevel++
-				return "", nil
+				break
 			case ast.PostVisit:
 				indentLevel--
-				return "", nil
+				break
 			default:
-				return indentation(indentLevel), nil
+				p.Write(indentation(indentLevel))
 			}
+			break
 
 		case *nast.MacroDefinition:
 			switch visitType {
 			case ast.PreVisit:
-				arglist := strings.Join(n.Arguments, ",")
-				return "macro " + n.Name + "(" + arglist + ")\n", nil
+				arglist := strings.Join(n.Arguments, ", ")
+				p.Write("macro")
+				p.Space()
+				p.Write(n.Name)
+				p.Write("(")
+				p.Write(arglist)
+				p.Write(")")
+				p.Newline()
+				break
 			case ast.PostVisit:
-				return "end", nil
+				p.Write("end")
+				break
 			}
+			break
 
 		case *nast.MacroInsetion:
 			switch visitType {
 			case ast.PreVisit:
-				return "insert ", nil
+				p.Write("insert")
+				p.Space()
+				break
 			case ast.PostVisit:
-				return "\n", nil
+				p.Newline()
+				break
 			default:
-				return "", nil
 			}
+			break
 
 		case *nast.FuncCall:
 			switch visitType {
 			case ast.PreVisit:
-				return n.Function + "(", nil
+				p.Write(n.Function)
+				p.Write("(")
+				break
 			case ast.PostVisit:
-				return ")", nil
+				p.Write(")")
+				break
 			default:
 				if visitType > 0 {
-					return ",", nil
+					p.Write(",")
+					p.OptionalSpace()
 				}
-				return "", nil
 			}
+			break
 
 		case *nast.MultilineIf:
 			switch visitType {
 			case ast.PreVisit:
-				return "if ", nil
+				p.Write("if")
+				p.Space()
+				break
 			case ast.InterVisit1:
-				return " then\n", nil
+				p.Space()
+				p.Write("then")
+				p.Newline()
+				break
 			case ast.InterVisit2:
-				return indentation(indentLevel) + "else\n", nil
+				p.Write(indentation(indentLevel))
+				p.Write("else")
+				p.Newline()
+				break
 			case ast.PostVisit:
-				return indentation(indentLevel) + "end\n", nil
+				p.Write(indentation(indentLevel))
+				p.Write("end")
+				p.Newline()
+				break
 			default:
 				if visitType > 0 {
-					return indentation(indentLevel) + "else if ", nil
+					p.Write(indentation(indentLevel))
+					p.Write("else if")
+					p.Space()
 				}
-				return "", nil
 			}
+			break
 		case *nast.WhileLoop:
 			switch visitType {
 			case ast.PreVisit:
-				return "while ", nil
+				p.Write("while")
+				p.Space()
+				break
 			case ast.InterVisit1:
-				return " do\n", nil
+				p.Space()
+				p.Write("do")
+				p.Newline()
 			case ast.PostVisit:
-				return indentation(indentLevel) + "end\n", nil
+				p.Write(indentation(indentLevel))
+				p.Write("end")
+				p.Newline()
+				break
 			default:
-				return "", nil
 			}
+			break
 		case *nast.StatementLine:
 			switch visitType {
 			case ast.PreVisit:
-				out := ""
 				if n.Label != "" {
-					out += n.Label + "> "
+					p.Write(n.Label)
+					p.Write(">")
+					p.Space()
 				}
 				if n.HasBOL {
-					out += "$"
+					p.Write("$")
 					if len(n.Statements) > 0 {
-						out += " "
+						p.Space()
 					}
 				}
-				return out, nil
+				break
 			case ast.PostVisit:
-				out := ""
 				if n.HasEOL && len(n.Statements) > 0 {
-					out += " $"
+					p.Space()
+					p.Write("$")
 				}
 				if n.Comment != "" && (n.HasBOL || n.Label != "" || len(n.Statements) > 0) {
 					// the line has a comment and somethin else. Seperate it by a space
-					out += " "
+					p.Space()
 				}
-				out += n.Comment
-				out += "\n"
-				return out, nil
+				p.Write(n.Comment)
+				p.Newline()
+				break
 			default:
 				if visitType > 0 {
-					return "; ", nil
+					p.Write(";")
+					p.OptionalSpace()
 				}
 			}
-			return "", nil
+			break
 		case *nast.IncludeDirective:
-			return "include \"" + n.File + "\"\n", nil
+			p.Write("include")
+			p.Space()
+			p.Write("\"" + n.File + "\"")
+			p.Newline()
+			break
 		case *nast.Definition:
 			switch visitType {
 			case ast.PreVisit:
-				return "define " + n.Name + " = ", nil
+				p.Write("define")
+				p.Space()
+				p.Write(n.Name)
+				p.OptionalSpace()
+				p.Write("=")
+				p.OptionalSpace()
+				break
 			case ast.PostVisit:
-				return "\n", nil
+				p.Newline()
+				break
 			}
 		case *nast.Program:
-			return "", nil
+			break
 		case *nast.WaitDirective:
 			if visitType == ast.PreVisit {
-				return "wait ", nil
+				p.Write("wait")
+				p.Space()
+				break
 			}
 			if n.Statements != nil {
 				if visitType == ast.InterVisit1 {
-					return " then ", nil
+					p.Space()
+					p.Write("then")
+					p.Space()
+					break
 				}
 				if visitType > 0 {
-					return " ; ", nil
+					p.OptionalSpace()
+					p.Write(";")
+					p.OptionalSpace()
+					break
 				}
 				if visitType == ast.PostVisit {
-					return " end", nil
+					p.Space()
+					p.Write("end")
+					break
 				}
 			}
-			return "", nil
+			break
+		default:
+			return fmt.Errorf("Unknown node-type: %T", node)
 		}
-		return "", fmt.Errorf("Unknown node-type: %T", node)
+		return nil
 	}
 
 	return p.yololPrinter.Print(prog)

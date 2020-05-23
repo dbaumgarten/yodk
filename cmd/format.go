@@ -11,6 +11,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var formatShort bool
+
 // formatCmd represents the format command
 var formatCmd = &cobra.Command{
 	Use:   "format [file]+",
@@ -35,6 +37,9 @@ func format(filepath string) {
 			exitOnError(errs, "parsing file")
 		}
 		gen := parser.Printer{}
+		if formatShort {
+			gen.Mode = parser.PrintermodeShort
+		}
 		generated, err = gen.Print(parsed)
 		exitOnError(err, "generating code")
 		err = util.CheckForFormattingErrorYolol(parsed, generated)
@@ -59,6 +64,7 @@ func format(filepath string) {
 
 func init() {
 	rootCmd.AddCommand(formatCmd)
+	formatCmd.Flags().BoolVarP(&formatShort, "short", "s", false, "Shorten the code by only using necessary spaces")
 
 	// Here you will define your flags and configuration settings.
 

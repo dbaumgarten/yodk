@@ -7,12 +7,26 @@ import (
 	"github.com/dbaumgarten/yodk/pkg/parser/ast"
 )
 
+// Printermode describes various modes for the printer
+type Printermode int
+
+const (
+	// PrintermodeReadable inserts spaces the improve readability
+	PrintermodeReadable Printermode = 0
+	// PrintermodeShort inserts only spaces that are reasonably necessary
+	PrintermodeShort Printermode = 1
+)
+
 // Printer generates yolol-code from an AST
 type Printer struct {
 	// This function is called whenever an unknown node-type is encountered.
 	// It can be used to add support for additional types to the generator
 	// returns the yolol-code for the giben node or an error
-	UnknownHandlerFunc func(node ast.Node, visitType int) (string, error)
+	UnknownHandlerFunc func(node ast.Node, visitType int, p *Printer) error
+	// If true, only insert spaces where absolutely necessary
+	Mode         Printermode
+	text         string
+	lastWasSpace bool
 }
 
 var operatorPriority = map[string]int{
@@ -33,9 +47,47 @@ var operatorPriority = map[string]int{
 	"not": 4,
 }
 
+// Write adds text to the source-code that is currently build
+func (p *Printer) Write(content string) {
+	p.text += content
+	p.lastWasSpace = false
+}
+
+// Space adds a space to the source-code that is currently build
+func (p *Printer) Space() {
+	if !p.lastWasSpace {
+		p.text += " "
+	}
+	p.lastWasSpace = true
+}
+
+// OptionalSpace adds a space to the source-code that is currently build, IF we are not producing compressed output
+func (p *Printer) OptionalSpace() {
+	if p.Mode == PrintermodeReadable {
+		p.Space()
+	}
+}
+
+// StatementSeparator writes spaces to seperate statements on one line. Amount of spaces depends on settings
+func (p *Printer) StatementSeparator() {
+	if p.Mode == PrintermodeReadable {
+		p.Write(" ")
+		p.Space()
+	} else {
+		p.Space()
+	}
+}
+
+// Newline adds a newline to the source-code that is currently build
+func (p *Printer) Newline() {
+	p.text += "\n"
+	p.lastWasSpace = false
+}
+
 // Print returns the yolol-code the ast-node and it's children represent
-func (y *Printer) Print(prog ast.Node) (string, error) {
-	output := ""
+func (p *Printer) Print(prog ast.Node) (string, error) {
+	p.text = ""
+	p.lastWasSpace = false
 	err := prog.Accept(ast.VisitorFunc(func(node ast.Node, visitType int) error {
 		switch n := node.(type) {
 		case *ast.Program:
@@ -43,75 +95,78 @@ func (y *Printer) Print(prog ast.Node) (string, error) {
 		case *ast.Line:
 			if visitType == ast.PostVisit {
 				if n.Comment != "" {
-					if len(n.Statements) == 0 {
-						output += n.Comment
-					} else {
-						output += " " + n.Comment
+					if len(n.Statements) != 0 {
+						p.Space()
 					}
+					p.Write(n.Comment)
 				}
-				output += "\n"
+				p.Newline()
 			}
 			if visitType > 0 {
-				output += " "
+				p.StatementSeparator()
 			}
 			break
 		case *ast.Assignment:
 			if visitType == ast.PreVisit {
-				output += n.Variable + n.Operator
+				p.Write(n.Variable)
+				p.OptionalSpace()
+				p.Write(n.Operator)
+				p.OptionalSpace()
 			}
 			break
 		case *ast.IfStatement:
-			output += y.printIf(visitType)
+			p.printIf(visitType)
 			break
 		case *ast.GoToStatement:
 			if visitType == ast.PreVisit {
-				output += "goto "
+				p.Write("goto")
+				p.Space()
 			}
 			break
 		case *ast.Dereference:
-			output += y.printDeref(n)
+			p.printDeref(n)
 			break
 		case *ast.StringConstant:
-			output += "\"" + insertEscapesIntoString(n.Value) + "\""
+			p.Write("\"" + insertEscapesIntoString(n.Value) + "\"")
 			break
 		case *ast.NumberConstant:
 			if strings.HasPrefix(n.Value, "-") {
-				output += " "
+				p.Space()
 			}
-			output += fmt.Sprintf(n.Value)
+			p.Write(fmt.Sprintf(n.Value))
 			break
 		case *ast.BinaryOperation:
-			output += y.printBinaryOperation(n, visitType)
+			p.printBinaryOperation(n, visitType)
 			break
 		case *ast.UnaryOperation:
 			_, childBinary := n.Exp.(*ast.BinaryOperation)
 			if visitType == ast.PreVisit {
 				op := n.Operator
 				if op == "-" {
-					op = " " + op
+					p.Space()
+					p.Write(op)
 				} else {
-					op = op + " "
+					p.Write(op)
+					p.Space()
 				}
-				output += op
 				if childBinary {
-					output += "("
+					p.Write("(")
 				}
 			}
 			if visitType == ast.PostVisit {
 				if childBinary {
-					output += ")"
+					p.Write(")")
 				}
 			}
 			break
 		default:
-			if y.UnknownHandlerFunc == nil {
+			if p.UnknownHandlerFunc == nil {
 				return fmt.Errorf("Unknown ast-node: %T%v", node, node)
 			}
-			str, err := y.UnknownHandlerFunc(node, visitType)
+			err := p.UnknownHandlerFunc(node, visitType, p)
 			if err != nil {
 				return err
 			}
-			output += str
 		}
 		return nil
 	}))
@@ -119,8 +174,8 @@ func (y *Printer) Print(prog ast.Node) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	// during the generation duplicate spaces might appear. Remove them
-	return strings.Replace(output, "  ", " ", -1), nil
+
+	return p.text, nil
 }
 
 func insertEscapesIntoString(in string) string {
@@ -130,38 +185,43 @@ func insertEscapesIntoString(in string) string {
 	return in
 }
 
-func (y *Printer) printBinaryOperation(o *ast.BinaryOperation, visitType int) string {
+func (p *Printer) printBinaryOperation(o *ast.BinaryOperation, visitType int) {
 	lPrio := priorityForExpression(o.Exp1)
 	rPrio := priorityForExpression(o.Exp2)
 	_, rBinary := o.Exp2.(*ast.BinaryOperation)
 	myPrio := priorityForExpression(o)
-	output := ""
 	switch visitType {
 	case ast.PreVisit:
 		if lPrio < myPrio {
-			output += "("
+			p.Write("(")
 		}
 		break
 	case ast.InterVisit1:
 		if lPrio < myPrio {
-			output += ")"
+			p.Write(")")
 		}
 		op := o.Operator
 		if op == "and" || op == "or" {
-			op = " " + op + " "
+			p.Space()
+			p.Write(op)
+			p.Space()
+		} else {
+			p.OptionalSpace()
+			p.Write(op)
+			p.OptionalSpace()
 		}
-		output += op
+
 		if rBinary && rPrio <= myPrio {
-			output += "("
+			p.Write("(")
 		}
 		break
 	case ast.PostVisit:
 		if rBinary && rPrio <= myPrio {
-			output += ")"
+			p.Write(")")
 		}
 		break
 	}
-	return output
+
 }
 
 func priorityForExpression(e ast.Expression) int {
@@ -173,30 +233,42 @@ func priorityForExpression(e ast.Expression) int {
 	}
 }
 
-func (y *Printer) printIf(visitType int) string {
+func (p *Printer) printIf(visitType int) {
 
 	switch visitType {
 	case ast.PreVisit:
-		return "if "
+		p.Write("if")
+		p.Space()
+		break
 	case ast.InterVisit1:
-		return " then "
+		p.Space()
+		p.Write("then")
+		p.Space()
+		break
 	case ast.InterVisit2:
-		return " else "
+		p.Space()
+		p.Write("else")
+		p.Space()
+		break
 	case ast.PostVisit:
-		return " end"
+		p.Space()
+		p.Write("end")
+		break
 	default:
-		return " "
+		if visitType > 0 {
+			p.StatementSeparator()
+		}
 	}
 }
 
-func (y *Printer) printDeref(d *ast.Dereference) string {
-	txt := ""
+func (p *Printer) printDeref(d *ast.Dereference) {
 	if d.PrePost == "Pre" {
-		txt += " " + d.Operator
+		p.Space()
+		p.Write(d.Operator)
 	}
-	txt += d.Variable
+	p.Write(d.Variable)
 	if d.PrePost == "Post" {
-		txt += d.Operator + " "
+		p.Write(d.Operator)
+		p.Space()
 	}
-	return txt
 }

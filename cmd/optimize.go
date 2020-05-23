@@ -29,7 +29,7 @@ var optimizeCmd = &cobra.Command{
 }
 
 func optimize(filepath string) {
-	outfile := strings.Replace(filepath, path.Ext(filepath), "", -1) + "-opt" + path.Ext(filepath)
+	outfile := strings.Replace(filepath, path.Ext(filepath), "", -1) + ".opt" + path.Ext(filepath)
 	p := parser.NewParser()
 	file := loadInputFile(filepath)
 	parsed, errs := p.Parse(file)
@@ -40,6 +40,7 @@ func optimize(filepath string) {
 	err := opt.Optimize(parsed)
 	exitOnError(err, "performing optimisation")
 	gen := parser.Printer{}
+	gen.Mode = parser.PrintermodeShort
 	generated, err := gen.Print(parsed)
 	exitOnError(err, "generating code")
 	ioutil.WriteFile(outfile, []byte(generated), 0700)

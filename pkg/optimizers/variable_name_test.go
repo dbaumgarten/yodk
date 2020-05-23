@@ -84,8 +84,8 @@ func TestVarOpt(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if strings.Contains(generated, "pi = ") || strings.Contains(generated, "hw = ") {
-		t.Fatal("Variables have not been replaced")
+	if strings.Contains(generated, " pi") || strings.Contains(generated, " hw") {
+		t.Fatal("Variables have not been replaced", generated)
 	}
 
 	err = testdata.ExecuteTestProgram(generated)
