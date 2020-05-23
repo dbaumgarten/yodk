@@ -173,20 +173,20 @@ func (t Test) Run(caseCallback func(c Case)) []error {
 	fails := make([]error, 0)
 	flock := &sync.Mutex{}
 
-	errHandler := func(vm *vm.YololVM, err error) bool {
-		flock.Lock()
-		defer flock.Unlock()
-		fails = append(fails, err)
-		return false
-	}
-
 	for _, c := range t.Cases {
 		if caseCallback != nil {
 			caseCallback(c)
 		}
 		coord := vm.NewCoordinator()
-
 		c.InitializeVariables(coord)
+
+		errHandler := func(vm *vm.YololVM, err error) bool {
+			flock.Lock()
+			defer flock.Unlock()
+			fails = append(fails, err)
+			go coord.Terminate()
+			return true
+		}
 
 		_, _, err := t.CreateVMs(coord, errHandler)
 		if err != nil {
