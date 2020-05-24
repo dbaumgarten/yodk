@@ -103,7 +103,7 @@ You can run multiple yaml-files at once, just by appending their names to the co
 
 The command will print which test is run and how the test-result is. If all tests finish without error, the command returns with a return value of 0, otherwise with 1.
 
-# Comiling NOLOL
+# Compiling NOLOL
 The cli is used to compile NOLOL-code to YOLOL. To compile one (or many) nolol files run:
 ```
 yodk compile myfile.nolol
