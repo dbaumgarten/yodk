@@ -1,0 +1,7 @@
+scripts: 
+  - name: loops_advanced.nolol
+    iterations: 1
+cases:
+  - name: Count up
+    outputs:
+      out: "|1.3.5.7.9.|1.3.5.7.9."

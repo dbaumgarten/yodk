@@ -130,6 +130,14 @@ func CopyAst(inp ast.Node) ast.Node {
 				m := &WaitDirective{}
 				copier.Copy(m, n)
 				newnode = m
+			case *BreakStatement:
+				m := &BreakStatement{}
+				copier.Copy(m, n)
+				newnode = m
+			case *ContinueStatement:
+				m := &BreakStatement{}
+				copier.Copy(m, n)
+				newnode = m
 			default:
 				panic(fmt.Sprintf("Cannot copy unkown type %T", node))
 			}

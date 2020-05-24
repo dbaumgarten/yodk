@@ -236,6 +236,14 @@ func (np *Printer) handleNololNodes(node ast.Node, visitType int, p *parser.Prin
 			}
 		}
 		break
+	case *nast.BreakStatement:
+		p.Write("break")
+		p.Space()
+		break
+	case *nast.ContinueStatement:
+		p.Write("continue")
+		p.Space()
+		break
 	default:
 		return fmt.Errorf("Unknown node-type: %T", node)
 	}

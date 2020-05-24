@@ -212,6 +212,16 @@ func (f *FuncCall) Accept(v ast.Visitor) error {
 	return v.Visit(f, ast.PostVisit)
 }
 
+// Accept is used to implement Acceptor
+func (s *BreakStatement) Accept(v ast.Visitor) error {
+	return v.Visit(s, ast.SingleVisit)
+}
+
+// Accept is used to implement Acceptor
+func (s *ContinueStatement) Accept(v ast.Visitor) error {
+	return v.Visit(s, ast.SingleVisit)
+}
+
 // AcceptElementList calles Accept for ever element of old and handles node-replacements
 func AcceptElementList(parent ast.Node, v ast.Visitor, old []Element) ([]Element, error) {
 	for i := 0; i < len(old); i++ {

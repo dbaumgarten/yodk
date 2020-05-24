@@ -108,6 +108,10 @@ YOLOL Output:
 
 [loops.yolol](generated/code/nolol/loops.yolol ':include')
 
+Also, the keywords ```break``` and ```continue``` can be used inside loops (as in most programming-languages):
+
+[loops_advanced.nolol](generated/code/nolol/loops_advanced.nolol ':include')
+
 ## Timing control
 YOLOL implements timing operations by enforcing a fixed and predictable execution speed for the script. The programmer always knows (or at least could know) how much time passes between two statements.  
 

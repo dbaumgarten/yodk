@@ -239,3 +239,33 @@ func (n *FuncCall) End() ast.Position {
 	}
 	return n.Position.Add(len(n.Function) + 2)
 }
+
+// BreakStatement represents the break-keyword inside a loop
+type BreakStatement struct {
+	Position ast.Position
+}
+
+// Start is needed to implement ast.Node
+func (n *BreakStatement) Start() ast.Position {
+	return n.Position
+}
+
+// End is needed to implement ast.Node
+func (n *BreakStatement) End() ast.Position {
+	return n.Position.Add(len("break"))
+}
+
+// ContinueStatement represents the continue-keyword inside a loop
+type ContinueStatement struct {
+	Position ast.Position
+}
+
+// Start is needed to implement ast.Node
+func (n *ContinueStatement) Start() ast.Position {
+	return n.Position
+}
+
+// End is needed to implement ast.Node
+func (n *ContinueStatement) End() ast.Position {
+	return n.Position.Add(len("continue"))
+}

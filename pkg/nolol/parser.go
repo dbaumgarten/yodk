@@ -531,3 +531,43 @@ func (p *Parser) ParseSingleExpression() ast.Expression {
 	}
 	return p.Parser.ParseSingleExpression()
 }
+
+// ParseStatement wraps the method of the yolol-parser to add new statement-types
+func (p *Parser) ParseStatement() ast.Statement {
+	p.Log()
+	breakstmt := p.ParseBreak()
+	if breakstmt != nil {
+		return breakstmt
+	}
+	continuestmt := p.ParseContinue()
+	if continuestmt != nil {
+		return continuestmt
+	}
+	return p.Parser.ParseStatement()
+}
+
+// ParseBreak parses the break keyword
+func (p *Parser) ParseBreak() ast.Statement {
+	p.Log()
+	if p.IsCurrent(ast.TypeKeyword, "break") {
+		rval := &nast.BreakStatement{
+			Position: p.CurrentToken.Position,
+		}
+		p.Advance()
+		return rval
+	}
+	return nil
+}
+
+// ParseContinue parses the continue keyword
+func (p *Parser) ParseContinue() ast.Statement {
+	p.Log()
+	if p.IsCurrent(ast.TypeKeyword, "continue") {
+		rval := &nast.ContinueStatement{
+			Position: p.CurrentToken.Position,
+		}
+		p.Advance()
+		return rval
+	}
+	return nil
+}

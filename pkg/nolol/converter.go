@@ -24,11 +24,14 @@ type Converter struct {
 	jumpLabels map[string]int
 	// the names of definitions are case-insensitive. Keys are converted to lowercase before using them
 	// all lookups MUST also use lowercased keys
-	definitions         map[string]ast.Expression
-	usesTimeTracking    bool
-	iflabelcounter      int
-	waitlabelcounter    int
-	whilelabelcounter   int
+	definitions      map[string]ast.Expression
+	usesTimeTracking bool
+	iflabelcounter   int
+	waitlabelcounter int
+	loopcounter      int
+	// keeps track of the current loop we are in while converting
+	// the last element in the list is the current innermost loop
+	loopLevel           []int
 	sexpOptimizer       *optimizers.StaticExpressionOptimizer
 	boolexpOptimizer    *optimizers.ExpressionInversionOptimizer
 	varnameOptimizer    *optimizers.VariableNameOptimizer
@@ -49,6 +52,7 @@ func NewConverter() *Converter {
 		sexpOptimizer:    optimizers.NewStaticExpressionOptimizer(),
 		boolexpOptimizer: &optimizers.ExpressionInversionOptimizer{},
 		varnameOptimizer: optimizers.NewVariableNameOptimizer(),
+		loopLevel:        make([]int, 0),
 	}
 }
 
@@ -89,6 +93,11 @@ func (c *Converter) getMacro(name string) (*nast.MacroDefinition, bool) {
 func (c *Converter) setMacro(name string, val *nast.MacroDefinition) {
 	name = strings.ToLower(name)
 	c.macros[name] = val
+}
+
+// getCurrentLoopNumber returns the number of the current (innermost) loop that is beeing converted
+func (c *Converter) getCurrentLoopNumber() int {
+	return c.loopLevel[len(c.loopLevel)-1]
 }
 
 // GetVariableTranslations returns a table that can be used to find the original names
@@ -227,8 +236,14 @@ func (c *Converter) convertNodes(node ast.Node) error {
 				return c.convertIf(n)
 			}
 		case *nast.WhileLoop:
+			if visitType == ast.PreVisit {
+				c.loopcounter++
+				c.loopLevel = append(c.loopLevel, c.loopcounter)
+			}
 			if visitType == ast.PostVisit {
-				return c.convertWhileLoop(n)
+				result := c.convertWhileLoop(n)
+				c.loopLevel = c.loopLevel[:len(c.loopLevel)-1]
+				return result
 			}
 		case *ast.UnaryOperation:
 		case *ast.BinaryOperation:
@@ -244,11 +259,47 @@ func (c *Converter) convertNodes(node ast.Node) error {
 				c.macroLevel = c.macroLevel[:len(c.macroLevel)-1]
 				return ast.NewNodeReplacement()
 			}
+		case *nast.BreakStatement:
+			return c.convertBreakStatement(n)
+		case *nast.ContinueStatement:
+			return c.convertContinueStatement(n)
 		}
 
 		return nil
 	}
 	return node.Accept(ast.VisitorFunc(f))
+}
+
+// convertBreakStatement converts the rbeak keyword
+func (c *Converter) convertBreakStatement(brk *nast.BreakStatement) error {
+	if len(c.loopLevel) == 0 {
+		return &parser.Error{
+			Message:       "The break keyword can only be used inside loops",
+			StartPosition: brk.Start(),
+			EndPosition:   brk.End(),
+		}
+	}
+	endLabel := fmt.Sprintf("endwhile%d", c.getCurrentLoopNumber())
+	return ast.NewNodeReplacementSkip(&nast.GoToLabelStatement{
+		Position: brk.Position,
+		Label:    endLabel,
+	})
+}
+
+// convertContinueStatement converts the continue keyword
+func (c *Converter) convertContinueStatement(cnt *nast.ContinueStatement) error {
+	if len(c.loopLevel) == 0 {
+		return &parser.Error{
+			Message:       "The continue keyword can only be used inside loops",
+			StartPosition: cnt.Start(),
+			EndPosition:   cnt.End(),
+		}
+	}
+	startLabel := fmt.Sprintf("while%d", c.getCurrentLoopNumber())
+	return ast.NewNodeReplacementSkip(&nast.GoToLabelStatement{
+		Position: cnt.Position,
+		Label:    startLabel,
+	})
 }
 
 // convertAssignment optimizes the variable name and the expression of an assignment
@@ -742,8 +793,9 @@ func (c *Converter) convertConditionMultiline(mlif *nast.MultilineIf, index int,
 
 // convertWhileLoop converts while loops into yolol-code
 func (c *Converter) convertWhileLoop(loop *nast.WhileLoop) error {
-	startLabel := fmt.Sprintf("while%d", c.whilelabelcounter)
-	endLabel := fmt.Sprintf("endwhile%d", c.whilelabelcounter)
+	loopnr := c.getCurrentLoopNumber()
+	startLabel := fmt.Sprintf("while%d", loopnr)
+	endLabel := fmt.Sprintf("endwhile%d", loopnr)
 
 	condition := c.boolexpOptimizer.OptimizeExpression(&ast.UnaryOperation{
 		Operator: "not",
@@ -793,7 +845,6 @@ func (c *Converter) convertWhileLoop(loop *nast.WhileLoop) error {
 		},
 	})
 
-	c.whilelabelcounter++
 	return ast.NewNodeReplacementSkip(repl...)
 
 }
