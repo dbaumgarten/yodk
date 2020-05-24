@@ -28,7 +28,7 @@ The yodk can automatically optimize your yolol files for you. Just run:
 yodk optimize file1.yolol
 ```
 
-This will create a fiĺe file1-opt.yolol. (The original file is not overwritten, as you will probably still need it)
+This will create a fiĺe ```file1.opt.yolol``` . (The original file is not overwritten, as you will probably still need it)
 
 Take a look at the example below:
 
@@ -36,7 +36,7 @@ Take a look at the example below:
 
 and the resulting optimized code:
 
-[unoptimized-opt.yolol](generated/code/yolol/unoptimized-opt.yolol ':include')
+[unoptimized.opt.yolol](generated/code/yolol/unoptimized.opt.yolol ':include')
 
 While the optimizations do not reduce the number of lines (because this would throw of the line-numberings needed for goto), it often significantly shortens lines, which helps to cope with the 70 character line-lenght limitation of yolol.  
 
