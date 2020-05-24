@@ -13,8 +13,8 @@ type Printermode int
 const (
 	// PrintermodeReadable inserts spaces the improve readability
 	PrintermodeReadable Printermode = 0
-	// PrintermodeShort inserts only spaces that are reasonably necessary
-	PrintermodeShort Printermode = 1
+	// PrintermodeCompact inserts only spaces that are reasonably necessary
+	PrintermodeCompact Printermode = 1
 )
 
 // Printer generates yolol-code from an AST

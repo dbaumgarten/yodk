@@ -32,7 +32,7 @@ func compileFile(fpath string) {
 	converted, err := converter.ConvertFile(fpath)
 	exitOnError(err, "converting to yolol")
 	gen := parser.Printer{}
-	gen.Mode = parser.PrintermodeShort
+	gen.Mode = parser.PrintermodeCompact
 	generated, err := gen.Print(converted)
 	exitOnError(err, "generating code")
 	err = ioutil.WriteFile(outfile, []byte(generated), 0700)

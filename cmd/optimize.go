@@ -40,7 +40,7 @@ func optimize(filepath string) {
 	err := opt.Optimize(parsed)
 	exitOnError(err, "performing optimisation")
 	gen := parser.Printer{}
-	gen.Mode = parser.PrintermodeShort
+	gen.Mode = parser.PrintermodeCompact
 	generated, err := gen.Print(parsed)
 	exitOnError(err, "generating code")
 	ioutil.WriteFile(outfile, []byte(generated), 0700)
