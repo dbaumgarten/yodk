@@ -16,8 +16,6 @@ script:
   - go test ./...
   - go build -ldflags "-X github.com/dbaumgarten/yodk/cmd.YodkVersion=${TRAVIS_BRANCH}"
   - ./yodk version
-  - ./yodk test examples/yolol/*_test.yaml
-  - ./yodk test examples/nolol/*_test.yaml
   - GOOS=windows go build -ldflags "-X github.com/dbaumgarten/yodk/cmd.YodkVersion=${TRAVIS_BRANCH}"
   - cd vscode-yolol
   - npm run vscode:prepublish
