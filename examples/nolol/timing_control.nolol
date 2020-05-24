@@ -1,40 +1,40 @@
 // statements on continous lines are merged, until the yolol line is full
 // then a new yolol line will be started
-:a=123
-:b=456
-:c=789
-:d="this is too long, so it will start a new line"
+:a = 123
+:b = 456
+:c = 789
+:d = "this is too long, so it will start a new line"
 
-:e=0
-jumplbl> :f=123 // lines that have jump labels can not be merged with previous lines
-:g="xyz" // lines following jump labels however can be merged with the previous line
+:e = 0
+jumplbl> :f = 123 // lines that have jump labels can not be merged with previous lines
+:g = "xyz" // lines following jump labels however can be merged with the previous line
 
 
 // Statements seperate by ; are ALWAYS placed in a single yolol line
 // if this is not possible, an error is thrown
-:x=0; :y=1; :z=2
+:x = 0; :y = 1; :z = 2
 // preceding and following lines of a ;-line can be merged with the ;-line (if there is enough space)
-:q=666
+:q = 666
 
 
 // auto-merging of lines can be prohibited with the $ sign
 // a line starting with $ will not be appended o previous lines
-:foo="a"
-$ :bar="b"
+:foo = "a"
+$ :bar = "b"
 // following lines however will be merged
-:baz="c"
+:baz = "c"
 
 // if you want to prevent merging with following lines, place a $ at the end of the line
-:foo="d" $
-:bar="e"
+:foo = "d" $
+:bar = "e"
 
 // all this features can be combined
-:foo="a"
+:foo = "a"
 // the following three statements and ONLY the three will be on one yolol line
-$ :a=0; b=1; c=2 $
-:bar="b"
+$ :a = 0; b = 1; c = 2 $
+:bar = "b"
 
 // a line only containing a $ and nothing else will be translated to an empty line on yolol
-:a=123
+:a = 123
 $
-:b=456
+:b = 456

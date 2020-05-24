@@ -1,26 +1,26 @@
 // this example shows the use of labeled gotos
 // but be cautious when using goto. It is bad style, error prone and hinders optimization
-:out="a"
+:out = "a"
 goto b
 // labels can be on the same line as a statement
-c> :out+="c"
+c> :out += "c"
 goto d
-b> :out+="b"
+b> :out += "b"
 goto c
 d> // or on an own line. code automatically falls through empty lines
 
 
-:out+="d"; goto e
+:out += "d"; goto e
 
-if 1==0 then
+if 1 == 0 then
 	// you can even jump into ifs
-	e> :out+="e"
+	e> :out += "e"
 	// and out again
 	goto f
 end
 
-f> :out+="f"; goto eof
+f> :out += "f"; goto eof
 
-:out="skip this"
+:out = "skip this"
 eof> 
 

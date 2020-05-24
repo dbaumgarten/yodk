@@ -3,23 +3,23 @@ define separator = "."
 //macros are defined using the macro-keyword, followed by a list of arguments and a block of line
 //macros must be defined at the top-level of the program (can not be nested)
 //arguments work, by replacing every instance of the name, by the value that is provided when using the insert-keyword
-macro greet(output,name)
+macro greet(output, name)
 	// "output" is replaced by the first argument provided when inserting the macro
-	output="Hello"
+	output = "Hello"
 	// i is a macro-local variable. Changes to i are local to macro-insertions
-	while i++ <5 do
-		output+=separator
+	while i++ < 5 do
+		output += separator
 	end
 	// "name" is replaced by the second argument provided when inserting the macro
-	output+=name
+	output += name
 end
 
 // macros are used with the insert-keyword, followed by the macro-name and the arguments to use
-insert greet(:out1,"world")
+insert greet(:out1, "world")
 
 // definitions are resolved when inserting a macro (and not when defining it) 
 // Also, new definitions override old ones
 // Therefore definitions can be used to configure the behavior of macros
 define separator = "_"
 
-insert greet(:out2,"you")
+insert greet(:out2, "you")

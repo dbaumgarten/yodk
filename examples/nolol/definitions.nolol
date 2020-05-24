@@ -3,7 +3,7 @@ define greeting = "Hello"
 
 
 // definitions can contain previous definitions
-define message = greeting+" "+"world"
+define message = greeting + " " + "world"
 
 // you can define a new name for a variable
 // if the defined value is a variable name (and nothing else), you can assign to it
@@ -11,5 +11,5 @@ define message = greeting+" "+"world"
 define :output = :out
 
 // :output is replaced by ":out" and message is replaced by "Hello world"
-:output=message
+:output = message
 

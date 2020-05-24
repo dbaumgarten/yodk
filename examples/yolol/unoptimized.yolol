@@ -2,5 +2,5 @@
 myFavouriteVariable="hello world" // variable names are shortened
 myFavouriteVariable+=:aglobal+anothervar // global variables are not renamed (for obvious reasons)
 :x=(100*2+10/5)*10 // equations only containing constant values are evaluated at compile time
-:answ= not :a and not :b and not :c and not :d
-:answ= not not not :answ // boolean expressions are converted to shorter and equivalent expressions if possible
+:answ=not :a and not :b and not :c and not :d
+:answ=not not not :answ // boolean expressions are converted to shorter and equivalent expressions if possible
