@@ -83,8 +83,9 @@ export function startLangServer(){
 		// Register the server for plain text documents
 		documentSelector: [{ scheme: 'file', language: 'yolol' }, { scheme: 'file', language: 'nolol' }],
 		synchronize: {
-			// Notify the server about file changes to '.clientrc files contained in the workspace
-			fileEvents: workspace.createFileSystemWatcher('**/.yolol')
+			// Notify the server about file changes to '.yolol files contained in the workspace
+			fileEvents: workspace.createFileSystemWatcher('**/.yolol'),
+			configurationSection: ['yolol','nolol'],
 		}
 	};
 

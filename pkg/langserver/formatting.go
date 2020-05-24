@@ -29,6 +29,18 @@ func (s *LangServer) Format(params *lsp.DocumentFormattingParams) ([]lsp.TextEdi
 			return []lsp.TextEdit{}, nil
 		}
 		gen := parser.Printer{}
+		if strings.HasSuffix(file, ".opt.yolol") {
+			gen.Mode = parser.PrintermodeCompact
+		} else {
+			switch s.settings.Yolol.Formatting.Mode {
+			case "Readable":
+				gen.Mode = parser.PrintermodeReadable
+			case "Compact":
+				gen.Mode = parser.PrintermodeCompact
+			default:
+				gen.Mode = parser.PrintermodeCompact
+			}
+		}
 		formatted, err = gen.Print(parsed)
 		if err != nil {
 			return []lsp.TextEdit{}, nil

@@ -18,6 +18,9 @@ type Printer struct {
 // NewPrinter creates a new Printer
 func NewPrinter() *Printer {
 	return &Printer{
+		yololPrinter: parser.Printer{
+			Mode: parser.PrintermodeReadable,
+		},
 		Indentation: "\t",
 	}
 }

@@ -899,7 +899,7 @@ func (c *Converter) mergeStatementElements(lines []*nast.StatementLine) ([]*nast
 //getLengthOfLine returns the amount of characters needed to represent the given line as yolol-code
 func getLengthOfLine(line ast.Node) int {
 	ygen := parser.Printer{}
-	ygen.Mode = parser.PrintermodeShort
+	ygen.Mode = parser.PrintermodeCompact
 	ygen.UnknownHandlerFunc = func(node ast.Node, visitType int, p *parser.Printer) error {
 		if _, is := node.(*nast.GoToLabelStatement); is {
 			p.Write("goto XX")

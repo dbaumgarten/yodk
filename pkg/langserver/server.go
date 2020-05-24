@@ -10,8 +10,9 @@ import (
 )
 
 type LangServer struct {
-	client lsp.Client
-	cache  *Cache
+	client   lsp.Client
+	cache    *Cache
+	settings *Settings
 }
 
 func Run(ctx context.Context, stream jsonrpc2.Stream, opts ...interface{}) error {
@@ -19,6 +20,7 @@ func Run(ctx context.Context, stream jsonrpc2.Stream, opts ...interface{}) error
 	conn, client := lsp.RunServer(ctx, stream, s, opts...)
 	s.client = client
 	s.cache = NewCache()
+	s.settings = DefaultSettings()
 	return conn.Wait(ctx)
 }
 
@@ -53,7 +55,6 @@ func (ls *LangServer) Initialize(ctx context.Context, params *lsp.InitializePara
 	}, nil
 }
 func (ls *LangServer) Initialized(ctx context.Context, params *lsp.InitializedParams) error {
-	//ignore
 	return nil
 }
 func (ls *LangServer) Shutdown(ctx context.Context) error {
@@ -67,7 +68,7 @@ func (ls *LangServer) DidChangeWorkspaceFolders(ctx context.Context, params *lsp
 	return unsupported()
 }
 func (ls *LangServer) DidChangeConfiguration(ctx context.Context, params *lsp.DidChangeConfigurationParams) error {
-	return unsupported()
+	return ls.settings.Read(params.Settings)
 }
 func (ls *LangServer) DidChangeWatchedFiles(ctx context.Context, params *lsp.DidChangeWatchedFilesParams) error {
 	return unsupported()
