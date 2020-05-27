@@ -29,13 +29,16 @@
 				"yolol.formatting.mode": {
 					"scope": "window",
 					"type": "string",
-  					"enum": ["Readable", "Compact"],
+					"enum": [
+						"Readable",
+						"Compact"
+					],
 					"default": "Compact",
 					"description": "Controls how yolol is formatted",
 					"enumDescriptions": [
 						"Add spaces to improve readability",
 						"Only add spaces when reasonable necessary"
-					  ]
+					]
 				}
 			}
 		},
@@ -78,34 +81,100 @@
 				"command": "yodk.restartLangserver",
 				"title": "Restart Language Server"
 			}
-		]
-	},
-	"publisher": "dbaumgarten",
-	"engines": {
-		"vscode": "^1.33.0"
-	},
-	"dependencies": {
-		"vscode-languageclient": "^5.2.1"
-	},
-	"devDependencies": {
-		"vscode": "^1.1.35",
-		"@types/mocha": "^5.2.0",
-		"@types/node": "^8.0.0",
-		"tslint": "^6.1.1",
-		"typescript": "^3.5.1"
-	},
-	"scripts": {
-		"vscode:prepublish": "npm run update-vscode && npm run compile && cd .. && go build && GOOS=windows go build && cp yodk* vscode-yolol/bin/",
-		"compile": "tsc -b",
-		"watch": "tsc -b -w",
-		"bin": "cd .. && go build && cp yodk* vscode-yolol/bin/ && cd vscode-yolol",
-		"update-vscode": "vscode-install",
-		"postinstall": "vscode-install",
-		"test": "sh ./scripts/e2e.sh"
-	},
-	"__metadata": {
-		"id": "e3871e35-a24a-4789-b037-50055f4d0bbb",
-		"publisherDisplayName": "Daniel Baumgarten",
-		"publisherId": "fdb9ee00-8d82-45b2-beda-c75c0afeb291"
+		],
+		"breakpoints": [
+			{
+				"language": "yolol"
+			},
+			{
+				"language": "nolol"
+			}
+		],
+		"debuggers": [
+			{
+				"type": "yodk",
+				"label": "YODK Debugger",
+				"program": "/home/daniel/go/src/github.com/dbaumgarten/yodk/yodk",
+				"args": ["debugadapter","--logfile","dalog"],
+				"configurationAttributes": {
+					"launch": {
+						"oneOf": [
+							{
+								"required": [
+									"scripts"
+								]
+							},
+							{
+								"required": [
+									"test"
+								]
+							}
+						],
+						"properties": {
+							"scripts": {
+								"type": "array",
+								"description": "A list of yolol/nolol scripts to debug",
+								"default": [],
+								"items": {
+									"type": "string"
+								}
+							},
+							"test": {
+								"type": "string",
+								"description": "Path to a yodk-test-file to debug",
+								"default": ""
+							}
+						}
+					}
+				},
+				"initialConfigurations": [
+					{
+						"type": "yodk",
+						"request": "launch",
+						"name": "Debug current script",
+						"scripts": ["${file}"]
+					},
+					{
+						"type": "yodk",
+						"request": "launch",
+						"name": "Debug all scripts",
+						"scripts": ["*.nolol","*.yolol"]
+					},
+					{
+						"type": "yodk",
+						"request": "launch",
+						"name": "Debug current test",
+						"test": "${file}"
+					}
+				]
+			}
+		]},
+		"publisher": "dbaumgarten",
+		"engines": {
+			"vscode": "^1.33.0"
+		},
+		"dependencies": {
+			"vscode-languageclient": "^5.2.1"
+		},
+		"devDependencies": {
+			"vscode": "^1.1.35",
+			"@types/mocha": "^5.2.0",
+			"@types/node": "^8.0.0",
+			"tslint": "^6.1.1",
+			"typescript": "^3.5.1"
+		},
+		"scripts": {
+			"vscode:prepublish": "npm run update-vscode && npm run compile && cd .. && go build && GOOS=windows go build && cp yodk* vscode-yolol/bin/",
+			"compile": "tsc -b",
+			"watch": "tsc -b -w",
+			"bin": "cd .. && go build && cp yodk* vscode-yolol/bin/ && cd vscode-yolol",
+			"update-vscode": "vscode-install",
+			"postinstall": "vscode-install",
+			"test": "sh ./scripts/e2e.sh"
+		},
+		"__metadata": {
+			"id": "e3871e35-a24a-4789-b037-50055f4d0bbb",
+			"publisherDisplayName": "Daniel Baumgarten",
+			"publisherId": "fdb9ee00-8d82-45b2-beda-c75c0afeb291"
+		}
 	}
-}
