@@ -30,6 +30,19 @@ type Helper struct {
 	CaseNumber int
 }
 
+func (h Helper) ScriptIndexByName(name string) int {
+	for i, s := range h.ScriptNames {
+		if s == name {
+			return i
+		}
+	}
+	return -1
+}
+
+func (h Helper) CurrentVM() *vm.YololVM {
+	return h.Vms[h.CurrentScript]
+}
+
 // VMPrepareFunc receives a VM and prepares it for debugging
 // (set error handlers etc.)
 type VMPrepareFunc func(yvm *vm.YololVM, filename string)

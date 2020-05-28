@@ -18,6 +18,7 @@ package debug
 
 import (
 	"bufio"
+	"encoding/json"
 	"errors"
 	"io"
 	"log"
@@ -119,7 +120,8 @@ func (ds *Session) handleRequest() error {
 	if err != nil {
 		return err
 	}
-	log.Printf("Request received\n\t%#v\n", request)
+	by, _ := json.Marshal(request)
+	log.Println("Message received:", string(by))
 	ds.sendWg.Add(1)
 	go func() {
 		ds.dispatchRequest(request)
@@ -140,6 +142,14 @@ func (g GenericResponse) GetSeq() int {
 // dispatchRequest launches a new goroutine to process each request
 // and send back events and responses.
 func (ds *Session) dispatchRequest(request dap.Message) {
+
+	defer func() {
+		err := recover()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}()
+
 	var err error
 	var response GenericResponse
 	switch request := request.(type) {
@@ -223,6 +233,7 @@ func (ds *Session) dispatchRequest(request dap.Message) {
 		response.Body, err = ds.handler.OnBreakpointLocationsRequest(&request.Arguments)
 	default:
 		log.Fatalf("Unable to process %#v", request)
+		return
 	}
 
 	requestfield := requestField(request)
@@ -233,7 +244,7 @@ func (ds *Session) dispatchRequest(request dap.Message) {
 			msg = "The call '" + requestfield.Command + "' has not been implemented"
 		}
 		ds.send(newErrorResponse(request.GetSeq(), requestfield.Command, msg))
-	} else if response.Body != nil {
+	} else {
 		response.Response = dap.Response{
 			ProtocolMessage: dap.ProtocolMessage{
 				Seq:  0,
@@ -272,7 +283,8 @@ func (ds *Session) send(message dap.Message) {
 func (ds *Session) sendFromQueue() {
 	for message := range ds.sendQueue {
 		dap.WriteProtocolMessage(ds.rw.Writer, message)
-		log.Printf("Message sent\n\t%#v\n", message)
+		by, _ := json.Marshal(message)
+		log.Println("Message sent:", string(by))
 		ds.rw.Flush()
 	}
 }

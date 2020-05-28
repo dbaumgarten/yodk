@@ -1,11 +1,16 @@
 package debug
 
 import (
+	"errors"
+
+	"github.com/dbaumgarten/yodk/pkg/vm"
 	"github.com/google/go-dap"
 )
 
 type YODKHandler struct {
-	session *Session
+	session         *Session
+	helper          *Helper
+	launchArguments map[string]interface{}
 }
 
 func NewYODKHandler(s *Session) Handler {
@@ -39,27 +44,101 @@ func (h *YODKHandler) OnInitializeRequest(arguments *dap.InitializeRequestArgume
 	response.SupportsExceptionInfoRequest = false
 	response.SupportTerminateDebuggee = true
 	response.SupportsDelayedStackTraceLoading = false
-	response.SupportsLoadedSourcesRequest = false
+	response.SupportsLoadedSourcesRequest = true
 	response.SupportsLogPoints = false
 	response.SupportsTerminateThreadsRequest = false
 	response.SupportsSetExpression = false
-	response.SupportsTerminateRequest = false
+	response.SupportsTerminateRequest = true
 	response.SupportsDataBreakpoints = false
 	response.SupportsReadMemoryRequest = false
-	response.SupportsDisassembleRequest = true
+	response.SupportsDisassembleRequest = false
 	response.SupportsCancelRequest = false
 	response.SupportsBreakpointLocationsRequest = false
 	// This is a fake set up, so we can start "accepting" configuration
 	// requests for setting breakpoints, etc from the client at any time.
 	// Notify the client with an 'initialized' event. The client will end
 	// the configuration sequence with 'configurationDone' request.
-	//h.session.send(&dap.InitializedEvent{Event: *newEvent("initialized")})
 	return response, nil
+}
+
+func (h *YODKHandler) helperFromArguments(arguments map[string]interface{}) (*Helper, error) {
+	if scriptsfield, exists := arguments["scripts"]; exists {
+		if scripts, is := scriptsfield.([]interface{}); is {
+			scriptlist := make([]string, 0, len(scripts))
+			for _, script := range scripts {
+				if scriptname, is := script.(string); is {
+					scriptlist = append(scriptlist, scriptname)
+				}
+			}
+			return FromScripts(scriptlist, h.configureVM)
+		}
+	} else if testfield, exists := arguments["test"]; exists {
+		tcase := 1
+		if casefield, exists := arguments["testcase"]; exists {
+			if casenr, is := casefield.(int); is {
+				tcase = casenr
+			}
+		}
+		if test, is := testfield.(string); is {
+			return FromTest(test, tcase, h.configureVM)
+		}
+	}
+	return nil, errors.New("Debug-config must contain 'scripts' or 'test' field")
+}
+
+func (h *YODKHandler) configureVM(yvm *vm.YololVM, filename string) {
+	yvm.SetBreakpointHandler(func(x *vm.YololVM) bool {
+		h.session.send(&dap.StoppedEvent{
+			Event: *newEvent("stopped"),
+			Body: dap.StoppedEventBody{
+				Reason:      "breakpoint",
+				Description: "Breakpoint reached",
+				ThreadId:    h.helper.ScriptIndexByName(filename) + 1,
+			},
+		})
+		return false
+	})
+	yvm.SetErrorHandler(func(x *vm.YololVM, err error) bool {
+		yvm.SetBreakpointHandler(func(x *vm.YololVM) bool {
+			h.session.send(&dap.StoppedEvent{
+				Event: *newEvent("exception"),
+				Body: dap.StoppedEventBody{
+					Reason:      "breakpoint",
+					Description: "A runtim-error occured",
+					ThreadId:    h.helper.ScriptIndexByName(filename) + 1,
+					Text:        err.Error(),
+				},
+			})
+			return false
+		})
+		return false
+	})
+	yvm.SetFinishHandler(func(x *vm.YololVM) {
+		h.session.send(&dap.StoppedEvent{
+			Event: *newEvent("stopped"),
+			Body: dap.StoppedEventBody{
+				Reason:      "breakpoint",
+				Description: "Breakpoint reached",
+				ThreadId:    h.helper.ScriptIndexByName(filename) + 1,
+			},
+		})
+	})
 }
 
 // OnLaunchRequest implements the Handler interface
 func (h *YODKHandler) OnLaunchRequest(arguments map[string]interface{}) error {
-	return ErrNotImplemented
+
+	h.launchArguments = arguments
+
+	var err error
+	h.helper, err = h.helperFromArguments(arguments)
+	if err != nil {
+		return err
+	}
+
+	h.session.send(&dap.InitializedEvent{Event: *newEvent("initialized")})
+
+	return nil
 }
 
 // OnAttachRequest implements the Handler interface
@@ -74,17 +153,57 @@ func (h *YODKHandler) OnDisconnectRequest(arguments *dap.DisconnectArguments) er
 
 // OnTerminateRequest implements the Handler interface
 func (h *YODKHandler) OnTerminateRequest(arguments *dap.TerminateArguments) error {
-	return ErrNotImplemented
+	h.helper.Coordinator.Terminate()
+	h.helper.Coordinator.WaitForTermination()
+	return nil
 }
 
 // OnRestartRequest implements the Handler interface
 func (h *YODKHandler) OnRestartRequest(arguments *dap.RestartArguments) error {
-	return ErrNotImplemented
+	go h.helper.Coordinator.Terminate()
+	var err error
+	h.helper, err = h.helperFromArguments(h.launchArguments)
+	if err != nil {
+		return err
+	}
+	h.session.send(&dap.InitializedEvent{Event: *newEvent("initialized")})
+	return nil
 }
 
 // OnSetBreakpointsRequest implements the Handler interface
 func (h *YODKHandler) OnSetBreakpointsRequest(arguments *dap.SetBreakpointsArguments) (*dap.SetBreakpointsResponseBody, error) {
-	return nil, ErrNotImplemented
+	idx := h.helper.ScriptIndexByName(arguments.Source.Path)
+	if idx == -1 {
+		return nil, errors.New("Source not found")
+	}
+	vm := h.helper.Vms[idx]
+
+	resp := &dap.SetBreakpointsResponseBody{
+		Breakpoints: make([]dap.Breakpoint, len(arguments.Lines)),
+	}
+
+	for _, bp := range vm.ListBreakpoints() {
+		vm.RemoveBreakpoint(bp)
+	}
+
+	for i, bp := range arguments.Lines {
+		vm.AddBreakpoint(bp)
+		resp.Breakpoints[i] = dap.Breakpoint{
+			Line:     bp,
+			Verified: true,
+		}
+	}
+
+	return resp, nil
+}
+
+func isIn(nr int, li []int) bool {
+	for _, i := range li {
+		if i == nr {
+			return true
+		}
+	}
+	return false
 }
 
 // OnSetFunctionBreakpointsRequest implements the Handler interface
@@ -99,27 +218,46 @@ func (h *YODKHandler) OnSetExceptionBreakpointsRequest(arguments *dap.SetExcepti
 
 // OnConfigurationDoneRequest implements the Handler interface
 func (h *YODKHandler) OnConfigurationDoneRequest(arguments *dap.ConfigurationDoneArguments) error {
-	return ErrNotImplemented
+	h.helper.Coordinator.Run()
+	return nil
 }
 
 // OnContinueRequest implements the Handler interface
 func (h *YODKHandler) OnContinueRequest(arguments *dap.ContinueArguments) (*dap.ContinueResponseBody, error) {
-	return nil, ErrNotImplemented
+	return &dap.ContinueResponseBody{
+		AllThreadsContinued: false,
+	}, h.helper.Vms[arguments.ThreadId-1].Resume()
 }
 
 // OnNextRequest implements the Handler interface
 func (h *YODKHandler) OnNextRequest(arguments *dap.NextArguments) error {
-	return ErrNotImplemented
+	err := h.helper.Vms[arguments.ThreadId-1].Step()
+	if err != nil {
+		return err
+	}
+	// TODO this event sould be sent AFTER the response
+	h.session.send(&dap.StoppedEvent{
+		Event: *newEvent("stopped"),
+		Body: dap.StoppedEventBody{
+			Reason:   "step",
+			ThreadId: arguments.ThreadId,
+		},
+	})
+	return nil
 }
 
 // OnStepInRequest implements the Handler interface
 func (h *YODKHandler) OnStepInRequest(arguments *dap.StepInArguments) error {
-	return ErrNotImplemented
+	return h.OnNextRequest(&dap.NextArguments{
+		ThreadId: arguments.ThreadId,
+	})
 }
 
 // OnStepOutRequest implements the Handler interface
 func (h *YODKHandler) OnStepOutRequest(arguments *dap.StepOutArguments) error {
-	return ErrNotImplemented
+	return h.OnNextRequest(&dap.NextArguments{
+		ThreadId: arguments.ThreadId,
+	})
 }
 
 // OnStepBackRequest implements the Handler interface
@@ -144,22 +282,74 @@ func (h *YODKHandler) OnGotoRequest(arguments *dap.GotoArguments) error {
 
 // OnPauseRequest implements the Handler interface
 func (h *YODKHandler) OnPauseRequest(arguments *dap.PauseArguments) error {
-	return ErrNotImplemented
+	h.helper.Vms[arguments.ThreadId-1].Pause()
+	// TODO this event sould be sent AFTER the response
+	h.session.send(&dap.StoppedEvent{
+		Event: *newEvent("stopped"),
+		Body: dap.StoppedEventBody{
+			Reason:   "pause",
+			ThreadId: arguments.ThreadId,
+		},
+	})
+	return nil
 }
 
 // OnStackTraceRequest implements the Handler interface
 func (h *YODKHandler) OnStackTraceRequest(arguments *dap.StackTraceArguments) (*dap.StackTraceResponseBody, error) {
-	return nil, ErrNotImplemented
+	resp := &dap.StackTraceResponseBody{
+		StackFrames: []dap.StackFrame{
+			{
+				Id:     arguments.ThreadId,
+				Name:   h.helper.ScriptNames[arguments.ThreadId-1],
+				Line:   h.helper.Vms[arguments.ThreadId-1].CurrentSourceLine(),
+				Column: 0,
+				Source: dap.Source{
+					Path: h.helper.ScriptNames[arguments.ThreadId-1],
+				},
+			},
+		},
+		TotalFrames: 1,
+	}
+	return resp, nil
 }
 
 // OnScopesRequest implements the Handler interface
 func (h *YODKHandler) OnScopesRequest(arguments *dap.ScopesArguments) (*dap.ScopesResponseBody, error) {
-	return nil, ErrNotImplemented
+	return &dap.ScopesResponseBody{
+		Scopes: []dap.Scope{
+			{
+				Name:               "Script variables",
+				PresentationHint:   "locals",
+				VariablesReference: arguments.FrameId,
+			},
+		},
+	}, nil
 }
 
 // OnVariablesRequest implements the Handler interface
 func (h *YODKHandler) OnVariablesRequest(arguments *dap.VariablesArguments) (*dap.VariablesResponseBody, error) {
-	return nil, ErrNotImplemented
+	vm := h.helper.Vms[arguments.VariablesReference-1]
+	vars := vm.GetVariables()
+	resp := &dap.VariablesResponseBody{
+		Variables: make([]dap.Variable, len(vars)),
+	}
+
+	i := 0
+	for k, v := range vars {
+		resp.Variables[i] = dap.Variable{
+			Name: k,
+		}
+		if v.IsNumber() {
+			resp.Variables[i].Type = "number"
+			resp.Variables[i].Value = v.Itoa()
+		} else {
+			resp.Variables[i].Type = "string"
+			resp.Variables[i].Value = v.String()
+		}
+		i++
+	}
+
+	return resp, nil
 }
 
 // OnSetVariableRequest implements the Handler interface
@@ -174,12 +364,23 @@ func (h *YODKHandler) OnSetExpressionRequest(arguments *dap.SetExpressionArgumen
 
 // OnSourceRequest implements the Handler interface
 func (h *YODKHandler) OnSourceRequest(arguments *dap.SourceArguments) (*dap.SourceResponseBody, error) {
-	return nil, ErrNotImplemented
+	return &dap.SourceResponseBody{
+		Content: h.helper.Scripts[arguments.SourceReference-1],
+	}, nil
 }
 
 // OnThreadsRequest implements the Handler interface
 func (h *YODKHandler) OnThreadsRequest() (*dap.ThreadsResponseBody, error) {
-	return nil, ErrNotImplemented
+	resp := &dap.ThreadsResponseBody{
+		Threads: make([]dap.Thread, len(h.helper.ScriptNames)),
+	}
+	for i, name := range h.helper.ScriptNames {
+		resp.Threads[i] = dap.Thread{
+			Id:   i + 1,
+			Name: name,
+		}
+	}
+	return resp, nil
 }
 
 // OnTerminateThreadsRequest implements the Handler interface
@@ -214,7 +415,19 @@ func (h *YODKHandler) OnExceptionInfoRequest(arguments *dap.ExceptionInfoArgumen
 
 // OnLoadedSourcesRequest implements the Handler interface
 func (h *YODKHandler) OnLoadedSourcesRequest(arguments *dap.LoadedSourcesArguments) (*dap.LoadedSourcesResponseBody, error) {
-	return nil, ErrNotImplemented
+	resp := &dap.LoadedSourcesResponseBody{
+		Sources: make([]dap.Source, len(h.helper.Scripts)),
+	}
+	for i, name := range h.helper.ScriptNames {
+		resp.Sources[i] = dap.Source{
+			SourceReference: i + 1,
+			Name:            name,
+		}
+		if i == h.helper.CurrentScript {
+			resp.Sources[i].PresentationHint = "emphasize"
+		}
+	}
+	return resp, nil
 }
 
 // OnDataBreakpointInfoRequest implements the Handler interface
