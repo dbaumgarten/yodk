@@ -86,8 +86,8 @@ func (h *YODKHandler) helperFromArguments(arguments map[string]interface{}) (*He
 	return nil, errors.New("Debug-config must contain 'scripts' or 'test' field")
 }
 
-func (h *YODKHandler) configureVM(yvm *vm.YololVM, filename string) {
-	yvm.SetBreakpointHandler(func(x *vm.YololVM) bool {
+func (h *YODKHandler) configureVM(yvm *vm.VM, filename string) {
+	yvm.SetBreakpointHandler(func(x *vm.VM) bool {
 		h.session.send(&dap.StoppedEvent{
 			Event: *newEvent("stopped"),
 			Body: dap.StoppedEventBody{
@@ -98,8 +98,8 @@ func (h *YODKHandler) configureVM(yvm *vm.YololVM, filename string) {
 		})
 		return false
 	})
-	yvm.SetErrorHandler(func(x *vm.YololVM, err error) bool {
-		yvm.SetBreakpointHandler(func(x *vm.YololVM) bool {
+	yvm.SetErrorHandler(func(x *vm.VM, err error) bool {
+		yvm.SetBreakpointHandler(func(x *vm.VM) bool {
 			h.session.send(&dap.StoppedEvent{
 				Event: *newEvent("exception"),
 				Body: dap.StoppedEventBody{
@@ -113,7 +113,7 @@ func (h *YODKHandler) configureVM(yvm *vm.YololVM, filename string) {
 		})
 		return false
 	})
-	yvm.SetFinishHandler(func(x *vm.YololVM) {
+	yvm.SetFinishHandler(func(x *vm.VM) {
 		h.session.send(&dap.StoppedEvent{
 			Event: *newEvent("stopped"),
 			Body: dap.StoppedEventBody{
@@ -154,7 +154,6 @@ func (h *YODKHandler) OnDisconnectRequest(arguments *dap.DisconnectArguments) er
 // OnTerminateRequest implements the Handler interface
 func (h *YODKHandler) OnTerminateRequest(arguments *dap.TerminateArguments) error {
 	h.helper.Coordinator.Terminate()
-	h.helper.Coordinator.WaitForTermination()
 	return nil
 }
 
@@ -224,17 +223,15 @@ func (h *YODKHandler) OnConfigurationDoneRequest(arguments *dap.ConfigurationDon
 
 // OnContinueRequest implements the Handler interface
 func (h *YODKHandler) OnContinueRequest(arguments *dap.ContinueArguments) (*dap.ContinueResponseBody, error) {
+	h.helper.Vms[arguments.ThreadId-1].Resume()
 	return &dap.ContinueResponseBody{
 		AllThreadsContinued: false,
-	}, h.helper.Vms[arguments.ThreadId-1].Resume()
+	}, nil
 }
 
 // OnNextRequest implements the Handler interface
 func (h *YODKHandler) OnNextRequest(arguments *dap.NextArguments) error {
-	err := h.helper.Vms[arguments.ThreadId-1].Step()
-	if err != nil {
-		return err
-	}
+	h.helper.Vms[arguments.ThreadId-1].Step()
 	// TODO this event sould be sent AFTER the response
 	h.session.send(&dap.StoppedEvent{
 		Event: *newEvent("stopped"),

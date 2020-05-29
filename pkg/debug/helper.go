@@ -22,7 +22,7 @@ type Helper struct {
 	// names of the running scripts
 	ScriptNames []string
 	// list of Vms for the running scripts
-	Vms []*vm.YololVM
+	Vms []*vm.VM
 	// list of variable translations for the VMs
 	// used to undo variable shortening performed by nolol using compilation
 	VariableTranslations []map[string]string
@@ -39,13 +39,13 @@ func (h Helper) ScriptIndexByName(name string) int {
 	return -1
 }
 
-func (h Helper) CurrentVM() *vm.YololVM {
+func (h Helper) CurrentVM() *vm.VM {
 	return h.Vms[h.CurrentScript]
 }
 
 // VMPrepareFunc receives a VM and prepares it for debugging
 // (set error handlers etc.)
-type VMPrepareFunc func(yvm *vm.YololVM, filename string)
+type VMPrepareFunc func(yvm *vm.VM, filename string)
 
 // FromScripts receives a list of yolol/nolol filenames and creates a Helper from them
 func FromScripts(scripts []string, prepareVM VMPrepareFunc) (*Helper, error) {
@@ -53,7 +53,7 @@ func FromScripts(scripts []string, prepareVM VMPrepareFunc) (*Helper, error) {
 		ScriptNames:          scripts,
 		Scripts:              make([]string, len(scripts)),
 		VariableTranslations: make([]map[string]string, len(scripts)),
-		Vms:                  make([]*vm.YololVM, len(scripts)),
+		Vms:                  make([]*vm.VM, len(scripts)),
 		CurrentScript:        0,
 		Coordinator:          vm.NewCoordinator(),
 	}
@@ -66,13 +66,13 @@ func FromScripts(scripts []string, prepareVM VMPrepareFunc) (*Helper, error) {
 
 		h.Scripts[i] = string(filecontent)
 
-		thisVM := vm.NewYololVMCoordinated(h.Coordinator)
-		h.Vms[i] = thisVM
-		thisVM.SetIterations(0)
-		prepareVM(thisVM, inputFileName)
+		var thisVM *vm.VM
 
 		if strings.HasSuffix(inputFileName, ".yolol") {
-			thisVM.RunSource(h.Scripts[i])
+			thisVM, err = vm.CreateFromSource(h.Scripts[i])
+			if err != nil {
+				return nil, err
+			}
 		} else if strings.HasSuffix(inputFileName, ".nolol") {
 			converter := nolol.NewConverter()
 			yololcode, err := converter.ConvertFile(inputFileName)
@@ -80,8 +80,14 @@ func FromScripts(scripts []string, prepareVM VMPrepareFunc) (*Helper, error) {
 				return nil, err
 			}
 			h.VariableTranslations[i] = converter.GetVariableTranslations()
-			thisVM.Run(yololcode)
+			thisVM = vm.Create(yololcode)
 		}
+
+		h.Vms[i] = thisVM
+		thisVM.SetIterations(0)
+		thisVM.SetCoordinator(h.Coordinator)
+		prepareVM(thisVM, inputFileName)
+		thisVM.Resume()
 	}
 	return h, nil
 }
@@ -106,7 +112,7 @@ func FromTest(testfile string, casenr int, prepareVM VMPrepareFunc) (*Helper, er
 		ScriptNames:          make([]string, len(t.Scripts)),
 		Scripts:              make([]string, len(t.Scripts)),
 		VariableTranslations: make([]map[string]string, len(t.Scripts)),
-		Vms:                  make([]*vm.YololVM, len(t.Scripts)),
+		Vms:                  make([]*vm.VM, len(t.Scripts)),
 		CurrentScript:        0,
 		Coordinator:          vm.NewCoordinator(),
 	}

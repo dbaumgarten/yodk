@@ -1,6 +1,7 @@
 package vm_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/dbaumgarten/yodk/pkg/vm"
@@ -21,16 +22,19 @@ func TestCoordinatedExecution(t *testing.T) {
 	:result += "g"
 	`
 	coord := vm.NewCoordinator()
-	vm1 := vm.NewYololVMCoordinated(coord)
-	vm2 := vm.NewYololVMCoordinated(coord)
+	vm1, _ := vm.CreateFromSource(prog1)
+	vm2, _ := vm.CreateFromSource(prog2)
 
-	vm1.RunSource(prog1)
-	vm2.RunSource(prog2)
+	vm1.SetCoordinator(coord)
+	vm2.SetCoordinator(coord)
+
+	fmt.Println("resume")
+	vm1.Resume()
+	vm2.Resume()
+	fmt.Println("resumed")
 
 	coord.Run()
-
-	vm1.WaitForTermination()
-	vm2.WaitForTermination()
+	coord.WaitForTermination()
 
 	r1, _ := vm1.GetVariable(":result")
 	r2, _ := vm1.GetVariable(":result")

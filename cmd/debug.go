@@ -28,6 +28,8 @@ var helper *debug.Helper
 // the args the script was called with
 var cliargs []string
 
+var running bool
+
 // debugCmd represents the debug command
 var debugCmd = &cobra.Command{
 	Use:   "debug [script]+ / debug [testfile]",
@@ -46,6 +48,7 @@ var debugCmd = &cobra.Command{
 func load(args []string) {
 	containsScript := false
 	containsTest := false
+	running = false
 	for _, arg := range args {
 		if strings.HasSuffix(arg, ".yaml") {
 			containsTest = true
@@ -79,19 +82,22 @@ func load(args []string) {
 }
 
 // prepares the given VM for use in the debugger
-func prepareVM(thisVM *vm.YololVM, inputFileName string) {
-	thisVM.SetBreakpointHandler(func(x *vm.YololVM) bool {
+func prepareVM(thisVM *vm.VM, inputFileName string) {
+	thisVM.SetBreakpointHandler(func(x *vm.VM) bool {
 		debugShell.Printf("--Hit Breakpoint at %s:%d--\n", inputFileName, x.CurrentSourceLine())
 		return false
 	})
-	thisVM.SetErrorHandler(func(x *vm.YololVM, err error) bool {
+	thisVM.SetErrorHandler(func(x *vm.VM, err error) bool {
 		debugShell.Printf("--A runtime error occured at %s:%d--\n", inputFileName, x.CurrentSourceLine())
 		debugShell.Println(err)
 		debugShell.Println("--Execution paused--")
 		return false
 	})
-	thisVM.SetFinishHandler(func(x *vm.YololVM) {
+	thisVM.SetFinishHandler(func(x *vm.VM) {
 		debugShell.Printf("--Program %s finished--\n", inputFileName)
+	})
+	thisVM.SetStepHandler(func(x *vm.VM) {
+		debugShell.Printf("--Step executed. VM paused at %s:%d--\n", inputFileName, x.CurrentSourceLine())
 	})
 }
 
@@ -159,7 +165,8 @@ func init() {
 		Aliases: []string{"c"},
 		Help:    "continue paused execution",
 		Func: func(c *ishell.Context) {
-			if !helper.Coordinator.IsRunning() {
+			if !running {
+				running = true
 				helper.Coordinator.Run()
 				return
 			}
@@ -167,12 +174,8 @@ func init() {
 				debugShell.Println("The current script is not paused.")
 				return
 			}
-			err := helper.Vms[helper.CurrentScript].Resume()
-			if err == nil {
-				debugShell.Println("--Resumed--")
-			} else {
-				debugShell.Println(err)
-			}
+			helper.Vms[helper.CurrentScript].Resume()
+			debugShell.Println("--Resumed--")
 		},
 	})
 	debugShell.AddCmd(&ishell.Cmd{
@@ -180,9 +183,11 @@ func init() {
 		Aliases: []string{"s"},
 		Help:    "execute the next line and pause again",
 		Func: func(c *ishell.Context) {
-			if helper.Vms[helper.CurrentScript].Step() == nil {
-				debugShell.Println("--Line executed. Paused again--")
+			if !running {
+				running = true
+				helper.Coordinator.Run()
 			}
+			helper.Vms[helper.CurrentScript].Step()
 		},
 	})
 	debugShell.AddCmd(&ishell.Cmd{
@@ -258,18 +263,14 @@ func init() {
 			defer c.ShowPrompt(true)
 			statestr := ""
 			switch helper.Vms[helper.CurrentScript].State() {
-			case vm.StateIdle:
-				statestr = "READY"
 			case vm.StateRunning:
 				statestr = "RUNNING"
 			case vm.StatePaused:
 				statestr = "PAUSED"
-			case vm.StateStep:
+			case vm.StateStepping:
 				statestr = "STEPPING"
-			case vm.StateDone:
+			case vm.StateTerminated:
 				statestr = "DONE"
-			case vm.StateKill:
-				statestr = "TERMINATING"
 			}
 			debugShell.Printf("--State: %s\n", statestr)
 		},

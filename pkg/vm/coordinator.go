@@ -8,53 +8,32 @@ import (
 // Coordinator is responsible for coordinating the execution of multiple VMs
 // It coordinates the line-by-line execution of the scripts and provides shared global variables
 type Coordinator struct {
-	vms             []*YololVM
-	currentVM       int
-	cvm             *YololVM
-	globalVariables map[string]*Variable
-	condLock        *sync.Mutex
-	condition       *sync.Cond
-	varLock         *sync.Mutex
+	vms              []*VM
+	runLineChannels  []chan struct{}
+	lineDoneChannels []chan struct{}
+	globalVariables  map[string]*Variable
+	varLock          *sync.Mutex
 }
 
 // NewCoordinator returns a new coordinator
 func NewCoordinator() *Coordinator {
-	lock := &sync.Mutex{}
 	return &Coordinator{
-		vms:             make([]*YololVM, 0),
-		currentVM:       -1,
-		globalVariables: make(map[string]*Variable),
-		condLock:        lock,
-		condition:       sync.NewCond(lock),
-		varLock:         &sync.Mutex{},
+		vms:              make([]*VM, 0),
+		runLineChannels:  make([]chan struct{}, 0),
+		lineDoneChannels: make([]chan struct{}, 0),
+		globalVariables:  make(map[string]*Variable),
+		varLock:          &sync.Mutex{},
 	}
 }
 
 // Run starts the coordinated exection
-// Run() on the VMs must have been called before
+// Once run has been called, no new VMs MUSt be added!!!
 func (c *Coordinator) Run() {
-	c.condLock.Lock()
-	c.currentVM = -1
-	c.condLock.Unlock()
-	c.finishTurn()
-}
-
-// Stop stops the execution
-func (c *Coordinator) Stop() {
-	c.condLock.Lock()
-	defer c.condLock.Unlock()
-	c.currentVM = -1
-	c.condition.Broadcast()
-}
-
-// IsRunning returns true if the sub-vms are allowed to run
-func (c *Coordinator) IsRunning() bool {
-	c.condLock.Lock()
-	defer c.condLock.Unlock()
-	return c.currentVM >= 0
+	go c.run()
 }
 
 // Terminate all coordinated vms
+// Once all VMs terminate the coordinator-goroutine will also shut-down
 func (c *Coordinator) Terminate() {
 	for _, v := range c.vms {
 		v.Terminate()
@@ -103,65 +82,50 @@ func (c *Coordinator) SetVariable(name string, value *Variable) error {
 }
 
 // registerVM registers a VM with the coordinator
-// is called in the run() method of the VM
-// if the vm is already registered nothing happens
-func (c *Coordinator) registerVM(vm *YololVM) {
-	c.condLock.Lock()
-	defer c.condLock.Unlock()
-	idx := -1
-	for i, val := range c.vms {
-		if val == vm {
-			idx = i
-		}
-	}
-	if idx == -1 {
-		c.vms = append(c.vms, vm)
-	}
+// is called by the vm in SetCoordinator.
+// returns two channels. The first is used to signal to the VM that it may run a line
+// the second one is used by the VM to signal it finished the line.
+// To remove the vm from coordination close the second channel
+func (c *Coordinator) registerVM(vm *VM) (<-chan struct{}, chan<- struct{}) {
+	runChannel := make(chan struct{})
+	doneChannel := make(chan struct{})
+	c.vms = append(c.vms, vm)
+	c.runLineChannels = append(c.runLineChannels, runChannel)
+	c.lineDoneChannels = append(c.lineDoneChannels, doneChannel)
+	return runChannel, doneChannel
 }
 
-// unRegisterVM stops a vm from participating in the coordinated execution
-// a vm unregisters itself after termination to not block still running vms
-func (c *Coordinator) unRegisterVM(vm *YololVM) {
-	c.condLock.Lock()
-	defer c.condLock.Unlock()
-	idx := -1
-	for i, val := range c.vms {
-		if val == vm {
-			idx = i
-			break
-		}
-	}
-	if idx != -1 {
-		c.vms = append(c.vms[:idx], c.vms[idx+1:]...)
-		if idx == c.currentVM {
-			if len(c.vms) > 0 {
-				c.cvm = c.vms[c.currentVM]
-				c.condition.Broadcast()
+// remove a VM from the coordination
+// execurted once a VM closes it's done-channel
+func (c *Coordinator) remove(idx int) {
+	c.vms = append(c.vms[:idx], c.vms[idx+1:]...)
+	close(c.runLineChannels[idx])
+	c.runLineChannels = append(c.runLineChannels[:idx], c.runLineChannels[idx+1:]...)
+	c.lineDoneChannels = append(c.lineDoneChannels[:idx], c.lineDoneChannels[idx+1:]...)
+}
+
+func (c *Coordinator) run() {
+	for {
+		for i := 0; i < len(c.runLineChannels); i++ {
+			runch := c.runLineChannels[i]
+			donech := c.lineDoneChannels[i]
+
+			select {
+			case runch <- struct{}{}:
+				// the vm resceived the permission to run. Continue execution normally
+			case <-donech:
+				// the client closed the donechannel. This means he does not longer participate in coordination
+				c.remove(i)
+				continue
 			}
-		} else if idx < c.currentVM {
-			c.currentVM--
-			c.cvm = c.vms[c.currentVM]
+
+			_, open := <-donech
+			if !open {
+				c.remove(i)
+			}
 		}
-
+		if len(c.vms) == 0 {
+			return
+		}
 	}
-}
-
-// waitForTurn blocks until it is vms turn to execute a line
-// vm must have registered itself before calling this
-func (c *Coordinator) waitForTurn(vm *YololVM) {
-	c.condLock.Lock()
-	for c.currentVM == -1 || c.cvm != vm {
-		c.condition.Wait()
-	}
-	c.condLock.Unlock()
-}
-
-// finishTurn is called by the current active vm after completing its line
-// allows the next vm to run
-func (c *Coordinator) finishTurn() {
-	c.condLock.Lock()
-	defer c.condLock.Unlock()
-	c.currentVM = (c.currentVM + 1) % len(c.vms)
-	c.cvm = c.vms[c.currentVM]
-	c.condition.Broadcast()
 }

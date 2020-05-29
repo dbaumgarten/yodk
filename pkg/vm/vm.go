@@ -15,24 +15,22 @@ var errAbortLine = fmt.Errorf("")
 
 // The current state of the VM
 const (
-	StateIdle    = iota
-	StateRunning = iota
-	StatePaused  = iota
-	StateStep    = iota
-	StateKill    = iota
-	StateDone    = iota
+	StatePaused     = iota
+	StateRunning    = iota
+	StateStepping   = iota
+	StateTerminated = iota
 )
 
 // BreakpointFunc is a function that is called when a breakpoint is encountered.
 // If true is returned the execution is resumed. Otherwise the vm remains paused
-type BreakpointFunc func(vm *YololVM) bool
+type BreakpointFunc func(vm *VM) bool
 
 // ErrorHandlerFunc is a function that is called when a runtime-error is encountered.
 // If true is returned the execution is resumed. Otherwise the vm remains paused
-type ErrorHandlerFunc func(vm *YololVM, err error) bool
+type ErrorHandlerFunc func(vm *VM, err error) bool
 
 // FinishHandlerFunc is a function that is called when the programm finished execution (looping is disabled)
-type FinishHandlerFunc func(vm *YololVM)
+type FinishHandlerFunc func(vm *VM)
 
 // RuntimeError represents an error encountered during execution
 type RuntimeError struct {
@@ -48,68 +46,78 @@ func (e RuntimeError) Error() string {
 // errKillVM is a special error used to terminate the vm-goroutine using panic/recover
 var errKillVM = fmt.Errorf("Kill this vm")
 
-// YololVM is a virtual machine to execute YOLOL-Code
-type YololVM struct {
+// VM is a virtual machine to execute YOLOL-Code
+type VM struct {
+	// the parsed program
+	program *ast.Program
+	// a lock to synchronize acces to variables
+	lock *sync.Mutex
 	// the current variables of the programm
-	variables map[string]*Variable
-	// amount of loops to perform for the programm
-	// 0 means run forever, >0 means execute x times
-	iterations int
-	// if != 0 and in the current iteration more the x lines are run, terminate VM
-	maxExecutedLines int
-
+	variables         map[string]*Variable
 	breakpointHandler BreakpointFunc
+	stepHandler       FinishHandlerFunc
 	errorHandler      ErrorHandlerFunc
 	finishHandler     FinishHandlerFunc
-
 	// current line in the ast is 1-indexed
 	currentAstLine int
 	// current line in the source code
 	currentSourceLine int
-	// current state of the vm
-	state int
+	// currerent coloumn in the current source line
+	currentSourceColoumn int
+	// if true we arrived at the current line via a goto
+	jumped bool
 	// list of active breakpoints
 	breakpoints map[int]bool
-	// the parsed program
-	program *ast.Program
-	// a lock to synchronize acces to the vms state
-	lock *sync.Mutex
-	// line number of a breakpoint to skip
-	skipBp int
-	// condition to wait on while VM is paused
-	waitCondition *sync.Cond
-	// true while there is a gorouting executing for this vm
-	running bool
-	// the coordinator to use for coordinating execution with other VMs
+	// current state of the vm
+	state int
+	// this channel is used to comminucate state-change-requests
+	stateRequests chan int
+	// this channel is closed once the VM terminates
+	terminationChannel chan interface{}
+	// if set we are running in coordinated mode
 	coordinator *Coordinator
+	// this channel is obtained from the coordinator and queried for permission to run a line
+	coordinatorPermission <-chan struct{}
+	// this channel is used to signal to the coordinator that we finished running a line
+	coordinatorDone chan<- struct{}
+	// 0 means run forever, >0 means execute x times
+	iterations int
+	// if != 0 and in the current iteration more the x lines are run, terminate VM
+	maxExecutedLines int
 	// number of performed iterations since run()
 	executedIterations int
 	// number of lines executed in the current run
 	executedLines int
+	// event handlers
 }
 
-// NewYololVM creates a new standalone VM
-func NewYololVM() *YololVM {
-	return NewYololVMCoordinated(nil)
-}
-
-// NewYololVMCoordinated creates a new VM that is coordinated with other VMs using the given coordinator
-func NewYololVMCoordinated(coordinator *Coordinator) *YololVM {
-	decimal.DivisionPrecision = 3
-	vm := &YololVM{
-		variables:         make(map[string]*Variable),
-		state:             StateIdle,
-		breakpoints:       make(map[int]bool),
-		lock:              &sync.Mutex{},
-		currentAstLine:    1,
-		currentSourceLine: 1,
-		skipBp:            -1,
-		coordinator:       coordinator,
-		maxExecutedLines:  0,
-		iterations:        1,
+// Create creates a new VM to run the given program in a seperate goroutine.
+// The returned VM is paused. Configure it using the setters and then call Resume()
+func Create(prog *ast.Program) *VM {
+	vm := &VM{
+		variables:          make(map[string]*Variable),
+		state:              StatePaused,
+		breakpoints:        make(map[int]bool),
+		lock:               &sync.Mutex{},
+		currentAstLine:     1,
+		currentSourceLine:  1,
+		iterations:         1,
+		stateRequests:      make(chan int),
+		terminationChannel: make(chan interface{}),
+		program:            prog,
 	}
-	vm.waitCondition = sync.NewCond(vm.lock)
+	go vm.run()
 	return vm
+}
+
+// CreateFromSource creates a new VM to run the given program in a seperate goroutine.
+// The returned VM is paused. Configure it using the setters and then call Resume()
+func CreateFromSource(prog string) (*VM, error) {
+	ast, err := parser.NewParser().Parse(prog)
+	if err != nil {
+		return nil, err
+	}
+	return Create(ast), nil
 }
 
 // Getters and Setters ---------------------------------
@@ -117,7 +125,7 @@ func NewYololVMCoordinated(coordinator *Coordinator) *YololVM {
 // SetIterations sets the number of iterations to perform for the script
 // 1 = run only once, <=0 run forever, >0 repeat x times
 // default is 1
-func (v *YololVM) SetIterations(reps int) {
+func (v *VM) SetIterations(reps int) {
 	v.iterations = reps
 }
 
@@ -125,27 +133,27 @@ func (v *YololVM) SetIterations(reps int) {
 // if the amount is reached the VM terminates
 // Can be used to prevent blocking by endless loops
 // <= 0 disables this. Default is 0
-func (v *YololVM) SetMaxExecutedLines(lines int) {
+func (v *VM) SetMaxExecutedLines(lines int) {
 	v.maxExecutedLines = lines
 }
 
 // AddBreakpoint adds a breakpoint at the line. Breakpoint-lines always refer to the position recorded in the
 // ast nodes, not the position of the Line in the Line-Slice of ast.Program.
-func (v *YololVM) AddBreakpoint(line int) {
+func (v *VM) AddBreakpoint(line int) {
 	v.lock.Lock()
 	defer v.lock.Unlock()
 	v.breakpoints[line] = true
 }
 
 // RemoveBreakpoint removes the breakpoint at the line
-func (v *YololVM) RemoveBreakpoint(line int) {
+func (v *VM) RemoveBreakpoint(line int) {
 	v.lock.Lock()
 	defer v.lock.Unlock()
 	delete(v.breakpoints, line)
 }
 
 // PrintVariables gets an overview over the current variable state
-func (v *YololVM) PrintVariables() string {
+func (v *VM) PrintVariables() string {
 	v.lock.Lock()
 	defer v.lock.Unlock()
 	txt := ""
@@ -161,98 +169,90 @@ func (v *YololVM) PrintVariables() string {
 	return txt
 }
 
-// Running returns true if there is a running goroutine for this vm
-func (v *YololVM) Running() bool {
-	v.lock.Lock()
-	defer v.lock.Unlock()
-	return v.running
+// Resume resumes execution after a breakpoint or pause() or the initial stopped state
+// Blocks until the VM reacts on the request
+func (v *VM) Resume() {
+	v.requestState(StateRunning)
 }
 
-// Resume resumes execution after a breakpoint or pause()
-func (v *YololVM) Resume() error {
-	v.lock.Lock()
-	if !v.running {
-		v.lock.Unlock()
-		err := fmt.Errorf("can not resume. Execution has not been started")
-		if v.errorHandler != nil {
-			v.errorHandler(v, err)
-		}
-		return err
-	}
-	v.state = StateRunning
-	v.waitCondition.Signal()
-	v.lock.Unlock()
-	return nil
-}
-
-// Step executes the next line and stops the execution again
-func (v *YololVM) Step() error {
-	v.lock.Lock()
-	if !v.running {
-		v.lock.Unlock()
-		err := fmt.Errorf("can not resume. Execution has not been started")
-		if v.errorHandler != nil {
-			v.errorHandler(v, err)
-		}
-		return err
-	}
-	v.state = StateStep
-	v.waitCondition.Signal()
-	v.lock.Unlock()
-	return nil
+// Step executes the next line and paused the execution
+// Blocks until the VM reacts on the request
+func (v *VM) Step() {
+	v.requestState(StateStepping)
 }
 
 // Pause pauses the execution
-func (v *YololVM) Pause() {
-	v.lock.Lock()
-	defer v.lock.Unlock()
-	v.state = StatePaused
+// Blocks until the VM reacts on the request
+func (v *VM) Pause() {
+	v.requestState(StatePaused)
 }
 
 // State returns the current vm state
-func (v *YololVM) State() int {
+func (v *VM) State() int {
 	v.lock.Lock()
 	defer v.lock.Unlock()
 	return v.state
 }
 
 // CurrentSourceLine returns the current (=next to be executed) source line of the program
-func (v *YololVM) CurrentSourceLine() int {
+func (v *VM) CurrentSourceLine() int {
 	v.lock.Lock()
 	defer v.lock.Unlock()
 	return v.currentSourceLine
 }
 
+// CurrentSourceColoumn returns the current (=next to be executed) source column of the program
+func (v *VM) CurrentSourceColoumn() int {
+	v.lock.Lock()
+	defer v.lock.Unlock()
+	return v.currentSourceColoumn
+}
+
 // CurrentAstLine returns the current (=next to be executed) ast line of the program
-func (v *YololVM) CurrentAstLine() int {
+func (v *VM) CurrentAstLine() int {
 	v.lock.Lock()
 	defer v.lock.Unlock()
 	return v.currentAstLine
 }
 
 // SetBreakpointHandler sets the function to be called when hitting a breakpoint
-func (v *YololVM) SetBreakpointHandler(f BreakpointFunc) {
+func (v *VM) SetBreakpointHandler(f BreakpointFunc) {
 	v.lock.Lock()
 	defer v.lock.Unlock()
 	v.breakpointHandler = f
 }
 
+// SetStepHandler sets the function to be called when a step completes
+func (v *VM) SetStepHandler(f FinishHandlerFunc) {
+	v.lock.Lock()
+	defer v.lock.Unlock()
+	v.stepHandler = f
+}
+
 // SetErrorHandler sets the function to be called when encountering an error
-func (v *YololVM) SetErrorHandler(f ErrorHandlerFunc) {
+func (v *VM) SetErrorHandler(f ErrorHandlerFunc) {
 	v.lock.Lock()
 	defer v.lock.Unlock()
 	v.errorHandler = f
 }
 
 // SetFinishHandler sets the function to be called when execution finishes
-func (v *YololVM) SetFinishHandler(f FinishHandlerFunc) {
+func (v *VM) SetFinishHandler(f FinishHandlerFunc) {
 	v.lock.Lock()
 	defer v.lock.Unlock()
 	v.finishHandler = f
 }
 
+// SetCoordinator sets the coordinator that is used to coordinate execution with other vms
+func (v *VM) SetCoordinator(c *Coordinator) {
+	v.lock.Lock()
+	defer v.lock.Unlock()
+	v.coordinator = c
+	v.coordinatorPermission, v.coordinatorDone = c.registerVM(v)
+}
+
 // ListBreakpoints returns the list of active breakpoints
-func (v *YololVM) ListBreakpoints() []int {
+func (v *VM) ListBreakpoints() []int {
 	v.lock.Lock()
 	defer v.lock.Unlock()
 	li := make([]int, 0, len(v.breakpoints))
@@ -263,7 +263,7 @@ func (v *YololVM) ListBreakpoints() []int {
 }
 
 // GetVariables gets the current state of all variables
-func (v *YololVM) GetVariables() map[string]Variable {
+func (v *VM) GetVariables() map[string]Variable {
 	v.lock.Lock()
 	defer v.lock.Unlock()
 	varlist := make(map[string]Variable)
@@ -284,7 +284,7 @@ func (v *YololVM) GetVariables() map[string]Variable {
 }
 
 // GetVariable gets the current state of a variable
-func (v *YololVM) GetVariable(name string) (*Variable, bool) {
+func (v *VM) GetVariable(name string) (*Variable, bool) {
 	v.lock.Lock()
 	defer v.lock.Unlock()
 	val, exists := v.getVariable(name)
@@ -297,7 +297,7 @@ func (v *YololVM) GetVariable(name string) (*Variable, bool) {
 }
 
 // SetVariable sets the current state of a variable
-func (v *YololVM) SetVariable(name string, value interface{}) error {
+func (v *VM) SetVariable(name string, value interface{}) error {
 	v.lock.Lock()
 	defer v.lock.Unlock()
 	// do return only a copy of the variable
@@ -310,7 +310,7 @@ func (v *YololVM) SetVariable(name string, value interface{}) error {
 // getVariable gets the current state of a variable.
 // Does not use the lock. ONLY USE WHEN LOCK IS ALREADY HELD
 // getting variables is case-insensitive
-func (v *YololVM) getVariable(name string) (*Variable, bool) {
+func (v *VM) getVariable(name string) (*Variable, bool) {
 	name = strings.ToLower(name)
 	if v.coordinator != nil && strings.HasPrefix(name, ":") {
 		return v.coordinator.GetVariable(name)
@@ -322,7 +322,7 @@ func (v *YololVM) getVariable(name string) (*Variable, bool) {
 // setVariable sets the current state of a variable
 // Does not use the lock. ONLY USE WHEN LOCK IS ALREADY HELD
 // setting variables is case-insensitive
-func (v *YololVM) setVariable(name string, value *Variable) error {
+func (v *VM) setVariable(name string, value *Variable) error {
 	name = strings.ToLower(name)
 	if v.coordinator != nil && strings.HasPrefix(name, ":") {
 		return v.coordinator.SetVariable(name, value)
@@ -332,110 +332,85 @@ func (v *YololVM) setVariable(name string, value *Variable) error {
 }
 
 // Terminate the vm goroutine (if running)
-func (v *YololVM) Terminate() {
-	v.lock.Lock()
-	if v.running {
-		v.state = StateKill
-		v.waitCondition.Signal()
-		for v.state != StateDone {
-			v.waitCondition.Wait()
-		}
-		v.running = false
-	}
-	v.lock.Unlock()
+func (v *VM) Terminate() {
+	v.requestState(StateTerminated)
 }
 
-// WaitForTermination blocks until the vm finished running
-func (v *YololVM) WaitForTermination() {
-	v.lock.Lock()
-	for v.state != StateDone {
-		v.waitCondition.Wait()
-	}
-	v.lock.Unlock()
+// WaitForTermination blocks until the VM terminates
+func (v *VM) WaitForTermination() {
+	<-v.terminationChannel
 }
 
 // Begin main section ------------------------------------------
 
-// Run runs the compiled program prog in a new go-routine
-func (v *YololVM) Run(prog *ast.Program) {
-	v.Terminate()
-	v.lock.Lock()
-	v.running = true
-	v.currentAstLine = 1
-	v.currentSourceLine = 1
-	v.program = prog
-	v.skipBp = -1
-	v.executedIterations = 0
-	v.executedLines = 0
-	v.state = StateRunning
-	v.variables = make(map[string]*Variable)
-	if v.coordinator != nil {
-		v.coordinator.registerVM(v)
-	}
-	v.lock.Unlock()
-	go v.run()
+// this function request a state-change from the worker goroutine.
+// blocks until the worker picks up the request
+// called from outside go.routines
+func (v *VM) requestState(state int) {
+	v.stateRequests <- state
 }
 
-// RunSource compiles and runs the given YOLOL code
-func (v *YololVM) RunSource(prog string) {
-	ast, err := parser.NewParser().Parse(prog)
-	if err != nil {
-		if v.errorHandler != nil {
-			v.errorHandler(v, err)
-		}
-		return
+// called by the worker goroutine to receive state-change-requests
+func (v *VM) receiveState() {
+	select {
+	case requested := <-v.stateRequests:
+		v.changeState(requested)
+	default:
+		// no state-change-requests
 	}
-
-	v.Run(ast)
 }
 
-func (v *YololVM) wait() {
-	if v.state == StateKill {
+// set a new state for the VM. perform necessary actions or new state. called by worker
+func (v *VM) changeState(requested int) {
+	v.state = requested
+	if requested == StateTerminated {
 		panic(errKillVM)
 	}
+	if requested == StatePaused {
+		v.pause()
+	}
+}
+
+// sets the state to StatePaused and blocks until another state is requested
+// unocks the lock while paused
+func (v *VM) pause() {
 	v.state = StatePaused
-	for v.state == StatePaused {
-		v.waitCondition.Wait()
-	}
-	// vm should be terminated
-	if v.state == StateKill {
-		panic(errKillVM)
+	for {
+		v.lock.Unlock()
+		newstate := <-v.stateRequests
+		v.lock.Lock()
+		if newstate != StatePaused {
+			v.state = newstate
+			break
+		}
 	}
 }
 
-func (v *YololVM) run() {
+func (v *VM) run() {
+
+	v.lock.Lock()
+	defer v.lock.Unlock()
+
 	defer func() {
 		err := recover()
 		if err != nil && err != errKillVM {
 			panic(err)
 		}
-		v.lock.Lock()
-		v.state = StateDone
-		v.running = false
-		v.lock.Unlock()
-		if v.coordinator != nil {
-			v.coordinator.unRegisterVM(v)
+		v.state = StateTerminated
+		close(v.stateRequests)
+		close(v.terminationChannel)
+		if v.coordinatorDone != nil {
+			close(v.coordinatorDone)
 		}
-		v.waitCondition.Signal()
 	}()
 
-	v.lock.Lock()
-	defer v.lock.Unlock()
+	v.pause()
+
 	for {
 
 		// give other goroutines a chance to aquire the lock
 		v.lock.Unlock()
 		v.lock.Lock()
-
-		// the vm should terminate
-		if v.state == StateKill {
-			panic(errKillVM)
-		}
-
-		// the vm should pause now
-		if v.state == StatePaused {
-			v.wait()
-		}
 
 		if v.currentAstLine > len(v.program.Lines) {
 			v.currentAstLine = 1
@@ -461,7 +436,7 @@ func (v *YololVM) run() {
 				cont := v.errorHandler(v, err)
 				v.lock.Lock()
 				if !cont {
-					v.wait()
+					v.pause()
 				}
 			} else {
 				// no error handler. Kill VM.
@@ -481,26 +456,94 @@ func (v *YololVM) run() {
 	}
 }
 
-func (v *YololVM) runLine(line *ast.Line) error {
+// called when execution advances to a new source-line
+// advancing to a new source-line could trigger a step, a breakpoint or a state-change
+func (v *VM) sourceLineChanged() {
 
-	// wait until the coordinator allows this VM to run a line
-	if v.coordinator != nil {
-		// give up the lock while waiting for our turn to execute a line
-		// to allow the retrieval of variables while waiting
+	if v.state == StateStepping {
+		if v.stepHandler != nil {
+			v.lock.Unlock()
+			v.stepHandler(v)
+			v.lock.Lock()
+		}
+		v.pause()
+	}
+
+	// check if we hit a breakpoint
+	if _, exists := v.breakpoints[v.currentSourceLine]; exists {
+		if v.breakpointHandler != nil {
+			v.lock.Unlock()
+			continueExecution := v.breakpointHandler(v)
+			v.lock.Lock()
+			if !continueExecution {
+				v.pause()
+			}
+		}
+	}
+
+	// the state can only be changed when one source-line completed (or inside pause())
+	v.receiveState()
+}
+
+// check if the statement that is to be executed is on a different line then the previous one
+func (v *VM) checkSourceLineChanged(stmt ast.Statement) {
+	if stmt.Start().File == "" && (stmt.Start().Line != v.currentSourceLine || v.jumped) {
+		v.jumped = false
+		v.currentSourceLine = stmt.Start().Line
+		v.sourceLineChanged()
+	}
+}
+
+// get the permission from the coordinator to run the next line
+// also react on state-change-requests while waiting for permission
+func (v *VM) aquireCoordinatorPermission() {
+	for {
+		// release the lock while waiting for permission
+		// but re-aquire it later
+
 		v.lock.Unlock()
-		v.coordinator.waitForTurn(v)
-		v.lock.Lock()
-		defer v.coordinator.finishTurn()
+		select {
+		case <-v.coordinatorPermission:
+			v.lock.Lock()
+			return
+		case statechange := <-v.stateRequests:
+			v.lock.Lock()
+			v.changeState(statechange)
+		}
+	}
+}
+
+func (v *VM) runLine(line *ast.Line) error {
+	needCoordinatorPermission := v.coordinator != nil
+
+	if needCoordinatorPermission {
+		// no metter what happens. If we run coordinated, report done to coordinator on return
+		defer func() {
+			v.coordinatorDone <- struct{}{}
+		}()
+	}
+
+	// an empty line has no statements that would trigger actions like breakpoints
+	// trigger these actions manually
+	if len(line.Statements) == 0 {
+		v.currentSourceLine = line.Start().Line
+		v.currentSourceColoumn = 0
+		v.sourceLineChanged()
+		if needCoordinatorPermission {
+			v.aquireCoordinatorPermission()
+		}
 	}
 
 	for _, stmt := range line.Statements {
-		// do not change the current statement line, if the statement is not from the main file
-		if stmt.Start().File == "" {
-			v.currentSourceLine = stmt.Start().Line
+		v.currentSourceColoumn = stmt.Start().Coloumn
+		v.checkSourceLineChanged(stmt)
+
+		if needCoordinatorPermission {
+			v.aquireCoordinatorPermission()
+			// only ask for permission once per line
+			needCoordinatorPermission = false
 		}
-		if v.state == StateStep {
-			v.wait()
-		}
+
 		err := v.runStmt(stmt)
 		if err != nil {
 			//errAbortLine is returned when the line is aborted due to an if. It is not really an 'error'
@@ -513,26 +556,7 @@ func (v *YololVM) runLine(line *ast.Line) error {
 	return nil
 }
 
-func (v *YololVM) runStmt(stmt ast.Statement) error {
-
-	// did we hit a breakpoint?
-	if _, exists := v.breakpoints[v.currentSourceLine]; exists && v.skipBp != v.currentSourceLine {
-		v.skipBp = v.currentSourceLine
-		if v.breakpointHandler != nil {
-			v.lock.Unlock()
-			continueExecution := v.breakpointHandler(v)
-			v.lock.Lock()
-			if !continueExecution {
-				v.wait()
-			}
-		}
-	}
-
-	// reached the end of the breakpoint-line. Reset skipBp.
-	if v.currentSourceLine != v.skipBp {
-		v.skipBp = -1
-	}
-
+func (v *VM) runStmt(stmt ast.Statement) error {
 	switch e := stmt.(type) {
 	case *ast.Assignment:
 		return v.runAssignment(e)
@@ -576,8 +600,7 @@ func (v *YololVM) runStmt(stmt ast.Statement) error {
 			linenr = 20
 		}
 		v.currentAstLine = int(linenr) - 1
-		// goto makes us leave the current line. Reset skipbp
-		v.skipBp = -1
+		v.jumped = true
 		return errAbortLine
 	case *ast.Dereference:
 		_, err := v.runDeref(e)
@@ -587,7 +610,7 @@ func (v *YololVM) runStmt(stmt ast.Statement) error {
 	}
 }
 
-func (v *YololVM) runAssignment(as *ast.Assignment) error {
+func (v *VM) runAssignment(as *ast.Assignment) error {
 	var newValue *Variable
 	var err error
 	if as.Operator != "=" {
@@ -610,7 +633,7 @@ func (v *YololVM) runAssignment(as *ast.Assignment) error {
 	return nil
 }
 
-func (v *YololVM) runExpr(expr ast.Expression) (*Variable, error) {
+func (v *VM) runExpr(expr ast.Expression) (*Variable, error) {
 	switch e := expr.(type) {
 	case *ast.StringConstant:
 		return &Variable{Value: e.Value}, nil
@@ -631,7 +654,7 @@ func (v *YololVM) runExpr(expr ast.Expression) (*Variable, error) {
 	}
 }
 
-func (v *YololVM) runDeref(d *ast.Dereference) (*Variable, error) {
+func (v *VM) runDeref(d *ast.Dereference) (*Variable, error) {
 	oldval, exists := v.getVariable(d.Variable)
 	if !exists {
 		// uninitialized variables have a default value of 0
@@ -679,7 +702,7 @@ func (v *YololVM) runDeref(d *ast.Dereference) (*Variable, error) {
 	return oldval, nil
 }
 
-func (v *YololVM) runBinOp(op *ast.BinaryOperation) (*Variable, error) {
+func (v *VM) runBinOp(op *ast.BinaryOperation) (*Variable, error) {
 	arg1, err1 := v.runExpr(op.Exp1)
 	if err1 != nil {
 		return nil, err1
@@ -695,7 +718,7 @@ func (v *YololVM) runBinOp(op *ast.BinaryOperation) (*Variable, error) {
 	return result, err
 }
 
-func (v *YololVM) runUnaryOp(op *ast.UnaryOperation) (*Variable, error) {
+func (v *VM) runUnaryOp(op *ast.UnaryOperation) (*Variable, error) {
 	arg, err := v.runExpr(op.Exp)
 	if err != nil {
 		return nil, err

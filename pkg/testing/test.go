@@ -109,15 +109,11 @@ func (script Script) GetCode() (string, error) {
 // Run() has been called on the returned VMs, but they are paused until coord.Run() is called
 // The error handler of the VMs is set to errF
 // Also returns variable-name translation-tables for nolol scripts
-func (t Test) CreateVMs(coord *vm.Coordinator, errF vm.ErrorHandlerFunc) ([]*vm.YololVM, []map[string]string, error) {
-	vms := make([]*vm.YololVM, len(t.Scripts))
+func (t Test) CreateVMs(coord *vm.Coordinator, errF vm.ErrorHandlerFunc) ([]*vm.VM, []map[string]string, error) {
+	vms := make([]*vm.VM, len(t.Scripts))
 	translationTables := make([]map[string]string, len(t.Scripts))
 	for i, script := range t.Scripts {
-		v := vm.NewYololVMCoordinated(coord)
-		v.SetIterations(script.Iterations)
-		v.SetMaxExecutedLines(script.MaxLines)
-		v.SetErrorHandler(errF)
-		vms[i] = v
+		var v *vm.VM
 
 		if strings.HasSuffix(script.Name, ".nolol") {
 			conv := nolol.NewConverter()
@@ -127,14 +123,23 @@ func (t Test) CreateVMs(coord *vm.Coordinator, errF vm.ErrorHandlerFunc) ([]*vm.
 			if err != nil {
 				return nil, nil, err
 			}
-			v.Run(prog)
+			v = vm.Create(prog)
 		} else {
 			scriptContent, err := script.GetCode()
 			if err != nil {
 				return nil, nil, err
 			}
-			v.RunSource(string(scriptContent))
+			v, err = vm.CreateFromSource(string(scriptContent))
+			if err != nil {
+				return nil, nil, err
+			}
 		}
+		v.SetIterations(script.Iterations)
+		v.SetMaxExecutedLines(script.MaxLines)
+		v.SetErrorHandler(errF)
+		v.SetCoordinator(coord)
+		vms[i] = v
+		v.Resume()
 	}
 	return vms, translationTables, nil
 }
@@ -180,7 +185,7 @@ func (t Test) Run(caseCallback func(c Case)) []error {
 		coord := vm.NewCoordinator()
 		c.InitializeVariables(coord)
 
-		errHandler := func(vm *vm.YololVM, err error) bool {
+		errHandler := func(vm *vm.VM, err error) bool {
 			flock.Lock()
 			defer flock.Unlock()
 			fails = append(fails, err)
