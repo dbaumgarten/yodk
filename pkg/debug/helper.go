@@ -1,6 +1,7 @@
 package debug
 
 import (
+	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"strings"
@@ -28,6 +29,19 @@ type Helper struct {
 	VariableTranslations []map[string]string
 	// number of the case in the given test to execute
 	CaseNumber int
+	// a folder all script paths are relative to
+	Worspace string
+	// a set of vms that have finished execution. This list is NOT managed by the Helper-class
+	FinishedVMs map[int]bool
+}
+
+func (h Helper) ScriptIndexByPath(path string) int {
+	for i, s := range h.ScriptNames {
+		if filepath.Join(h.Worspace, s) == path {
+			return i
+		}
+	}
+	return -1
 }
 
 func (h Helper) ScriptIndexByName(name string) int {
@@ -48,7 +62,7 @@ func (h Helper) CurrentVM() *vm.VM {
 type VMPrepareFunc func(yvm *vm.VM, filename string)
 
 // FromScripts receives a list of yolol/nolol filenames and creates a Helper from them
-func FromScripts(scripts []string, prepareVM VMPrepareFunc) (*Helper, error) {
+func FromScripts(workspace string, scripts []string, prepareVM VMPrepareFunc) (*Helper, error) {
 	h := &Helper{
 		ScriptNames:          scripts,
 		Scripts:              make([]string, len(scripts)),
@@ -56,10 +70,12 @@ func FromScripts(scripts []string, prepareVM VMPrepareFunc) (*Helper, error) {
 		Vms:                  make([]*vm.VM, len(scripts)),
 		CurrentScript:        0,
 		Coordinator:          vm.NewCoordinator(),
+		Worspace:             workspace,
+		FinishedVMs:          make(map[int]bool),
 	}
 
 	for i, inputFileName := range h.ScriptNames {
-		filecontent, err := ioutil.ReadFile(inputFileName)
+		filecontent, err := ioutil.ReadFile(filepath.Join(workspace, inputFileName))
 		if err != nil {
 			return nil, err
 		}
@@ -81,6 +97,8 @@ func FromScripts(scripts []string, prepareVM VMPrepareFunc) (*Helper, error) {
 			}
 			h.VariableTranslations[i] = converter.GetVariableTranslations()
 			thisVM = vm.Create(yololcode)
+		} else {
+			return nil, fmt.Errorf("Invalid file extension on: %s", inputFileName)
 		}
 
 		h.Vms[i] = thisVM
@@ -93,17 +111,14 @@ func FromScripts(scripts []string, prepareVM VMPrepareFunc) (*Helper, error) {
 }
 
 // FromTest creates a Helper from the given test-file
-func FromTest(testfile string, casenr int, prepareVM VMPrepareFunc) (*Helper, error) {
-
+func FromTest(workspace string, testfile string, casenr int, prepareVM VMPrepareFunc) (*Helper, error) {
+	testfile = filepath.Join(workspace, testfile)
 	testfilecontent, err := ioutil.ReadFile(testfile)
 	if err != nil {
 		return nil, err
 	}
 
-	// the source-files are relative to the test-file location. Therefore we need the absolute test-file location
-	absoluteFilepath, _ := filepath.Abs(testfile)
-
-	t, err := testing.Parse(testfilecontent, absoluteFilepath)
+	t, err := testing.Parse(testfilecontent, testfile)
 	if err != nil {
 		return nil, err
 	}
@@ -115,10 +130,12 @@ func FromTest(testfile string, casenr int, prepareVM VMPrepareFunc) (*Helper, er
 		Vms:                  make([]*vm.VM, len(t.Scripts)),
 		CurrentScript:        0,
 		Coordinator:          vm.NewCoordinator(),
+		Worspace:             filepath.Dir(testfile),
+		FinishedVMs:          make(map[int]bool),
 	}
 
 	for i, script := range t.Scripts {
-		h.ScriptNames[i] = filepath.Join(filepath.Dir(t.AbsolutePath), script.Name)
+		h.ScriptNames[i] = script.Name
 		h.Scripts[i], err = script.GetCode()
 		if err != nil {
 			return nil, err

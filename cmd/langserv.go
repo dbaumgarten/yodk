@@ -17,7 +17,8 @@ var langservCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 
 		stream := langserver.NewStdioStream()
-		stream.Log = configureLogging()
+		configureFileLogging()
+		stream.Log = debugLog
 		err := langserver.Run(context.Background(), stream)
 		if err != nil {
 			log.Println(err)
@@ -27,5 +28,6 @@ var langservCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(langservCmd)
-	langservCmd.Flags().StringVar(&logfile, "logfile", "", "Name of the file to log into")
+	langservCmd.Flags().StringVar(&logfile, "logfile", "", "Name of the file to log into. Defaults to stderr")
+	langservCmd.Flags().BoolVarP(&debugLog, "debug", "d", false, "Enable verbose debug-logging")
 }

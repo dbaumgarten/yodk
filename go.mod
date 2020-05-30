@@ -18,3 +18,5 @@ require (
 	github.com/spf13/viper v1.6.1
 	gopkg.in/yaml.v2 v2.2.7
 )
+
+replace github.com/google/go-dap v0.2.0 => github.com/dbaumgarten/go-dap v0.2.2

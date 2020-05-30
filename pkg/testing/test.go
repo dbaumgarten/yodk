@@ -17,8 +17,8 @@ import (
 
 // Test defines a test-run
 type Test struct {
-	// The absolut path where the test-file was located. Used to retrieve the script files.
-	AbsolutePath string
+	// The path where the test-file was located. Used to retrieve the script files.
+	Path string
 	// Scripts to use in this test
 	Scripts []Script
 	// Cases for this test
@@ -28,7 +28,7 @@ type Test struct {
 // Script contains run-options for a script in the test
 type Script struct {
 	// The absolut path where the test-file was located. Used to retrieve the script files.
-	AbsolutePath string
+	TestPath string
 	// Name of the script to run
 	Name string
 	// Maximum number of iterations for the script (0=infinite)
@@ -57,19 +57,21 @@ func prefixVarname(inp string) string {
 }
 
 // Parse parses a yaml file into a Test
-// absolutePath is the path from where the test was loaded
-// scripts are loaded relative to this path
-func Parse(file []byte, absolutePath string) (Test, error) {
+// path is the path from where the test was loaded. This is needed as the scripts are located relatice to the test-file
+func Parse(file []byte, path string) (Test, error) {
 	var test Test
 	err := yaml.Unmarshal(file, &test)
-	test.AbsolutePath = absolutePath
+	if err != nil {
+		return test, fmt.Errorf("The provided test-file is invalid: %s", err.Error())
+	}
+	test.Path = path
 	for i, script := range test.Scripts {
 		if script.Iterations == 0 {
 			test.Scripts[i].Iterations = 1
 		}
-		test.Scripts[i].AbsolutePath = absolutePath
+		test.Scripts[i].TestPath = path
 	}
-	return test, err
+	return test, nil
 }
 
 // InitializeVariables adds the variables required for the testcase
@@ -93,7 +95,7 @@ func (c Case) InitializeVariables(coord *vm.Coordinator) {
 
 // GetCode returns the code for script either from the script struct itself or from the referenced file
 func (script Script) GetCode() (string, error) {
-	file := filepath.Join(filepath.Dir(script.AbsolutePath), script.Name)
+	file := filepath.Join(filepath.Dir(script.TestPath), script.Name)
 	if script.Content == "" {
 		f, err := ioutil.ReadFile(file)
 		if err != nil {
@@ -117,7 +119,7 @@ func (t Test) CreateVMs(coord *vm.Coordinator, errF vm.ErrorHandlerFunc) ([]*vm.
 
 		if strings.HasSuffix(script.Name, ".nolol") {
 			conv := nolol.NewConverter()
-			file := filepath.Join(filepath.Dir(script.AbsolutePath), script.Name)
+			file := filepath.Join(filepath.Dir(script.TestPath), script.Name)
 			prog, err := conv.ConvertFile(file)
 			translationTables[i] = conv.GetVariableTranslations()
 			if err != nil {

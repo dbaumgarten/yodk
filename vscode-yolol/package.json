@@ -123,6 +123,10 @@
 								"type": "string",
 								"description": "Path to a yodk-test-file to debug",
 								"default": ""
+							},
+							"workspace": {
+								"type": "string",
+								"description": "A folder to which file-paths are relative"
 							}
 						}
 					}
@@ -132,19 +136,22 @@
 						"type": "yodk",
 						"request": "launch",
 						"name": "Debug current script",
-						"scripts": ["${file}"]
+						"scripts": ["${relativeFile}"],
+						"workspace": "${workspaceFolder}"
 					},
 					{
 						"type": "yodk",
 						"request": "launch",
 						"name": "Debug all scripts",
-						"scripts": ["*.nolol","*.yolol"]
+						"scripts": ["*.nolol","*.yolol"],
+						"workspace": "${workspaceFolder}"
 					},
 					{
 						"type": "yodk",
 						"request": "launch",
 						"name": "Debug current test",
-						"test": "${file}"
+						"test": "${relativeFile}",
+						"workspace": "${workspaceFolder}"
 					}
 				]
 			}

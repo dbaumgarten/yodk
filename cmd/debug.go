@@ -72,9 +72,9 @@ func load(args []string) {
 
 	var err error
 	if containsTest {
-		helper, err = debug.FromTest(args[0], caseNumber, prepareVM)
+		helper, err = debug.FromTest("", args[0], caseNumber, prepareVM)
 	} else {
-		helper, err = debug.FromScripts(args, prepareVM)
+		helper, err = debug.FromScripts("", args, prepareVM)
 	}
 	exitOnError(err, "starting debugger")
 

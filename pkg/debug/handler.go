@@ -2,66 +2,79 @@ package debug
 
 import (
 	"errors"
+	"fmt"
+	"log"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
 
 	"github.com/dbaumgarten/yodk/pkg/vm"
 	"github.com/google/go-dap"
 )
 
+var globalVarsReference = 10000
+
+// YODKHandler implements the handler-functions for a debug-session
 type YODKHandler struct {
 	session         *Session
 	helper          *Helper
 	launchArguments map[string]interface{}
 }
 
-func NewYODKHandler(s *Session) Handler {
-	return &YODKHandler{
-		session: s,
-	}
+// NewYODKHandler returns a new handler connected to the given session
+func NewYODKHandler() Handler {
+	return &YODKHandler{}
 }
 
 // OnInitializeRequest implements the Handler interface
 func (h *YODKHandler) OnInitializeRequest(arguments *dap.InitializeRequestArguments) (*dap.Capabilities, error) {
-	response := &dap.Capabilities{}
-	response.SupportsConfigurationDoneRequest = true
-	response.SupportsFunctionBreakpoints = false
-	response.SupportsConditionalBreakpoints = false
-	response.SupportsHitConditionalBreakpoints = false
-	response.SupportsEvaluateForHovers = false
-	response.ExceptionBreakpointFilters = []dap.ExceptionBreakpointsFilter{}
-	response.SupportsStepBack = false
-	response.SupportsSetVariable = false
-	response.SupportsRestartFrame = false
-	response.SupportsGotoTargetsRequest = false
-	response.SupportsStepInTargetsRequest = false
-	response.SupportsCompletionsRequest = false
-	response.CompletionTriggerCharacters = []string{}
-	response.SupportsModulesRequest = false
-	response.AdditionalModuleColumns = []dap.ColumnDescriptor{}
-	response.SupportedChecksumAlgorithms = []dap.ChecksumAlgorithm{}
-	response.SupportsRestartRequest = true
-	response.SupportsExceptionOptions = false
-	response.SupportsValueFormattingOptions = false
-	response.SupportsExceptionInfoRequest = false
-	response.SupportTerminateDebuggee = true
-	response.SupportsDelayedStackTraceLoading = false
-	response.SupportsLoadedSourcesRequest = true
-	response.SupportsLogPoints = false
-	response.SupportsTerminateThreadsRequest = false
-	response.SupportsSetExpression = false
-	response.SupportsTerminateRequest = true
-	response.SupportsDataBreakpoints = false
-	response.SupportsReadMemoryRequest = false
-	response.SupportsDisassembleRequest = false
-	response.SupportsCancelRequest = false
-	response.SupportsBreakpointLocationsRequest = false
-	// This is a fake set up, so we can start "accepting" configuration
-	// requests for setting breakpoints, etc from the client at any time.
-	// Notify the client with an 'initialized' event. The client will end
-	// the configuration sequence with 'configurationDone' request.
+	response := &dap.Capabilities{
+		SupportsConfigurationDoneRequest:   true,
+		SupportsFunctionBreakpoints:        false,
+		SupportsConditionalBreakpoints:     false,
+		SupportsHitConditionalBreakpoints:  false,
+		SupportsEvaluateForHovers:          false,
+		ExceptionBreakpointFilters:         []dap.ExceptionBreakpointsFilter{},
+		SupportsStepBack:                   false,
+		SupportsSetVariable:                false,
+		SupportsRestartFrame:               false,
+		SupportsGotoTargetsRequest:         false,
+		SupportsStepInTargetsRequest:       false,
+		SupportsCompletionsRequest:         false,
+		CompletionTriggerCharacters:        []string{},
+		SupportsModulesRequest:             false,
+		AdditionalModuleColumns:            []dap.ColumnDescriptor{},
+		SupportedChecksumAlgorithms:        []dap.ChecksumAlgorithm{},
+		SupportsRestartRequest:             true,
+		SupportsExceptionOptions:           false,
+		SupportsValueFormattingOptions:     false,
+		SupportsExceptionInfoRequest:       false,
+		SupportTerminateDebuggee:           true,
+		SupportsDelayedStackTraceLoading:   false,
+		SupportsLoadedSourcesRequest:       true,
+		SupportsLogPoints:                  false,
+		SupportsTerminateThreadsRequest:    false,
+		SupportsSetExpression:              false,
+		SupportsTerminateRequest:           true,
+		SupportsDataBreakpoints:            false,
+		SupportsReadMemoryRequest:          false,
+		SupportsDisassembleRequest:         false,
+		SupportsCancelRequest:              false,
+		SupportsBreakpointLocationsRequest: false,
+	}
 	return response, nil
 }
 
 func (h *YODKHandler) helperFromArguments(arguments map[string]interface{}) (*Helper, error) {
+
+	ws, _ := os.Getwd()
+	if workspacefield, exists := arguments["workspace"]; exists {
+		if workspace, is := workspacefield.(string); is {
+			ws = workspace
+		}
+	}
+
 	if scriptsfield, exists := arguments["scripts"]; exists {
 		if scripts, is := scriptsfield.([]interface{}); is {
 			scriptlist := make([]string, 0, len(scripts))
@@ -70,8 +83,13 @@ func (h *YODKHandler) helperFromArguments(arguments map[string]interface{}) (*He
 					scriptlist = append(scriptlist, scriptname)
 				}
 			}
-			return FromScripts(scriptlist, h.configureVM)
+			scriptlist, err := resolveGlobs(ws, scriptlist)
+			if err != nil {
+				return nil, err
+			}
+			return FromScripts(ws, scriptlist, h.configureVM)
 		}
+
 	} else if testfield, exists := arguments["test"]; exists {
 		tcase := 1
 		if casefield, exists := arguments["testcase"]; exists {
@@ -80,16 +98,35 @@ func (h *YODKHandler) helperFromArguments(arguments map[string]interface{}) (*He
 			}
 		}
 		if test, is := testfield.(string); is {
-			return FromTest(test, tcase, h.configureVM)
+			return FromTest(ws, test, tcase, h.configureVM)
 		}
 	}
 	return nil, errors.New("Debug-config must contain 'scripts' or 'test' field")
 }
 
+func resolveGlobs(workdir string, filenames []string) ([]string, error) {
+	resolved := make([]string, 0, len(filenames)*2)
+	for _, pattern := range filenames {
+		matches, err := filepath.Glob(filepath.Join(workdir, pattern))
+		if err != nil {
+			return nil, err
+		}
+		for _, match := range matches {
+			rel, _ := filepath.Rel(workdir, match)
+			resolved = append(resolved, rel)
+		}
+
+	}
+	if len(resolved) == 0 {
+
+		return nil, fmt.Errorf("Found no files matching the given pattern(s):[%s]", strings.Join(filenames, ", "))
+	}
+	return resolved, nil
+}
+
 func (h *YODKHandler) configureVM(yvm *vm.VM, filename string) {
 	yvm.SetBreakpointHandler(func(x *vm.VM) bool {
-		h.session.send(&dap.StoppedEvent{
-			Event: *newEvent("stopped"),
+		h.session.SendEvent(&dap.StoppedEvent{
 			Body: dap.StoppedEventBody{
 				Reason:      "breakpoint",
 				Description: "Breakpoint reached",
@@ -99,35 +136,61 @@ func (h *YODKHandler) configureVM(yvm *vm.VM, filename string) {
 		return false
 	})
 	yvm.SetErrorHandler(func(x *vm.VM, err error) bool {
-		yvm.SetBreakpointHandler(func(x *vm.VM) bool {
-			h.session.send(&dap.StoppedEvent{
-				Event: *newEvent("exception"),
-				Body: dap.StoppedEventBody{
-					Reason:      "breakpoint",
-					Description: "A runtim-error occured",
-					ThreadId:    h.helper.ScriptIndexByName(filename) + 1,
-					Text:        err.Error(),
-				},
-			})
-			return false
+		h.session.SendEvent(&dap.StoppedEvent{
+			Body: dap.StoppedEventBody{
+				Reason:      "exception",
+				Description: "A runtim-error occured",
+				ThreadId:    h.helper.ScriptIndexByName(filename) + 1,
+				Text:        err.Error(),
+			},
 		})
 		return false
 	})
 	yvm.SetFinishHandler(func(x *vm.VM) {
-		h.session.send(&dap.StoppedEvent{
-			Event: *newEvent("stopped"),
+		id := h.helper.ScriptIndexByName(filename) + 1
+		// mark the vm as finished so subsequent request can be handled properly
+		h.helper.FinishedVMs[id] = true
+		h.session.SendEvent(&dap.StoppedEvent{
 			Body: dap.StoppedEventBody{
 				Reason:      "breakpoint",
-				Description: "Breakpoint reached",
+				Description: "Execution completed",
+				ThreadId:    id,
+			},
+		})
+	})
+	yvm.SetStepHandler(func(x *vm.VM) {
+		h.session.SendEvent(&dap.StoppedEvent{
+			Body: dap.StoppedEventBody{
+				Reason:      "step",
+				Description: "Step completed",
 				ThreadId:    h.helper.ScriptIndexByName(filename) + 1,
 			},
 		})
 	})
 }
 
+// checks if th client is trying to access a finished thread/vm.
+// If so, sends a thread-exited-event
+func (h *YODKHandler) accessingFinishedVM(threadid int) bool {
+	if _, isFinished := h.helper.FinishedVMs[threadid]; isFinished {
+		h.session.SendEvent(&dap.ThreadEvent{
+			Body: dap.ThreadEventBody{
+				Reason:   "exited",
+				ThreadId: threadid,
+			},
+		})
+		return true
+	}
+	return false
+}
+
+// SetSession implements the Handler interface
+func (h *YODKHandler) SetSession(s *Session) {
+	h.session = s
+}
+
 // OnLaunchRequest implements the Handler interface
 func (h *YODKHandler) OnLaunchRequest(arguments map[string]interface{}) error {
-
 	h.launchArguments = arguments
 
 	var err error
@@ -136,7 +199,7 @@ func (h *YODKHandler) OnLaunchRequest(arguments map[string]interface{}) error {
 		return err
 	}
 
-	h.session.send(&dap.InitializedEvent{Event: *newEvent("initialized")})
+	h.session.SendEvent(&dap.InitializedEvent{})
 
 	return nil
 }
@@ -148,12 +211,23 @@ func (h *YODKHandler) OnAttachRequest(arguments *dap.AttachRequestArguments) err
 
 // OnDisconnectRequest implements the Handler interface
 func (h *YODKHandler) OnDisconnectRequest(arguments *dap.DisconnectArguments) error {
-	return ErrNotImplemented
+	if h.helper != nil {
+		h.helper.Coordinator.Terminate()
+		h.helper.Coordinator.WaitForTermination()
+	}
+	go func() {
+		log.Println("Teminating debugadapter")
+		<-time.After(2 * time.Second)
+		log.Println("Teminated debugadapter")
+		os.Exit(1)
+	}()
+	return nil
 }
 
 // OnTerminateRequest implements the Handler interface
 func (h *YODKHandler) OnTerminateRequest(arguments *dap.TerminateArguments) error {
 	h.helper.Coordinator.Terminate()
+	h.session.SendEvent(&dap.TerminatedEvent{})
 	return nil
 }
 
@@ -165,13 +239,13 @@ func (h *YODKHandler) OnRestartRequest(arguments *dap.RestartArguments) error {
 	if err != nil {
 		return err
 	}
-	h.session.send(&dap.InitializedEvent{Event: *newEvent("initialized")})
+	h.session.SendEvent(&dap.InitializedEvent{})
 	return nil
 }
 
 // OnSetBreakpointsRequest implements the Handler interface
 func (h *YODKHandler) OnSetBreakpointsRequest(arguments *dap.SetBreakpointsArguments) (*dap.SetBreakpointsResponseBody, error) {
-	idx := h.helper.ScriptIndexByName(arguments.Source.Path)
+	idx := h.helper.ScriptIndexByPath(arguments.Source.Path)
 	if idx == -1 {
 		return nil, errors.New("Source not found")
 	}
@@ -223,6 +297,9 @@ func (h *YODKHandler) OnConfigurationDoneRequest(arguments *dap.ConfigurationDon
 
 // OnContinueRequest implements the Handler interface
 func (h *YODKHandler) OnContinueRequest(arguments *dap.ContinueArguments) (*dap.ContinueResponseBody, error) {
+	if h.accessingFinishedVM(arguments.ThreadId) {
+		return nil, nil
+	}
 	h.helper.Vms[arguments.ThreadId-1].Resume()
 	return &dap.ContinueResponseBody{
 		AllThreadsContinued: false,
@@ -231,15 +308,11 @@ func (h *YODKHandler) OnContinueRequest(arguments *dap.ContinueArguments) (*dap.
 
 // OnNextRequest implements the Handler interface
 func (h *YODKHandler) OnNextRequest(arguments *dap.NextArguments) error {
+	if h.accessingFinishedVM(arguments.ThreadId) {
+		return nil
+	}
 	h.helper.Vms[arguments.ThreadId-1].Step()
-	// TODO this event sould be sent AFTER the response
-	h.session.send(&dap.StoppedEvent{
-		Event: *newEvent("stopped"),
-		Body: dap.StoppedEventBody{
-			Reason:   "step",
-			ThreadId: arguments.ThreadId,
-		},
-	})
+	// the vm.StepHandler will send the event
 	return nil
 }
 
@@ -281,8 +354,7 @@ func (h *YODKHandler) OnGotoRequest(arguments *dap.GotoArguments) error {
 func (h *YODKHandler) OnPauseRequest(arguments *dap.PauseArguments) error {
 	h.helper.Vms[arguments.ThreadId-1].Pause()
 	// TODO this event sould be sent AFTER the response
-	h.session.send(&dap.StoppedEvent{
-		Event: *newEvent("stopped"),
+	h.session.SendEvent(&dap.StoppedEvent{
 		Body: dap.StoppedEventBody{
 			Reason:   "pause",
 			ThreadId: arguments.ThreadId,
@@ -301,7 +373,7 @@ func (h *YODKHandler) OnStackTraceRequest(arguments *dap.StackTraceArguments) (*
 				Line:   h.helper.Vms[arguments.ThreadId-1].CurrentSourceLine(),
 				Column: 0,
 				Source: dap.Source{
-					Path: h.helper.ScriptNames[arguments.ThreadId-1],
+					Path: filepath.Join(h.helper.Worspace, h.helper.ScriptNames[arguments.ThreadId-1]),
 				},
 			},
 		},
@@ -315,24 +387,29 @@ func (h *YODKHandler) OnScopesRequest(arguments *dap.ScopesArguments) (*dap.Scop
 	return &dap.ScopesResponseBody{
 		Scopes: []dap.Scope{
 			{
-				Name:               "Script variables",
+				Name:               "Local variables",
 				PresentationHint:   "locals",
 				VariablesReference: arguments.FrameId,
+			},
+			{
+				Name:               "Global variables",
+				PresentationHint:   "globals",
+				VariablesReference: globalVarsReference,
 			},
 		},
 	}, nil
 }
 
-// OnVariablesRequest implements the Handler interface
-func (h *YODKHandler) OnVariablesRequest(arguments *dap.VariablesArguments) (*dap.VariablesResponseBody, error) {
-	vm := h.helper.Vms[arguments.VariablesReference-1]
-	vars := vm.GetVariables()
+func getVariableResponseBody(vars map[string]vm.Variable, skipglobals bool) *dap.VariablesResponseBody {
 	resp := &dap.VariablesResponseBody{
 		Variables: make([]dap.Variable, len(vars)),
 	}
 
 	i := 0
 	for k, v := range vars {
+		if skipglobals && strings.HasPrefix(k, ":") {
+			continue
+		}
 		resp.Variables[i] = dap.Variable{
 			Name: k,
 		}
@@ -346,7 +423,19 @@ func (h *YODKHandler) OnVariablesRequest(arguments *dap.VariablesArguments) (*da
 		i++
 	}
 
-	return resp, nil
+	return resp
+}
+
+// OnVariablesRequest implements the Handler interface
+func (h *YODKHandler) OnVariablesRequest(arguments *dap.VariablesArguments) (*dap.VariablesResponseBody, error) {
+
+	if arguments.VariablesReference == globalVarsReference {
+		return getVariableResponseBody(h.helper.Coordinator.GetVariables(), false), nil
+	}
+
+	vm := h.helper.Vms[arguments.VariablesReference-1]
+	return getVariableResponseBody(vm.GetVariables(), true), nil
+
 }
 
 // OnSetVariableRequest implements the Handler interface
@@ -416,12 +505,10 @@ func (h *YODKHandler) OnLoadedSourcesRequest(arguments *dap.LoadedSourcesArgumen
 		Sources: make([]dap.Source, len(h.helper.Scripts)),
 	}
 	for i, name := range h.helper.ScriptNames {
+		fullpath, _ := filepath.Abs(filepath.Join(h.helper.Worspace, name))
 		resp.Sources[i] = dap.Source{
-			SourceReference: i + 1,
-			Name:            name,
-		}
-		if i == h.helper.CurrentScript {
-			resp.Sources[i].PresentationHint = "emphasize"
+			Name: name,
+			Path: fullpath,
 		}
 	}
 	return resp, nil
