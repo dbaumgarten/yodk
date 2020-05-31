@@ -1,187 +1,202 @@
 {
-	"name": "vscode-yolol",
-	"description": "A language server extension for yolol",
-	"author": "dbaumgarten",
-	"license": "MIT",
-	"version": "0.0.0",
-	"icon": "logo.png",
-	"galleryBanner.color": "1a2541",
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/dbaumgarten/yodk/tree/master/vscode-yolol"
-	},
-	"keywords": [
-		"yolol",
-		"nolol",
-		"starbase",
-		"dev-kit"
-	],
-	"main": "./out/extension",
-	"activationEvents": [
-		"onLanguage:yolol",
-		"onLanguage:nolol"
-	],
-	"contributes": {
-		"configuration": {
-			"type": "object",
-			"title": "vscode-yolol",
-			"properties": {
-				"yolol.formatting.mode": {
-					"scope": "window",
-					"type": "string",
-					"enum": [
-						"Readable",
-						"Compact"
-					],
-					"default": "Compact",
-					"description": "Controls how yolol is formatted",
-					"enumDescriptions": [
-						"Add spaces to improve readability",
-						"Only add spaces when reasonable necessary"
-					]
-				}
-			}
-		},
-		"languages": [
-			{
-				"id": "yolol",
-				"extensions": [
-					".yolol"
-				]
-			},
-			{
-				"id": "nolol",
-				"extensions": [
-					".nolol"
-				]
-			}
-		],
-		"grammars": [
-			{
-				"language": "yolol",
-				"scopeName": "yolol",
-				"path": "./syntaxes/yolol.tmGrammar.json"
-			},
-			{
-				"language": "nolol",
-				"scopeName": "nolol",
-				"path": "./syntaxes/nolol.tmGrammar.json"
-			}
-		],
-		"commands": [
-			{
-				"command": "yodk.compileNolol",
-				"title": "Compile NOLOL-Code"
-			},
-			{
-				"command": "yodk.optimizeYolol",
-				"title": "Optimize YOLOL-Code"
-			},
-			{
-				"command": "yodk.restartLangserver",
-				"title": "Restart Language Server"
-			}
-		],
-		"breakpoints": [
-			{
-				"language": "yolol"
-			},
-			{
-				"language": "nolol"
-			}
-		],
-		"debuggers": [
-			{
-				"type": "yodk",
-				"label": "YODK Debugger",
-				"program": "/home/daniel/go/src/github.com/dbaumgarten/yodk/yodk",
-				"args": ["debugadapter","--logfile","dalog"],
-				"configurationAttributes": {
-					"launch": {
-						"oneOf": [
-							{
-								"required": [
-									"scripts"
-								]
-							},
-							{
-								"required": [
-									"test"
-								]
-							}
-						],
-						"properties": {
-							"scripts": {
-								"type": "array",
-								"description": "A list of yolol/nolol scripts to debug",
-								"default": [],
-								"items": {
-									"type": "string"
-								}
-							},
-							"test": {
-								"type": "string",
-								"description": "Path to a yodk-test-file to debug",
-								"default": ""
-							},
-							"workspace": {
-								"type": "string",
-								"description": "A folder to which file-paths are relative"
-							}
-						}
-					}
-				},
-				"initialConfigurations": [
-					{
-						"type": "yodk",
-						"request": "launch",
-						"name": "Debug current script",
-						"scripts": ["${relativeFile}"],
-						"workspace": "${workspaceFolder}"
-					},
-					{
-						"type": "yodk",
-						"request": "launch",
-						"name": "Debug all scripts",
-						"scripts": ["*.nolol","*.yolol"],
-						"workspace": "${workspaceFolder}"
-					},
-					{
-						"type": "yodk",
-						"request": "launch",
-						"name": "Debug current test",
-						"test": "${relativeFile}",
-						"workspace": "${workspaceFolder}"
-					}
-				]
-			}
-		]},
-		"publisher": "dbaumgarten",
-		"engines": {
-			"vscode": "^1.33.0"
-		},
-		"dependencies": {
-			"vscode-languageclient": "^5.2.1"
-		},
-		"devDependencies": {
-			"vscode": "^1.1.35",
-			"@types/mocha": "^5.2.0",
-			"@types/node": "^8.0.0",
-			"tslint": "^6.1.1",
-			"typescript": "^3.5.1"
-		},
-		"scripts": {
-			"vscode:prepublish": "npm run update-vscode && npm run compile && cd .. && go build && GOOS=windows go build && cp yodk* vscode-yolol/bin/",
-			"compile": "tsc -b",
-			"watch": "tsc -b -w",
-			"bin": "cd .. && go build && cp yodk* vscode-yolol/bin/ && cd vscode-yolol",
-			"update-vscode": "vscode-install",
-			"postinstall": "vscode-install",
-			"test": "sh ./scripts/e2e.sh"
-		},
-		"__metadata": {
-			"id": "e3871e35-a24a-4789-b037-50055f4d0bbb",
-			"publisherDisplayName": "Daniel Baumgarten",
-			"publisherId": "fdb9ee00-8d82-45b2-beda-c75c0afeb291"
-		}
-	}
+  "name": "vscode-yolol",
+  "description": "A language server extension for yolol",
+  "author": "dbaumgarten",
+  "license": "MIT",
+  "version": "0.0.0",
+  "icon": "logo.png",
+  "galleryBanner.color": "1a2541",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dbaumgarten/yodk/tree/master/vscode-yolol"
+  },
+  "keywords": [
+    "yolol",
+    "nolol",
+    "starbase",
+    "dev-kit"
+  ],
+  "main": "./out/extension",
+  "activationEvents": [
+    "onLanguage:yolol",
+    "onLanguage:nolol",
+    "onDebug"
+  ],
+  "contributes": {
+    "configuration": {
+      "type": "object",
+      "title": "vscode-yolol",
+      "properties": {
+        "yolol.formatting.mode": {
+          "scope": "window",
+          "type": "string",
+          "enum": [
+            "Readable",
+            "Compact"
+          ],
+          "default": "Compact",
+          "description": "Controls how yolol is formatted",
+          "enumDescriptions": [
+            "Add spaces to improve readability",
+            "Only add spaces when reasonable necessary"
+          ]
+        }
+      }
+    },
+    "languages": [
+      {
+        "id": "yolol",
+        "extensions": [
+          ".yolol"
+        ]
+      },
+      {
+        "id": "nolol",
+        "extensions": [
+          ".nolol"
+        ]
+      }
+    ],
+    "grammars": [
+      {
+        "language": "yolol",
+        "scopeName": "yolol",
+        "path": "./syntaxes/yolol.tmGrammar.json"
+      },
+      {
+        "language": "nolol",
+        "scopeName": "nolol",
+        "path": "./syntaxes/nolol.tmGrammar.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "yodk.compileNolol",
+        "title": "YODK: Compile NOLOL-Code"
+      },
+      {
+        "command": "yodk.optimizeYolol",
+        "title": "YODK: Optimize YOLOL-Code"
+      },
+      {
+        "command": "yodk.restartLangserver",
+        "title": "YODK: Restart Language Server"
+      }
+    ],
+    "breakpoints": [
+      {
+        "language": "yolol"
+      },
+      {
+        "language": "nolol"
+      }
+    ],
+    "debuggers": [
+      {
+        "type": "yodk",
+        "label": "YODK Debugger",
+        "configurationAttributes": {
+          "launch": {
+            "oneOf": [
+              {
+                "required": [
+                  "scripts"
+                ]
+              },
+              {
+                "required": [
+                  "test"
+                ]
+              }
+            ],
+            "properties": {
+              "scripts": {
+                "type": "array",
+                "description": "A list of yolol/nolol scripts to debug",
+                "default": [],
+                "items": {
+                  "type": "string"
+                }
+              },
+              "test": {
+                "type": "string",
+                "description": "Path to a yodk-test-file to debug",
+                "default": ""
+              },
+              "workspace": {
+                "type": "string",
+                "description": "A folder to which file-paths are relative"
+              },
+              "logfile": {
+                "type": "string",
+                "description": "Loaction of a file to write logs into"
+              },
+              "debug": {
+                "type": "boolean",
+                "desciption": "If true, enable verbose debug-logging"
+              }
+            }
+          }
+        },
+        "initialConfigurations": [
+          {
+            "type": "yodk",
+            "request": "launch",
+            "name": "Debug current script",
+            "scripts": [
+              "${relativeFile}"
+            ],
+            "workspace": "${workspaceFolder}"
+          },
+          {
+            "type": "yodk",
+            "request": "launch",
+            "name": "Debug all scripts",
+            "scripts": [
+              "*.nolol",
+              "*.yolol"
+            ],
+            "workspace": "${workspaceFolder}"
+          },
+          {
+            "type": "yodk",
+            "request": "launch",
+            "name": "Debug current test",
+            "test": "${relativeFile}",
+            "workspace": "${workspaceFolder}"
+          }
+        ]
+      }
+    ]
+  },
+  "publisher": "dbaumgarten",
+  "engines": {
+    "vscode": "^1.33.0"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^5.2.1"
+  },
+  "devDependencies": {
+    "vscode": "^1.1.35",
+    "@types/mocha": "^5.2.0",
+    "@types/node": "^8.0.0",
+    "tslint": "^6.1.1",
+    "typescript": "^3.5.1",
+    "vscode-debugadapter-testsupport": "^1.41.0-pre.0",
+    "vscode-debugprotocol": "^1.41.0-pre.0"
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run update-vscode && npm run compile && cd .. && go build && GOOS=windows go build && cp yodk* vscode-yolol/bin/",
+    "compile": "tsc -b",
+    "watch": "tsc -b -w",
+    "bin": "cd .. && go build && cp yodk* vscode-yolol/bin/ && cd vscode-yolol",
+    "update-vscode": "vscode-install",
+    "postinstall": "vscode-install",
+    "test": "sh ./scripts/e2e.sh"
+  },
+  "__metadata": {
+    "id": "e3871e35-a24a-4789-b037-50055f4d0bbb",
+    "publisherDisplayName": "Daniel Baumgarten",
+    "publisherId": "fdb9ee00-8d82-45b2-beda-c75c0afeb291"
+  }
+}

@@ -1,5 +1,5 @@
 import * as path from 'path';
-import { workspace, ExtensionContext } from 'vscode';
+import { workspace, ExtensionContext, ProviderResult } from 'vscode';
 
 import {
 	LanguageClient,
@@ -124,6 +124,9 @@ export function activate(lcontext: ExtensionContext) {
 	context.subscriptions.push(vscode.commands.registerCommand('yodk.optimizeYolol', optimizeCommandHandler));
 	context.subscriptions.push(vscode.commands.registerCommand('yodk.restartLangserver', restartCommandHandler));
 
+	var factory = new DebugAdapterExecutableFactory();
+	context.subscriptions.push(vscode.debug.registerDebugAdapterDescriptorFactory('yodk', factory));
+
 	startLangServer()
 }
 
@@ -132,4 +135,31 @@ export function deactivate(): Thenable<void> | undefined {
 		return undefined;
 	}
 	return client.stop();
+}
+
+export class DebugAdapterExecutableFactory implements vscode.DebugAdapterDescriptorFactory {
+	createDebugAdapterDescriptor(_session: vscode.DebugSession, executable: vscode.DebugAdapterExecutable | undefined): ProviderResult<vscode.DebugAdapterDescriptor> {
+		
+		const command = getExePath()
+		var args = [
+			"debugadapter",
+		];
+
+		if ("logfile" in _session.configuration) {
+			args.push("--logfile")
+			args.push(_session.configuration["logfile"])
+		}
+
+		if ("debug" in _session.configuration && _session.configuration["debug"] == true){
+			args.push("--debug")
+		}
+
+		const options = {
+			cwd: _session.workspaceFolder.uri.path,
+		};
+		executable = new vscode.DebugAdapterExecutable(command, args, options);
+
+		// make VS Code launch the DA executable
+		return executable;
+	}
 }

@@ -4,30 +4,34 @@ import { getDocUri, activate } from './helper'
 
 describe('Should get diagnostics', () => {
 
-  it('Diagnoses errors in yolol', async () => {
-    const docUri = getDocUri('has_errors.yolol')
-    await testDiagnostics(docUri, [
-      { message: 'If-block needs at least one statement. Found Token: \'then\'(Keyword)', range: toRange(1, 27, 1, 27), severity: vscode.DiagnosticSeverity.Error, source: 'parser' },
-      { message: 'Expected a statement. Found Token: \'iff\'(ID)', range: toRange(4, 0, 4, 0), severity: vscode.DiagnosticSeverity.Error, source: 'parser' }
-    ])
+  describe('Diagnose errors', () => {
+    it('Diagnoses errors in yolol', async () => {
+      const docUri = getDocUri('has_errors.yolol')
+      await testDiagnostics(docUri, [
+        { message: 'If-block needs at least one statement. Found Token: \'then\'(Keyword)', range: toRange(1, 27, 1, 27), severity: vscode.DiagnosticSeverity.Error, source: 'parser' },
+        { message: 'Expected a statement. Found Token: \'iff\'(ID)', range: toRange(4, 0, 4, 0), severity: vscode.DiagnosticSeverity.Error, source: 'parser' }
+      ])
+    })
+  
+    it('Diagnoses errors in nolol', async () => {
+      const docUri = getDocUri('has_errors.nolol')
+      await testDiagnostics(docUri, [
+        { message: 'Expected newline. Found Token: \'do\'(Keyword)', range: toRange(9, 23, 9, 23), severity: vscode.DiagnosticSeverity.Error, source: 'parser' },
+        { message: 'Goto must be followed by an identifier. Found Token: \'1\'(Number)', range: toRange(19, 7, 19, 7), severity: vscode.DiagnosticSeverity.Error, source: 'parser' }
+      ])
+    })
   })
 
-  it('Diagnoses errors in nolol', async () => {
-    const docUri = getDocUri('has_errors.nolol')
-    await testDiagnostics(docUri, [
-      { message: 'Expected newline. Found Token: \'do\'(Keyword)', range: toRange(9, 23, 9, 23), severity: vscode.DiagnosticSeverity.Error, source: 'parser' },
-      { message: 'Goto must be followed by an identifier. Found Token: \'1\'(Number)', range: toRange(19, 7, 19, 7), severity: vscode.DiagnosticSeverity.Error, source: 'parser' }
-    ])
-  })
-
-  it('Diagnoses no errors in correct yolol', async () => {
-    const docUri = getDocUri('correct.yolol')
-    await testNoErrors(docUri)
-  })
-
-  it('Diagnoses no errors in correct nolol', async () => {
-    const docUri = getDocUri('correct.nolol')
-    await testNoErrors(docUri)
+  describe('Diagnose no wrong errors', () => {
+    it('Diagnoses no errors in correct yolol', async () => {
+      const docUri = getDocUri('correct.yolol')
+      await testNoErrors(docUri)
+    })
+  
+    it('Diagnoses no errors in correct nolol', async () => {
+      const docUri = getDocUri('correct.nolol')
+      await testNoErrors(docUri)
+    })
   })
 
 })

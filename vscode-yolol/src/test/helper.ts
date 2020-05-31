@@ -9,16 +9,17 @@ export let platformEol: string;
 /**
  * Activates the vscode.lsp-sample extension
  */
-export async function activate(docUri: vscode.Uri) {
+export async function activate(docUri?: vscode.Uri) {
 	// The extensionId is `publisher.name` from package.json
 	const ext = vscode.extensions.getExtension('dbaumgarten.vscode-yolol')!;
 	await ext.activate();
-	try {
-		doc = await vscode.workspace.openTextDocument(docUri);
-		editor = await vscode.window.showTextDocument(doc);
-		await sleep(2000); // Wait for server activation
-	} catch (e) {
-		console.error(e);
+	if (docUri !== undefined){
+		try {
+			doc = await vscode.workspace.openTextDocument(docUri);
+			editor = await vscode.window.showTextDocument(doc);
+		} catch (e) {
+			console.error(e);
+		}
 	}
 	return ext
 }
