@@ -49,10 +49,6 @@ Note: It is helpful to add the yodk-binary to your path.
 ## VScode extension
 You can install ```vscode-yolol``` directly from the vscode marketplace. For more information, see the [documentation](https://dbaumgarten.github.io/yodk/#/vscode-yolol).
 
-
-# Upcoming features
-- Implement debug adapter protocoll to enable debugging directly within vscode
-
 # Compatibility guarantees
 Absolutely none. There will be massive changes to the codebase in the near future and things WILL definetly break.  
 If you want to use this projects code in your own project, you best use go-modules to pin your dependency to a fixed version number.
