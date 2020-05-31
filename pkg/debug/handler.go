@@ -107,7 +107,7 @@ func (h *YODKHandler) helperFromArguments(arguments map[string]interface{}) (*He
 func resolveGlobs(workdir string, filenames []string) ([]string, error) {
 	resolved := make([]string, 0, len(filenames)*2)
 	for _, pattern := range filenames {
-		matches, err := filepath.Glob(filepath.Join(workdir, pattern))
+		matches, err := filepath.Glob(JoinPath(workdir, pattern))
 		if err != nil {
 			return nil, err
 		}
@@ -373,7 +373,7 @@ func (h *YODKHandler) OnStackTraceRequest(arguments *dap.StackTraceArguments) (*
 				Line:   h.helper.Vms[arguments.ThreadId-1].CurrentSourceLine(),
 				Column: 0,
 				Source: dap.Source{
-					Path: filepath.Join(h.helper.Worspace, h.helper.ScriptNames[arguments.ThreadId-1]),
+					Path: JoinPath(h.helper.Worspace, h.helper.ScriptNames[arguments.ThreadId-1]),
 				},
 			},
 		},
@@ -505,7 +505,7 @@ func (h *YODKHandler) OnLoadedSourcesRequest(arguments *dap.LoadedSourcesArgumen
 		Sources: make([]dap.Source, len(h.helper.Scripts)),
 	}
 	for i, name := range h.helper.ScriptNames {
-		fullpath, _ := filepath.Abs(filepath.Join(h.helper.Worspace, name))
+		fullpath, _ := filepath.Abs(JoinPath(h.helper.Worspace, name))
 		resp.Sources[i] = dap.Source{
 			Name: name,
 			Path: fullpath,

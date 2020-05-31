@@ -11,6 +11,14 @@ import (
 	"github.com/dbaumgarten/yodk/pkg/vm"
 )
 
+// JoinPath wraps filepath.Join, but returns only the second part if the second part is an absolute path
+func JoinPath(base string, other string) string {
+	if filepath.IsAbs(other) || base == "" {
+		return other
+	}
+	return filepath.Join(base, other)
+}
+
 // Helper bundles a lot of stuff you need to debuy yolol/nolol-code
 type Helper struct {
 	// index of the current script (the script targeted by commands)
@@ -37,7 +45,7 @@ type Helper struct {
 
 func (h Helper) ScriptIndexByPath(path string) int {
 	for i, s := range h.ScriptNames {
-		if filepath.Join(h.Worspace, s) == path {
+		if JoinPath(h.Worspace, s) == path {
 			return i
 		}
 	}
@@ -75,7 +83,7 @@ func FromScripts(workspace string, scripts []string, prepareVM VMPrepareFunc) (*
 	}
 
 	for i, inputFileName := range h.ScriptNames {
-		filecontent, err := ioutil.ReadFile(filepath.Join(workspace, inputFileName))
+		filecontent, err := ioutil.ReadFile(JoinPath(workspace, inputFileName))
 		if err != nil {
 			return nil, err
 		}
@@ -112,7 +120,7 @@ func FromScripts(workspace string, scripts []string, prepareVM VMPrepareFunc) (*
 
 // FromTest creates a Helper from the given test-file
 func FromTest(workspace string, testfile string, casenr int, prepareVM VMPrepareFunc) (*Helper, error) {
-	testfile = filepath.Join(workspace, testfile)
+	testfile = JoinPath(workspace, testfile)
 	testfilecontent, err := ioutil.ReadFile(testfile)
 	if err != nil {
 		return nil, err

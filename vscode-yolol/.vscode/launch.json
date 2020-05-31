@@ -17,9 +17,9 @@
 				"type": "npm",
 				"script": "watch"
 			},
-			"env": {
-				"YODK_EXECUTABLE": "/home/daniel/go/src/github.com/dbaumgarten/yodk/yodk"
-			}
+			//"env": {
+			//	"YODK_EXECUTABLE": "/home/daniel/go/src/github.com/dbaumgarten/yodk/yodk"
+			//}
 		}
 	]
 }

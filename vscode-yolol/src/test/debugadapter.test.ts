@@ -11,7 +11,7 @@ describe('Debug Adapter', function () {
 
 	let dc: DebugClient;
 	let executable: DebugAdapterExecutable;
-	const DATA_ROOT = Path.join(__dirname, "../../testFixture")
+	const DATA_ROOT = Path.join(__dirname, "..","..","testFixture")
 
 
 	before(async () => {
@@ -23,7 +23,7 @@ describe('Debug Adapter', function () {
 			type: "";
 			name: "";
 			workspaceFolder = new class {
-				readonly uri = Uri.parse(Path.join(__dirname, '../../'));
+				readonly uri = Uri.parse(Path.join(__dirname, "..",".."));
 				readonly name = ""
 				readonly index = 0
 			}
