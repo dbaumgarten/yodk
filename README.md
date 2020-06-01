@@ -21,6 +21,7 @@ It mainly consists of:
 - interactively debug yolol
 - compile NOLOL code to YOLOL (also, all previous features also work with NOLOL)
 - start a Language Server Protocol Server
+- start a Debug Adapter Protocol Server
 
 For more detailed information, see the [documentation](https://dbaumgarten.github.io/yodk/#/cli).
 
@@ -28,7 +29,10 @@ For more detailed information, see the [documentation](https://dbaumgarten.githu
 - Syntax highlighting of yolol and nolol
 - Automatically find and highlight errors in your code in realtime
 - Automatically format your code
-- Use cli-functionality directly from within vscode
+- Debug your yolol/nolol-code directly inside vscode
+- Use yodk commands directly from within vscode
+    - Optimize YOLOL-code
+    - Compile NOLOL to YOLOL
 
 For more detailed information, see the [documentation](https://dbaumgarten.github.io/yodk/#/vscode-yolol).
 
