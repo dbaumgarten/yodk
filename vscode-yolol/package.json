@@ -137,35 +137,7 @@
               }
             }
           }
-        },
-        "initialConfigurations": [
-          {
-            "type": "yodk",
-            "request": "launch",
-            "name": "Debug current script",
-            "scripts": [
-              "${relativeFile}"
-            ],
-            "workspace": "${workspaceFolder}"
-          },
-          {
-            "type": "yodk",
-            "request": "launch",
-            "name": "Debug all scripts",
-            "scripts": [
-              "*.nolol",
-              "*.yolol"
-            ],
-            "workspace": "${workspaceFolder}"
-          },
-          {
-            "type": "yodk",
-            "request": "launch",
-            "name": "Debug current test",
-            "test": "${relativeFile}",
-            "workspace": "${workspaceFolder}"
           }
-        ]
       }
     ]
   },

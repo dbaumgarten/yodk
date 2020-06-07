@@ -32,11 +32,11 @@ Place the yodk executable (or a symlink to it) in the bin folder or set the envi
 # Debugging
 This extension enables you to interactively debug yolol-code. To learn how to debug using vscode see here: https://code.visualstudio.com/Docs/editor/debugging .  
 
-This extension comes with a few default launch.json configurations that you can use.  
+This extension comes with a few default launch.json configurations that you can use. (If you start without a launch-configuration you will automatically debug the current script.)  
 
-There are essentialy two different ways to specify what script to debug:  
+There are essentialy two different ways to specify what script to debug in a launch configuration:  
 
-1. Set the "scripts"-field in the laun.json to a list if script-names. You can also use globs (like for example "subdir/*.yolol") to include all files that match a specific pattern. You can mix .yolol and .nolol scripts.  
+1. Set the "scripts"-field in the launch.json to a list of script-names. You can also use globs (like for example "subdir/*.yolol") to include all files that match a specific pattern. You can mix .yolol and .nolol scripts.  
 
 2. Create a yodk testfile ([see here](/cli?id=testing)) that defines which scripts to run, how long to run them and what the inputs and expected outputs are. You can now set the "test" field of you launch.json to the path of the testfile.  
 

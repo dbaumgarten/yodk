@@ -1,5 +1,5 @@
 import * as path from 'path';
-import { workspace, ExtensionContext, ProviderResult } from 'vscode';
+import { workspace, ExtensionContext, ProviderResult} from 'vscode';
 
 import {
 	LanguageClient,
@@ -124,8 +124,9 @@ export function activate(lcontext: ExtensionContext) {
 	context.subscriptions.push(vscode.commands.registerCommand('yodk.optimizeYolol', optimizeCommandHandler));
 	context.subscriptions.push(vscode.commands.registerCommand('yodk.restartLangserver', restartCommandHandler));
 
-	var factory = new DebugAdapterExecutableFactory();
-	context.subscriptions.push(vscode.debug.registerDebugAdapterDescriptorFactory('yodk', factory));
+
+	context.subscriptions.push(vscode.debug.registerDebugAdapterDescriptorFactory('yodk', new DebugAdapterExecutableFactory()));
+	context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('yodk', new YodkDebugConfigurationProvider()));
 
 	startLangServer()
 }
@@ -163,5 +164,88 @@ export class DebugAdapterExecutableFactory implements vscode.DebugAdapterDescrip
 
 		// make VS Code launch the DA executable
 		return executable;
+	}
+}
+
+export class YodkDebugConfigurationProvider implements vscode.DebugConfigurationProvider {
+	public provideDebugConfigurations( folder: vscode.WorkspaceFolder | undefined, token?: vscode.CancellationToken): vscode.DebugConfiguration[] {
+		if (!folder) {
+			return [
+				{
+					type: "yodk",
+					request: "launch",
+					name: "Debug current script",
+					scripts: [
+						"${file}"
+					]
+				},
+				{
+					type: "yodk",
+					request: "launch",
+					name: "Debug current test",
+					test: "${file}"
+				}]
+		}
+		return [
+			{
+			  type: "yodk",
+			  request: "launch",
+			  name: "Debug current script",
+			  scripts: [
+				"${relativeFile}"
+			  ],
+			  workspace: "${workspaceFolder}"
+			},
+			{
+			  type: "yodk",
+			  request: "launch",
+			  name: "Debug all scripts",
+			  scripts: [
+				"*.nolol",
+				"*.yolol"
+			  ],
+			  workspace: "${workspaceFolder}"
+			},
+			{
+			  type: "yodk",
+			  request: "launch",
+			  name: "Debug current test",
+			  test: "${relativeFile}",
+			  workspace: "${workspaceFolder}"
+			}
+		  ];
+	}
+
+	public resolveDebugConfiguration?( folder: vscode.WorkspaceFolder | undefined, debugConfiguration: vscode.DebugConfiguration, token?: vscode.CancellationToken): vscode.DebugConfiguration {
+		vscode.window.showErrorMessage("called "+debugConfiguration)
+			
+		// no debug config given. Create one on the fly
+		if (!debugConfiguration.request){
+			const activeEditor = vscode.window.activeTextEditor;
+			if (!activeEditor) {
+				return;
+			}
+			if (activeEditor.document.languageId == "yolol" || activeEditor.document.languageId == "nolol"){
+				return {
+					type: "yodk",
+					request: "launch",
+					name: "Debug current test",
+					scripts: [
+						activeEditor.document.fileName
+					]
+				}
+			}
+			if (activeEditor.document.languageId == "yaml"){
+				return {
+					type: "yodk",
+					request: "launch",
+					name: "Debug current script",
+					test: activeEditor.document.fileName
+				}
+			}
+		}
+
+		// return debug-config unchanged
+		return debugConfiguration
 	}
 }
