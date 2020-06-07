@@ -32,7 +32,9 @@ func configureFileLogging() {
 	if logfile != "" {
 		f, err := os.OpenFile(logfile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 		if err != nil {
-			os.Exit(1)
+			log.Println("Could not open log-file", err.Error())
+			// well. Nothing we can do about it...
+			return
 		}
 
 		log.SetOutput(f)

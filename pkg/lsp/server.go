@@ -7,6 +7,8 @@ package lsp
 import (
 	"context"
 	"encoding/json"
+	"log"
+	"runtime/debug"
 
 	"github.com/dbaumgarten/yodk/pkg/jsonrpc2"
 )
@@ -52,6 +54,12 @@ type Server interface {
 }
 
 func serverHandler(server Server) jsonrpc2.Handler {
+	defer func() {
+		err := recover()
+		if err != nil {
+			log.Fatal(err, string(debug.Stack()))
+		}
+	}()
 	return func(ctx context.Context, conn *jsonrpc2.Conn, r *jsonrpc2.Request) {
 		switch r.Method {
 		case "initialize":

@@ -154,9 +154,11 @@ export class DebugAdapterExecutableFactory implements vscode.DebugAdapterDescrip
 			args.push("--debug")
 		}
 
-		const options = {
-			cwd: _session.workspaceFolder.uri.path,
-		};
+		var options = {}
+		if (_session.workspaceFolder){
+			options["cwd"] =_session.workspaceFolder.uri.fsPath
+		}
+
 		executable = new vscode.DebugAdapterExecutable(command, args, options);
 
 		// make VS Code launch the DA executable

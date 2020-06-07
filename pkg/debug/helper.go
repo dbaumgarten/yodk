@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/dbaumgarten/yodk/pkg/nolol"
@@ -43,9 +44,17 @@ type Helper struct {
 	FinishedVMs map[int]bool
 }
 
+// on windows paths are case-insensitive. Normalize path for comparisons
+func normalizePath(path string) string {
+	if runtime.GOOS == "windows" {
+		return strings.ToLower(path)
+	}
+	return path
+}
+
 func (h Helper) ScriptIndexByPath(path string) int {
 	for i, s := range h.ScriptNames {
-		if JoinPath(h.Worspace, s) == path {
+		if normalizePath(JoinPath(h.Worspace, s)) == normalizePath(path) {
 			return i
 		}
 	}
@@ -54,7 +63,7 @@ func (h Helper) ScriptIndexByPath(path string) int {
 
 func (h Helper) ScriptIndexByName(name string) int {
 	for i, s := range h.ScriptNames {
-		if s == name {
+		if normalizePath(s) == normalizePath(name) {
 			return i
 		}
 	}
