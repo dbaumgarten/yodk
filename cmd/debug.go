@@ -204,6 +204,14 @@ func init() {
 				debugShell.Println("Error parsing line-number: ", err)
 				return
 			}
+
+			if validBps, exists := helper.ValidBreakpoints[helper.CurrentScript]; exists {
+				if _, isValid := validBps[line]; !isValid {
+					debugShell.Println("You can not set a breakpoint at this line")
+					return
+				}
+			}
+
 			helper.Vms[helper.CurrentScript].AddBreakpoint(line)
 			debugShell.Println("--Breakpoint added--")
 		},

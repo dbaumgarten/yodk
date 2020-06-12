@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/dbaumgarten/yodk/pkg/nolol"
+	"github.com/dbaumgarten/yodk/pkg/parser/ast"
 	"github.com/dbaumgarten/yodk/pkg/testing"
 	"github.com/dbaumgarten/yodk/pkg/vm"
 )
@@ -33,9 +34,13 @@ type Helper struct {
 	Worspace string
 	// a set of vms that have finished execution. This list is NOT managed by the Helper-class
 	FinishedVMs map[int]bool
+	// ValidBreakpoints contains a set of valid-breakpoint-locations for each script.
+	// If no value is returned for a script, all breakpoints are valid.
+	// This is needed because in a nolol-script not every line is valid for a breakpoint
+	ValidBreakpoints map[int]map[int]bool
 }
 
-// joinPath wraps filepath.Join, but returns only the second part if the second part is an absolute path
+// JoinPath wraps filepath.Join, but returns only the second part if the second part is an absolute path
 func JoinPath(base string, other string) string {
 	if filepath.IsAbs(other) || base == "" {
 		return other
@@ -43,6 +48,7 @@ func JoinPath(base string, other string) string {
 	return filepath.Join(base, other)
 }
 
+// ScriptIndexByPath returns the index of the script with the given path
 func (h Helper) ScriptIndexByPath(path string) int {
 	for i, s := range h.ScriptNames {
 		if JoinPath(h.Worspace, s) == path {
@@ -52,6 +58,7 @@ func (h Helper) ScriptIndexByPath(path string) int {
 	return -1
 }
 
+// ScriptIndexByName returns the index of the script with the given name
 func (h Helper) ScriptIndexByName(name string) int {
 	for i, s := range h.ScriptNames {
 		if s == name {
@@ -61,6 +68,7 @@ func (h Helper) ScriptIndexByName(name string) int {
 	return -1
 }
 
+// CurrentVM returns the currently selected VM (only used in cli-debugger)
 func (h Helper) CurrentVM() *vm.VM {
 	return h.Vms[h.CurrentScript]
 }
@@ -80,6 +88,7 @@ func FromScripts(workspace string, scripts []string, prepareVM VMPrepareFunc) (*
 		Coordinator:          vm.NewCoordinator(),
 		Worspace:             normalizePath(workspace),
 		FinishedVMs:          make(map[int]bool),
+		ValidBreakpoints:     make(map[int]map[int]bool),
 	}
 
 	for i, inputFileName := range h.ScriptNames {
@@ -103,6 +112,7 @@ func FromScripts(workspace string, scripts []string, prepareVM VMPrepareFunc) (*
 			if err != nil {
 				return nil, err
 			}
+			h.ValidBreakpoints[i] = findValidBreakpoints(yololcode)
 			h.VariableTranslations[i] = converter.GetVariableTranslations()
 			thisVM = vm.Create(yololcode)
 		} else {
@@ -140,6 +150,7 @@ func FromTest(workspace string, testfile string, casenr int, prepareVM VMPrepare
 		Coordinator:          vm.NewCoordinator(),
 		Worspace:             filepath.Dir(testfile),
 		FinishedVMs:          make(map[int]bool),
+		ValidBreakpoints:     make(map[int]map[int]bool),
 	}
 
 	for i, script := range t.Scripts {
@@ -162,6 +173,39 @@ func FromTest(workspace string, testfile string, casenr int, prepareVM VMPrepare
 
 	for i, iv := range h.Vms {
 		prepareVM(iv, h.ScriptNames[i])
+		if strings.HasSuffix(h.ScriptNames[i], ".nolol") {
+			h.ValidBreakpoints[i] = findValidBreakpoints(iv.GetProgram())
+		}
 	}
 	return h, nil
+}
+
+// returns a set of valid breakpoint locations for the given program
+// a breakpoint is valid if there is a statement or an empty line at the given location
+func findValidBreakpoints(prog *ast.Program) map[int]bool {
+	valid := make(map[int]bool)
+	prog.Accept(ast.VisitorFunc(func(node ast.Node, visitType int) error {
+		switch n := node.(type) {
+		case *ast.Assignment:
+			valid[n.Start().Line] = true
+			break
+		case *ast.GoToStatement:
+			valid[n.Start().Line] = true
+			break
+		case *ast.Dereference:
+			valid[n.Start().Line] = true
+			break
+		case *ast.IfStatement:
+			valid[n.Start().Line] = true
+			break
+		case *ast.Line:
+			// if the line is non-empty, the statements on the line will validate the breakpoint
+			if len(n.Statements) == 0 {
+				valid[n.Start().Line] = true
+			}
+			break
+		}
+		return nil
+	}))
+	return valid
 }

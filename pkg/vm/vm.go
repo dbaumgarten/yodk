@@ -307,6 +307,13 @@ func (v *VM) SetVariable(name string, value interface{}) error {
 	return v.setVariable(name, val)
 }
 
+// GetProgram returns the program that is run by the VM
+func (v *VM) GetProgram() *ast.Program {
+	v.lock.Lock()
+	defer v.lock.Unlock()
+	return v.program
+}
+
 // getVariable gets the current state of a variable.
 // Does not use the lock. ONLY USE WHEN LOCK IS ALREADY HELD
 // getting variables is case-insensitive

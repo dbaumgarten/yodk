@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 
 	"github.com/dbaumgarten/yodk/pkg/parser/ast"
@@ -93,7 +94,7 @@ func (p *Printer) Print(prog ast.Node) (string, error) {
 	p.lastWasSpace = false
 	err := prog.Accept(ast.VisitorFunc(func(node ast.Node, visitType int) error {
 		if (visitType == ast.PreVisit || visitType == ast.SingleVisit) && p.DebugPositions {
-			p.Write("{")
+			p.Write(fmt.Sprintf("{%s(%v - %v)", reflect.TypeOf(node).String(), node.Start(), node.End()))
 		}
 		switch n := node.(type) {
 		case *ast.Program:
@@ -175,7 +176,7 @@ func (p *Printer) Print(prog ast.Node) (string, error) {
 			}
 		}
 		if (visitType == ast.PostVisit || visitType == ast.SingleVisit) && p.DebugPositions {
-			p.Write(fmt.Sprintf("(%v---%v)}", node.Start(), node.End()))
+			p.Write("}")
 		}
 
 		return nil

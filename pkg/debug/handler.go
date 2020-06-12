@@ -279,6 +279,13 @@ func (h *YODKHandler) OnSetBreakpointsRequest(arguments *dap.SetBreakpointsArgum
 	}
 
 	for i, bp := range arguments.Lines {
+		// if there is a table of valid breakpoints, use it to verify the breakpoint
+		if h.helper.ValidBreakpoints[idx] != nil {
+			if _, isValid := h.helper.ValidBreakpoints[idx][bp]; !isValid {
+				i--
+				continue
+			}
+		}
 		vm.AddBreakpoint(bp)
 		resp.Breakpoints[i] = dap.Breakpoint{
 			Line:     bp,
