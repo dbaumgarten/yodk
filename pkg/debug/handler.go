@@ -283,6 +283,10 @@ func (h *YODKHandler) OnSetBreakpointsRequest(arguments *dap.SetBreakpointsArgum
 		resp.Breakpoints[i] = dap.Breakpoint{
 			Line:     bp,
 			Verified: true,
+			Source: dap.Source{
+				Name: arguments.Source.Name,
+				Path: arguments.Source.Path,
+			},
 		}
 	}
 
