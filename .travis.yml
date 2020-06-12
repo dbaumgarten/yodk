@@ -22,13 +22,13 @@ script:
   - npm test --silent
   - cd ..
 before_deploy:
-  - zip yodk-win.zip yodk.exe
-  - zip yodk-linux.zip yodk
   - cd vscode-yolol
   - npm version --no-git-tag-version $(echo ${TRAVIS_TAG} | tr -d v) --allow-same-version
   - vsce package
   - cp *.vsix ../vscode-yolol.vsix
   - cd ..
+  - zip yodk-win.zip yodk.exe
+  - zip yodk-linux.zip yodk
   - ./build-docs.sh
 deploy:
   - provider: releases
