@@ -48,7 +48,6 @@ export async function runYodkCommand(cmd): Promise<{}> {
 
 	return new Promise((resolve, reject) => {
 		binary.on("exit", (code) => {
-			console.log(code)
 			resolve({
 				code: code,
 				output: buffer
@@ -217,8 +216,6 @@ export class YodkDebugConfigurationProvider implements vscode.DebugConfiguration
 	}
 
 	public resolveDebugConfiguration?( folder: vscode.WorkspaceFolder | undefined, debugConfiguration: vscode.DebugConfiguration, token?: vscode.CancellationToken): vscode.DebugConfiguration {
-		vscode.window.showErrorMessage("called "+debugConfiguration)
-			
 		// no debug config given. Create one on the fly
 		if (!debugConfiguration.request){
 			const activeEditor = vscode.window.activeTextEditor;
