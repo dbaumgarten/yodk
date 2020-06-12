@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/dbaumgarten/yodk/pkg/nolol"
+	"github.com/dbaumgarten/yodk/pkg/parser"
 	"github.com/dbaumgarten/yodk/pkg/parser/ast"
 	"github.com/dbaumgarten/yodk/pkg/testing"
 	"github.com/dbaumgarten/yodk/pkg/vm"
@@ -38,6 +39,8 @@ type Helper struct {
 	// If no value is returned for a script, all breakpoints are valid.
 	// This is needed because in a nolol-script not every line is valid for a breakpoint
 	ValidBreakpoints map[int]map[int]bool
+	// CompiledCode contains the generated yolol-code for for VMs that are running NOLOL
+	CompiledCode map[int]string
 }
 
 // JoinPath wraps filepath.Join, but returns only the second part if the second part is an absolute path
@@ -89,6 +92,7 @@ func FromScripts(workspace string, scripts []string, prepareVM VMPrepareFunc) (*
 		Worspace:             normalizePath(workspace),
 		FinishedVMs:          make(map[int]bool),
 		ValidBreakpoints:     make(map[int]map[int]bool),
+		CompiledCode:        make(map[int]string),
 	}
 
 	for i, inputFileName := range h.ScriptNames {
@@ -114,6 +118,11 @@ func FromScripts(workspace string, scripts []string, prepareVM VMPrepareFunc) (*
 			}
 			h.ValidBreakpoints[i] = findValidBreakpoints(yololcode)
 			h.VariableTranslations[i] = converter.GetVariableTranslations()
+			pri := parser.Printer{
+				Mode: parser.PrintermodeReadable,
+			}
+			yololcodestr, _ := pri.Print(yololcode)
+			h.CompiledCode[i] = yololcodestr
 			thisVM = vm.Create(yololcode)
 		} else {
 			return nil, fmt.Errorf("Invalid file extension on: %s", inputFileName)
@@ -151,6 +160,7 @@ func FromTest(workspace string, testfile string, casenr int, prepareVM VMPrepare
 		Worspace:             filepath.Dir(testfile),
 		FinishedVMs:          make(map[int]bool),
 		ValidBreakpoints:     make(map[int]map[int]bool),
+		CompiledCode:        make(map[int]string),
 	}
 
 	for i, script := range t.Scripts {
@@ -175,6 +185,11 @@ func FromTest(workspace string, testfile string, casenr int, prepareVM VMPrepare
 		prepareVM(iv, h.ScriptNames[i])
 		if strings.HasSuffix(h.ScriptNames[i], ".nolol") {
 			h.ValidBreakpoints[i] = findValidBreakpoints(iv.GetProgram())
+			pri := parser.Printer{
+				Mode: parser.PrintermodeReadable,
+			}
+			yololcodestr, _ := pri.Print(iv.GetProgram())
+			h.CompiledCode[i] = yololcodestr
 		}
 	}
 	return h, nil

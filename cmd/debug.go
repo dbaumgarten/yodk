@@ -8,8 +8,6 @@ import (
 	"strings"
 
 	"github.com/dbaumgarten/yodk/pkg/debug"
-	"github.com/dbaumgarten/yodk/pkg/nolol"
-	"github.com/dbaumgarten/yodk/pkg/parser"
 
 	"github.com/abiosoft/ishell"
 	"github.com/dbaumgarten/yodk/pkg/vm"
@@ -318,13 +316,7 @@ func init() {
 				debugShell.Print("Disas is only available when debugging nolol code")
 			}
 			current := helper.Vms[helper.CurrentScript].CurrentAstLine()
-			conv := nolol.NewConverter()
-			ast, err := conv.ConvertFile(helper.ScriptNames[helper.CurrentScript])
-			if err != nil {
-				fmt.Println("Error when converting nolol: ", err.Error())
-				return
-			}
-			yolol, _ := (&parser.Printer{}).Print(ast)
+			yolol := helper.CompiledCode[helper.CurrentScript]
 			progLines := strings.Split(yolol, "\n")
 			debugShell.Println("--Programm--")
 			pfx := ""

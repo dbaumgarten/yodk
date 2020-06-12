@@ -16,6 +16,7 @@ import (
 )
 
 var globalVarsReference = 10000
+var convertedCodeOffset = 10000
 
 // YODKHandler implements the handler-functions for a debug-session
 type YODKHandler struct {
@@ -480,6 +481,14 @@ func (h *YODKHandler) OnSetExpressionRequest(arguments *dap.SetExpressionArgumen
 
 // OnSourceRequest implements the Handler interface
 func (h *YODKHandler) OnSourceRequest(arguments *dap.SourceArguments) (*dap.SourceResponseBody, error) {
+
+	// the client wants compiled code
+	if arguments.SourceReference >= convertedCodeOffset {
+		return &dap.SourceResponseBody{
+			Content: h.helper.CompiledCode[arguments.SourceReference-1-convertedCodeOffset],
+		}, nil
+	}
+
 	return &dap.SourceResponseBody{
 		Content: h.helper.Scripts[arguments.SourceReference-1],
 	}, nil
@@ -532,13 +541,20 @@ func (h *YODKHandler) OnExceptionInfoRequest(arguments *dap.ExceptionInfoArgumen
 // OnLoadedSourcesRequest implements the Handler interface
 func (h *YODKHandler) OnLoadedSourcesRequest(arguments *dap.LoadedSourcesArguments) (*dap.LoadedSourcesResponseBody, error) {
 	resp := &dap.LoadedSourcesResponseBody{
-		Sources: make([]dap.Source, len(h.helper.Scripts)),
+		Sources: make([]dap.Source, 0, len(h.helper.Scripts)),
 	}
 	for i, name := range h.helper.ScriptNames {
 		fullpath, _ := filepath.Abs(JoinPath(h.helper.Worspace, name))
-		resp.Sources[i] = dap.Source{
+		resp.Sources = append(resp.Sources, dap.Source{
 			Name: name,
 			Path: fullpath,
+		})
+		if _, hasCompiledCode := h.helper.CompiledCode[i]; hasCompiledCode {
+			resp.Sources = append(resp.Sources, dap.Source{
+				Name:            "(Compiled)" + name,
+				Path:            fullpath + ".compiled",
+				SourceReference: i + 1 + convertedCodeOffset,
+			})
 		}
 	}
 	return resp, nil
