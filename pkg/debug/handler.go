@@ -6,6 +6,8 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
+	"runtime"
 	"strings"
 	"time"
 
@@ -66,6 +68,21 @@ func (h *YODKHandler) OnInitializeRequest(arguments *dap.InitializeRequestArgume
 	return response, nil
 }
 
+var driveLetterRegex = regexp.MustCompile("^([A-Z])(:\\\\.*)$")
+
+// NormalizePath normalizes paths on windows. Does noting on linux.
+// The debug adapter interface of vscode expects lowercased drive-letters on windows.
+// Correct it if we get passed something else
+func normalizePath(path string) string {
+	if runtime.GOOS == "windows" {
+		match := driveLetterRegex.FindStringSubmatch(path)
+		if match != nil {
+			return strings.ToLower(match[1]) + match[2]
+		}
+	}
+	return path
+}
+
 func (h *YODKHandler) helperFromArguments(arguments map[string]interface{}) (*Helper, error) {
 
 	ws, _ := os.Getwd()
@@ -74,6 +91,8 @@ func (h *YODKHandler) helperFromArguments(arguments map[string]interface{}) (*He
 			ws = workspace
 		}
 	}
+
+	ws = normalizePath(ws)
 
 	if scriptsfield, exists := arguments["scripts"]; exists {
 		if scripts, is := scriptsfield.([]interface{}); is {

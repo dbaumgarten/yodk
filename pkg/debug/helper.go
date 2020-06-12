@@ -4,21 +4,12 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
-	"runtime"
 	"strings"
 
 	"github.com/dbaumgarten/yodk/pkg/nolol"
 	"github.com/dbaumgarten/yodk/pkg/testing"
 	"github.com/dbaumgarten/yodk/pkg/vm"
 )
-
-// JoinPath wraps filepath.Join, but returns only the second part if the second part is an absolute path
-func JoinPath(base string, other string) string {
-	if filepath.IsAbs(other) || base == "" {
-		return other
-	}
-	return filepath.Join(base, other)
-}
 
 // Helper bundles a lot of stuff you need to debuy yolol/nolol-code
 type Helper struct {
@@ -44,17 +35,17 @@ type Helper struct {
 	FinishedVMs map[int]bool
 }
 
-// on windows paths are case-insensitive. Normalize path for comparisons
-func normalizePath(path string) string {
-	if runtime.GOOS == "windows" {
-		return strings.ToLower(path)
+// joinPath wraps filepath.Join, but returns only the second part if the second part is an absolute path
+func JoinPath(base string, other string) string {
+	if filepath.IsAbs(other) || base == "" {
+		return other
 	}
-	return path
+	return filepath.Join(base, other)
 }
 
 func (h Helper) ScriptIndexByPath(path string) int {
 	for i, s := range h.ScriptNames {
-		if normalizePath(JoinPath(h.Worspace, s)) == normalizePath(path) {
+		if JoinPath(h.Worspace, s) == path {
 			return i
 		}
 	}
@@ -63,7 +54,7 @@ func (h Helper) ScriptIndexByPath(path string) int {
 
 func (h Helper) ScriptIndexByName(name string) int {
 	for i, s := range h.ScriptNames {
-		if normalizePath(s) == normalizePath(name) {
+		if s == name {
 			return i
 		}
 	}
@@ -87,7 +78,7 @@ func FromScripts(workspace string, scripts []string, prepareVM VMPrepareFunc) (*
 		Vms:                  make([]*vm.VM, len(scripts)),
 		CurrentScript:        0,
 		Coordinator:          vm.NewCoordinator(),
-		Worspace:             workspace,
+		Worspace:             normalizePath(workspace),
 		FinishedVMs:          make(map[int]bool),
 	}
 
