@@ -380,7 +380,7 @@ func (v *VM) pause() {
 		newstate := <-v.stateRequests
 		v.lock.Lock()
 		if newstate != StatePaused {
-			v.state = newstate
+			v.changeState(newstate)
 			break
 		}
 	}
