@@ -55,7 +55,7 @@ func (o *StaticExpressionOptimizer) OptimizeExpressionNonRecursive(exp ast.Expre
 			fmt.Println(err)
 			break
 		}
-		return varToConst(res)
+		return varToConst(res, n.Position)
 	case *ast.BinaryOperation:
 		if !isConstant(n.Exp1) || !isConstant(n.Exp2) {
 			break
@@ -64,7 +64,7 @@ func (o *StaticExpressionOptimizer) OptimizeExpressionNonRecursive(exp ast.Expre
 		if err != nil {
 			break
 		}
-		return varToConst(res)
+		return varToConst(res, n.Exp1.Start())
 	}
 	return nil
 }
@@ -96,13 +96,15 @@ func constToVar(exp ast.Expression) *vm.Variable {
 }
 
 // convert a vm-variable to a constant AST-Node
-func varToConst(v *vm.Variable) ast.Expression {
+func varToConst(v *vm.Variable, pos ast.Position) ast.Expression {
 	if v.IsNumber() {
 		return &ast.NumberConstant{
-			Value: v.Itoa(),
+			Value:    v.Itoa(),
+			Position: pos,
 		}
 	}
 	return &ast.StringConstant{
-		Value: v.String(),
+		Value:    v.String(),
+		Position: pos,
 	}
 }

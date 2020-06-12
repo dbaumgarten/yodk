@@ -649,7 +649,7 @@ func (c *Converter) replaceGotoLabels(p ast.Node) error {
 			repl := &ast.GoToStatement{
 				Position: gotostmt.Position,
 				Line: &ast.NumberConstant{
-					Position: p.Start(),
+					Position: gotostmt.Start(),
 					Value:    strconv.Itoa(line),
 				},
 			}
@@ -685,7 +685,7 @@ func (c *Converter) convertIf(mlif *nast.MultilineIf) error {
 	}
 
 	repl = append(repl, &nast.StatementLine{
-		Position: mlif.Position,
+		Position: mlif.End(),
 		Label:    endif,
 		Line: ast.Line{
 			Statements: []ast.Statement{},
@@ -709,17 +709,18 @@ func (c *Converter) convertConditionInline(mlif *nast.MultilineIf, index int, en
 		statements = mergedIfElements[0].(*nast.StatementLine).Line.Statements
 		if endlabel != "" {
 			statements = append(statements, &nast.GoToLabelStatement{
-				Label: endlabel,
+				Label:    endlabel,
+				Position: statements[len(statements)-1].End(),
 			})
 		}
 	}
 
 	repl := &nast.StatementLine{
-		Position: mlif.Position,
+		Position: mlif.Positions[index],
 		Line: ast.Line{
 			Statements: []ast.Statement{
 				&ast.IfStatement{
-					Position:  mlif.Position,
+					Position:  mlif.Positions[index],
 					Condition: mlif.Conditions[index],
 					IfBlock:   statements,
 				},
@@ -744,15 +745,15 @@ func (c *Converter) convertConditionMultiline(mlif *nast.MultilineIf, index int,
 	})
 	repl := []ast.Node{
 		&nast.StatementLine{
-			Position: mlif.Position,
+			Position: mlif.Positions[index],
 			Line: ast.Line{
 				Statements: []ast.Statement{
 					&ast.IfStatement{
-						Position:  mlif.Position,
+						Position:  mlif.Positions[index],
 						Condition: condition,
 						IfBlock: []ast.Statement{
 							&nast.GoToLabelStatement{
-								Position: mlif.Position,
+								Position: mlif.Positions[index],
 								Label:    skipIf,
 							},
 						},
@@ -768,11 +769,12 @@ func (c *Converter) convertConditionMultiline(mlif *nast.MultilineIf, index int,
 
 	if endlabel != "" {
 		repl = append(repl, &nast.StatementLine{
-			Position: mlif.Position,
+			Position: mlif.Blocks[index].End(),
 			Line: ast.Line{
+				Position: mlif.Blocks[index].End(),
 				Statements: []ast.Statement{
 					&nast.GoToLabelStatement{
-						Position: mlif.Position,
+						Position: mlif.Blocks[index].End(),
 						Label:    endlabel,
 					},
 				},
@@ -781,7 +783,7 @@ func (c *Converter) convertConditionMultiline(mlif *nast.MultilineIf, index int,
 	}
 
 	repl = append(repl, &nast.StatementLine{
-		Position: mlif.Position,
+		Position: mlif.Blocks[index].End(),
 		Label:    skipIf,
 		Line: ast.Line{
 			Statements: []ast.Statement{},
@@ -800,6 +802,7 @@ func (c *Converter) convertWhileLoop(loop *nast.WhileLoop) error {
 	condition := c.boolexpOptimizer.OptimizeExpression(&ast.UnaryOperation{
 		Operator: "not",
 		Exp:      loop.Condition,
+		Position: loop.Condition.Start(),
 	})
 	repl := []ast.Node{
 		&nast.StatementLine{
@@ -826,11 +829,11 @@ func (c *Converter) convertWhileLoop(loop *nast.WhileLoop) error {
 		repl = append(repl, blockline)
 	}
 	repl = append(repl, &nast.StatementLine{
-		Position: loop.Position,
+		Position: loop.Block.End(),
 		Line: ast.Line{
 			Statements: []ast.Statement{
 				&nast.GoToLabelStatement{
-					Position: loop.Position,
+					Position: loop.Block.End(),
 					Label:    startLabel,
 				},
 			},

@@ -97,6 +97,8 @@ func CopyAst(inp ast.Node) ast.Node {
 			case *MultilineIf:
 				m := &MultilineIf{}
 				copier.Copy(m, n)
+				m.Positions = make([]ast.Position, len(n.Positions))
+				copy(m.Positions, n.Positions)
 				m.Conditions = make([]ast.Expression, len(n.Conditions))
 				copy(m.Conditions, n.Conditions)
 				m.Blocks = make([]*Block, len(n.Blocks))

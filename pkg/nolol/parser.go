@@ -358,10 +358,11 @@ func (p *Parser) ParseDefinition() *nast.Definition {
 func (p *Parser) ParseMultilineIf() nast.Element {
 	p.Log()
 	mlif := nast.MultilineIf{
-		Position:   p.CurrentToken.Position,
+		Positions:  make([]ast.Position, 1),
 		Conditions: make([]ast.Expression, 0),
 		Blocks:     make([]*nast.Block, 0),
 	}
+	mlif.Positions[0] = p.CurrentToken.Position
 	if !p.IsCurrent(ast.TypeKeyword, "if") {
 		return nil
 	}
@@ -392,6 +393,7 @@ func (p *Parser) ParseMultilineIf() nast.Element {
 		}
 
 		if p.IsCurrent(ast.TypeKeyword, "if") {
+			mlif.Positions = append(mlif.Positions, p.CurrentToken.Position)
 			p.Advance()
 			continue
 		} else {

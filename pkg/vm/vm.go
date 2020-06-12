@@ -514,9 +514,8 @@ func (v *VM) aquireCoordinatorPermission() {
 }
 
 func (v *VM) runLine(line *ast.Line) error {
-	needCoordinatorPermission := v.coordinator != nil
-
-	if needCoordinatorPermission {
+	if v.coordinator != nil {
+		v.aquireCoordinatorPermission()
 		// no metter what happens. If we run coordinated, report done to coordinator on return
 		defer func() {
 			v.coordinatorDone <- struct{}{}
@@ -529,21 +528,9 @@ func (v *VM) runLine(line *ast.Line) error {
 		v.currentSourceLine = line.Start().Line
 		v.currentSourceColoumn = 0
 		v.sourceLineChanged()
-		if needCoordinatorPermission {
-			v.aquireCoordinatorPermission()
-		}
 	}
 
 	for _, stmt := range line.Statements {
-		v.currentSourceColoumn = stmt.Start().Coloumn
-		v.checkSourceLineChanged(stmt)
-
-		if needCoordinatorPermission {
-			v.aquireCoordinatorPermission()
-			// only ask for permission once per line
-			needCoordinatorPermission = false
-		}
-
 		err := v.runStmt(stmt)
 		if err != nil {
 			//errAbortLine is returned when the line is aborted due to an if. It is not really an 'error'
@@ -557,6 +544,8 @@ func (v *VM) runLine(line *ast.Line) error {
 }
 
 func (v *VM) runStmt(stmt ast.Statement) error {
+	v.currentSourceColoumn = stmt.Start().Coloumn
+	v.checkSourceLineChanged(stmt)
 	switch e := stmt.(type) {
 	case *ast.Assignment:
 		return v.runAssignment(e)

@@ -48,10 +48,12 @@ func pushDownNots(node ast.Expression) ast.Expression {
 					inner.Exp1 = &ast.UnaryOperation{
 						Operator: "not",
 						Exp:      inner.Exp1,
+						Position: inner.Exp1.Start(),
 					}
 					inner.Exp2 = &ast.UnaryOperation{
 						Operator: "not",
 						Exp:      inner.Exp2,
+						Position: inner.Exp2.Start(),
 					}
 					return inner
 				}
@@ -77,6 +79,7 @@ func bubbleUpNots(node ast.Expression) ast.Expression {
 				return &ast.UnaryOperation{
 					Operator: "not",
 					Exp:      bin,
+					Position: bin.Start(),
 				}
 			}
 		}

@@ -80,7 +80,7 @@ func (n *Block) End() ast.Position {
 
 // MultilineIf represents a nolol-style multiline if
 type MultilineIf struct {
-	Position   ast.Position
+	Positions  []ast.Position
 	Conditions []ast.Expression
 	Blocks     []*Block
 	ElseBlock  *Block
@@ -88,7 +88,7 @@ type MultilineIf struct {
 
 // Start is needed to implement ast.Node
 func (n *MultilineIf) Start() ast.Position {
-	return n.Position
+	return n.Positions[0]
 }
 
 // End is needed to implement ast.Node

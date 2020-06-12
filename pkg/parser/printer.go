@@ -27,6 +27,9 @@ type Printer struct {
 	Mode         Printermode
 	text         string
 	lastWasSpace bool
+	// If true, at position-information to every printed token.
+	// Does not produce valid yolol, but is usefull for debugging
+	DebugPositions bool
 }
 
 var operatorPriority = map[string]int{
@@ -89,6 +92,9 @@ func (p *Printer) Print(prog ast.Node) (string, error) {
 	p.text = ""
 	p.lastWasSpace = false
 	err := prog.Accept(ast.VisitorFunc(func(node ast.Node, visitType int) error {
+		if (visitType == ast.PreVisit || visitType == ast.SingleVisit) && p.DebugPositions {
+			p.Write("{")
+		}
 		switch n := node.(type) {
 		case *ast.Program:
 			break
@@ -168,6 +174,10 @@ func (p *Printer) Print(prog ast.Node) (string, error) {
 				return err
 			}
 		}
+		if (visitType == ast.PostVisit || visitType == ast.SingleVisit) && p.DebugPositions {
+			p.Write(fmt.Sprintf("(%v---%v)}", node.Start(), node.End()))
+		}
+
 		return nil
 	}))
 
