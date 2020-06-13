@@ -22,7 +22,9 @@ script:
   - npm run vscode:prepublish
   - npm test --silent
   - cd ..
+  - ./build-changelog.sh
 before_deploy:
+  - cp CHANGELOG.md vscode-yolol/
   - cd vscode-yolol
   - npm version --no-git-tag-version $(echo ${TRAVIS_TAG} | tr -d v) --allow-same-version
   - vsce package
@@ -39,6 +41,7 @@ deploy:
       - yodk-linux.zip
       - vscode-yolol.vsix
     skip_cleanup: true
+    release_notes_file: "CHANGELOG.md"
     on:
       tags: true
   - provider: script

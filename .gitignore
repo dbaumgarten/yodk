@@ -2,6 +2,7 @@
 *.out
 yodk
 yodk.exe
+yodk.exe~
 lslog
 !vscode-yolol/.vscode
 *.vsix
@@ -11,3 +12,4 @@ docs/README.ms
 docs/vscode-yolol.md
 examples/nolol/*.yolol
 dalog
+CHANGELOG.md
