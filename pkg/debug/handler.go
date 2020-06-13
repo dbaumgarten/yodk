@@ -431,15 +431,27 @@ func (h *YODKHandler) OnScopesRequest(arguments *dap.ScopesArguments) (*dap.Scop
 	}, nil
 }
 
-func getVariableResponseBody(vars map[string]vm.Variable, skipglobals bool) *dap.VariablesResponseBody {
+// OnVariablesRequest implements the Handler interface
+func (h *YODKHandler) OnVariablesRequest(arguments *dap.VariablesArguments) (*dap.VariablesResponseBody, error) {
+	i := 0
+	var vars map[string]vm.Variable
+	if arguments.VariablesReference == globalVarsReference {
+		vars = h.helper.Coordinator.GetVariables()
+	} else {
+		vars = h.helper.Vms[arguments.VariablesReference-1].GetVariables()
+	}
+
 	resp := &dap.VariablesResponseBody{
 		Variables: make([]dap.Variable, len(vars)),
 	}
-
-	i := 0
 	for k, v := range vars {
-		if skipglobals && strings.HasPrefix(k, ":") {
+		// only include globals if we are listing globals
+		if arguments.VariablesReference != globalVarsReference && strings.HasPrefix(k, ":") {
 			continue
+		}
+		// if there are translations for local variables available, use them to retrieve the original var name
+		if arguments.VariablesReference != globalVarsReference && h.helper.VariableTranslations[arguments.VariablesReference-1] != nil {
+			k = h.helper.VariableTranslations[arguments.VariablesReference-1][k]
 		}
 		resp.Variables[i] = dap.Variable{
 			Name: k,
@@ -449,23 +461,12 @@ func getVariableResponseBody(vars map[string]vm.Variable, skipglobals bool) *dap
 			resp.Variables[i].Value = v.Itoa()
 		} else {
 			resp.Variables[i].Type = "string"
-			resp.Variables[i].Value = v.String()
+			resp.Variables[i].Value = strings.ReplaceAll(v.String(), "\n", "\\n")
 		}
 		i++
 	}
 
-	return resp
-}
-
-// OnVariablesRequest implements the Handler interface
-func (h *YODKHandler) OnVariablesRequest(arguments *dap.VariablesArguments) (*dap.VariablesResponseBody, error) {
-
-	if arguments.VariablesReference == globalVarsReference {
-		return getVariableResponseBody(h.helper.Coordinator.GetVariables(), false), nil
-	}
-
-	vm := h.helper.Vms[arguments.VariablesReference-1]
-	return getVariableResponseBody(vm.GetVariables(), true), nil
+	return resp, nil
 
 }
 
