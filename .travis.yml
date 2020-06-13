@@ -41,6 +41,7 @@ deploy:
       - yodk-linux.zip
       - vscode-yolol.vsix
     skip_cleanup: true
+    edge: true
     release_notes_file: "CHANGELOG.md"
     on:
       tags: true
