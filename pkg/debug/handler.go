@@ -40,7 +40,7 @@ func (h *YODKHandler) OnInitializeRequest(arguments *dap.InitializeRequestArgume
 		SupportsEvaluateForHovers:          false,
 		ExceptionBreakpointFilters:         []dap.ExceptionBreakpointsFilter{},
 		SupportsStepBack:                   false,
-		SupportsSetVariable:                false,
+		SupportsSetVariable:                true,
 		SupportsRestartFrame:               false,
 		SupportsGotoTargetsRequest:         false,
 		SupportsStepInTargetsRequest:       false,
@@ -472,7 +472,27 @@ func (h *YODKHandler) OnVariablesRequest(arguments *dap.VariablesArguments) (*da
 
 // OnSetVariableRequest implements the Handler interface
 func (h *YODKHandler) OnSetVariableRequest(arguments *dap.SetVariableArguments) (*dap.SetVariableResponseBody, error) {
-	return nil, ErrNotImplemented
+	name := arguments.Name
+	value := vm.VariableFromString(arguments.Value)
+	if arguments.VariablesReference == globalVarsReference {
+		h.helper.Coordinator.SetVariable(name, value)
+	} else {
+		// the variable has been renamed by the compiler (and has been un-renamed in the debug view).
+		// re-rename it when setting
+		if h.helper.VariableTranslations[arguments.VariablesReference-1] != nil {
+			name = h.helper.ReverseVarnameTranslation(arguments.VariablesReference-1, name)
+		}
+		h.helper.Vms[arguments.VariablesReference-1].SetVariable(name, value)
+	}
+	resp := &dap.SetVariableResponseBody{}
+	if value.IsNumber() {
+		resp.Type = "number"
+		resp.Value = value.Itoa()
+	} else {
+		resp.Type = "string"
+		resp.Value = value.String()
+	}
+	return resp, nil
 }
 
 // OnSetExpressionRequest implements the Handler interface

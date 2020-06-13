@@ -71,6 +71,19 @@ func (h Helper) ScriptIndexByName(name string) int {
 	return -1
 }
 
+// ReverseVarnameTranslation returns the compiled name of a variable, given the original (source) name
+func (h Helper) ReverseVarnameTranslation(vmidx int, search string) string {
+	if h.VariableTranslations[vmidx] == nil {
+		return search
+	}
+	for k, v := range h.VariableTranslations[vmidx] {
+		if v == search {
+			return k
+		}
+	}
+	return ""
+}
+
 // CurrentVM returns the currently selected VM (only used in cli-debugger)
 func (h Helper) CurrentVM() *vm.VM {
 	return h.Vms[h.CurrentScript]
@@ -92,7 +105,7 @@ func FromScripts(workspace string, scripts []string, prepareVM VMPrepareFunc) (*
 		Worspace:             normalizePath(workspace),
 		FinishedVMs:          make(map[int]bool),
 		ValidBreakpoints:     make(map[int]map[int]bool),
-		CompiledCode:        make(map[int]string),
+		CompiledCode:         make(map[int]string),
 	}
 
 	for i, inputFileName := range h.ScriptNames {
@@ -160,7 +173,7 @@ func FromTest(workspace string, testfile string, casenr int, prepareVM VMPrepare
 		Worspace:             filepath.Dir(testfile),
 		FinishedVMs:          make(map[int]bool),
 		ValidBreakpoints:     make(map[int]map[int]bool),
-		CompiledCode:        make(map[int]string),
+		CompiledCode:         make(map[int]string),
 	}
 
 	for i, script := range t.Scripts {

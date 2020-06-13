@@ -256,6 +256,22 @@ func init() {
 		},
 	})
 	debugShell.AddCmd(&ishell.Cmd{
+		Name:    "set",
+		Aliases: []string{"w"},
+		Help:    "set a variable",
+		Func: func(c *ishell.Context) {
+			if len(c.Args) != 2 {
+				debugShell.Println("You must enter a variable-name and a value")
+				return
+			}
+			varname := helper.ReverseVarnameTranslation(helper.CurrentScript, c.Args[0])
+			varvalue := vm.VariableFromString(c.Args[1])
+			helper.CurrentVM().SetVariable(varname, varvalue)
+			debugShell.Print(varvalue.TypeName())
+			debugShell.Println("--Variable set--")
+		},
+	})
+	debugShell.AddCmd(&ishell.Cmd{
 		Name:    "info",
 		Aliases: []string{"i"},
 		Help:    "show vm-state",

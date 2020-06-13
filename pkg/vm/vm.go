@@ -297,12 +297,12 @@ func (v *VM) GetVariable(name string) (*Variable, bool) {
 }
 
 // SetVariable sets the current state of a variable
-func (v *VM) SetVariable(name string, value interface{}) error {
+func (v *VM) SetVariable(name string, value *Variable) error {
 	v.lock.Lock()
 	defer v.lock.Unlock()
 	// do return only a copy of the variable
 	val := &Variable{
-		value,
+		value.Value,
 	}
 	return v.setVariable(name, val)
 }
