@@ -251,12 +251,7 @@ func init() {
 				}
 			}
 			for _, variable := range vars {
-				if variable.val.IsString() {
-					debugShell.Println(variable.name, "'"+variable.val.String()+"'")
-				}
-				if variable.val.IsNumber() {
-					debugShell.Println(variable.name, variable.val.Itoa())
-				}
+				debugShell.Println(variable.name, variable.val.Repr())
 			}
 		},
 	})

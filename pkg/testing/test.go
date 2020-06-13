@@ -9,7 +9,6 @@ import (
 
 	"github.com/dbaumgarten/yodk/pkg/nolol"
 
-	"github.com/shopspring/decimal"
 	yaml "gopkg.in/yaml.v2"
 
 	"github.com/dbaumgarten/yodk/pkg/vm"
@@ -76,21 +75,16 @@ func Parse(file []byte, path string) (Test, error) {
 
 // InitializeVariables adds the variables required for the testcase
 // to the variables of the given Coordinator
-func (c Case) InitializeVariables(coord *vm.Coordinator) {
+func (c Case) InitializeVariables(coord *vm.Coordinator) error {
 	for key, value := range c.Inputs {
 		//key = strings.ToLower(key)
-		variable := &vm.Variable{}
-		if number, isnum := value.(int); isnum {
-			variable.Value = decimal.NewFromFloat(float64(number))
-		} else if number, isnum := value.(float64); isnum {
-			variable.Value = decimal.NewFromFloat(number)
-		} else {
-			variable = &vm.Variable{
-				Value: value,
-			}
+		variable, err := vm.VariableFromType(value)
+		if err != nil {
+			return err
 		}
 		coord.SetVariable(prefixVarname(key), variable)
 	}
+	return nil
 }
 
 // GetCode returns the code for script either from the script struct itself or from the referenced file
@@ -153,16 +147,23 @@ func (c Case) CheckResults(coord *vm.Coordinator) []error {
 	for key, value := range c.Outputs {
 		//key = strings.ToLower(key)
 		key = prefixVarname(key)
-		expected := &vm.Variable{
-			Value: value,
+		var fail error
+		expected, err := vm.VariableFromType(value)
+		if err != nil {
+			fail = fmt.Errorf("Invalid type for expected var: %T", value)
+			fails = append(fails, fail)
+			continue
 		}
 		actual, exists := coord.GetVariable(key)
-		var fail error
+
 		if !exists {
 			fail = fmt.Errorf("Expected output variable %s does not exist", key)
 		} else {
-			if actual.Itoa() != expected.Itoa() {
-				fail = fmt.Errorf("Case '%s': Output '%s' has value '%s' but should be '%s' ", c.Name, key, actual.Itoa(), expected.Itoa())
+			if !actual.SameType(expected) {
+				fail = fmt.Errorf("Case '%s': Output '%s' has type '%s' but should be '%s' ", c.Name, key, actual.TypeName(), expected.TypeName())
+
+			} else if !actual.Equals(expected) {
+				fail = fmt.Errorf("Case '%s': Output '%s' has value %s but should be %s ", c.Name, key, actual.Repr(), expected.Repr())
 			}
 		}
 		if fail != nil {
