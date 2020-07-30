@@ -37,6 +37,10 @@ func NewPosition(file string, line int, coloumn int) Position {
 	}
 }
 
+// UnknownPosition is used, when a position is expected, but a real one can not be provided
+// Usually used by ast-elements that rely on their children to determin their position, if the children are nil
+var UnknownPosition = Position{}
+
 func (p Position) String() string {
 	if p.File != "" {
 		return fmt.Sprintf("%s:%d:%d", p.File, p.Line, p.Coloumn)

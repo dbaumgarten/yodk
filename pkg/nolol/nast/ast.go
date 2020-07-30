@@ -10,11 +10,17 @@ type Program struct {
 
 // Start is needed to implement ast.Node
 func (n *Program) Start() ast.Position {
+	if len(n.Elements) == 0 {
+		return ast.UnknownPosition
+	}
 	return n.Elements[0].Start()
 }
 
 // End is needed to implement ast.Node
 func (n *Program) End() ast.Position {
+	if len(n.Elements) == 0 {
+		return ast.UnknownPosition
+	}
 	return n.Elements[len(n.Elements)-1].End()
 }
 
@@ -60,6 +66,9 @@ func (n *Definition) Start() ast.Position {
 
 // End is needed to implement ast.Node
 func (n *Definition) End() ast.Position {
+	if n.Value == nil {
+		return n.Position
+	}
 	return n.Value.End()
 }
 
@@ -70,11 +79,17 @@ type Block struct {
 
 // Start is needed to implement ast.Node
 func (n *Block) Start() ast.Position {
+	if len(n.Elements) == 0 {
+		return ast.UnknownPosition
+	}
 	return n.Elements[0].Start()
 }
 
 // End is needed to implement ast.Node
 func (n *Block) End() ast.Position {
+	if len(n.Elements) == 0 {
+		return ast.UnknownPosition
+	}
 	return n.Elements[len(n.Elements)-1].End()
 }
 
@@ -88,12 +103,18 @@ type MultilineIf struct {
 
 // Start is needed to implement ast.Node
 func (n *MultilineIf) Start() ast.Position {
+	if len(n.Positions) == 0 {
+		return ast.UnknownPosition
+	}
 	return n.Positions[0]
 }
 
 // End is needed to implement ast.Node
 func (n *MultilineIf) End() ast.Position {
 	if n.ElseBlock == nil {
+		if len(n.Blocks) == 0 {
+			return ast.UnknownPosition
+		}
 		return n.Blocks[len(n.Blocks)-1].End()
 	}
 	return n.ElseBlock.End()
@@ -129,6 +150,9 @@ func (n *WhileLoop) Start() ast.Position {
 
 // End is needed to implement ast.Node
 func (n *WhileLoop) End() ast.Position {
+	if n.Block == nil {
+		return n.Position
+	}
 	return n.Block.End()
 }
 
@@ -147,6 +171,9 @@ func (n *WaitDirective) Start() ast.Position {
 // End is needed to implement ast.Node
 func (n *WaitDirective) End() ast.Position {
 	if n.Statements == nil || len(n.Statements) == 0 {
+		if n.Condition == nil {
+			return n.Position
+		}
 		return n.Condition.End()
 	}
 	return n.Statements[len(n.Statements)-1].End()
@@ -183,6 +210,9 @@ func (n *MacroDefinition) Start() ast.Position {
 
 // End is needed to implement ast.Node
 func (n *MacroDefinition) End() ast.Position {
+	if n.Block == nil {
+		return n.Position
+	}
 	return n.Block.End()
 }
 
@@ -200,6 +230,9 @@ func (n *MacroInsetion) Start() ast.Position {
 
 // End is needed to implement ast.Node
 func (n *MacroInsetion) End() ast.Position {
+	if n.FuncCall == nil {
+		return n.Position
+	}
 	return n.FuncCall.End()
 }
 

@@ -708,9 +708,15 @@ func (c *Converter) convertConditionInline(mlif *nast.MultilineIf, index int, en
 	if len(mergedIfElements) > 0 {
 		statements = mergedIfElements[0].(*nast.StatementLine).Line.Statements
 		if endlabel != "" {
+			var pos ast.Position
+			if len(statements) == 0 {
+				pos = mlif.Positions[index]
+			} else {
+				pos = statements[len(statements)-1].End()
+			}
 			statements = append(statements, &nast.GoToLabelStatement{
 				Label:    endlabel,
-				Position: statements[len(statements)-1].End(),
+				Position: pos,
 			})
 		}
 	}

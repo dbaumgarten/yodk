@@ -16,11 +16,17 @@ type Program struct {
 
 // Start is needed to implement Node
 func (n *Program) Start() Position {
+	if len(n.Lines) == 0 {
+		return UnknownPosition
+	}
 	return n.Lines[0].Start()
 }
 
 // End is needed to implement Node
 func (n *Program) End() Position {
+	if len(n.Lines) == 0 {
+		return UnknownPosition
+	}
 	return n.Lines[len(n.Lines)-1].End()
 }
 
@@ -123,6 +129,9 @@ func (n *UnaryOperation) Start() Position {
 
 // End is needed to implement Node
 func (n *UnaryOperation) End() Position {
+	if n.Exp == nil {
+		return n.Position
+	}
 	return n.Exp.End()
 }
 
@@ -135,11 +144,17 @@ type BinaryOperation struct {
 
 // Start is needed to implement Node
 func (n *BinaryOperation) Start() Position {
+	if n.Exp1 == nil {
+		return UnknownPosition
+	}
 	return n.Exp1.Start()
 }
 
 // End is needed to implement Node
 func (n *BinaryOperation) End() Position {
+	if n.Exp1 == nil {
+		return UnknownPosition
+	}
 	return n.Exp2.End()
 }
 
@@ -210,5 +225,8 @@ func (n *GoToStatement) Start() Position {
 
 // End is needed to implement Node
 func (n *GoToStatement) End() Position {
+	if n.Line == nil {
+		return n.Position
+	}
 	return n.Line.End()
 }
