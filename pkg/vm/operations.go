@@ -90,6 +90,9 @@ func RunBinaryOperation(arg1 *Variable, arg2 *Variable, operator string) (*Varia
 			endResult.Value = arg1.Number().Mul(arg2.Number())
 			break
 		case "/":
+			if arg2.Number().IsZero() {
+				return nil, fmt.Errorf("Can not divide by 0")
+			}
 			endResult.Value = arg1.Number().Div(arg2.Number())
 			break
 		case "%":
