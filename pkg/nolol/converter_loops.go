@@ -6,6 +6,7 @@ import (
 	"github.com/dbaumgarten/yodk/pkg/nolol/nast"
 	"github.com/dbaumgarten/yodk/pkg/parser"
 	"github.com/dbaumgarten/yodk/pkg/parser/ast"
+	"github.com/dbaumgarten/yodk/pkg/vm"
 )
 
 // getCurrentLoopNumber returns the number of the current (innermost) loop that is beeing converted
@@ -19,30 +20,47 @@ func (c *Converter) convertWhileLoop(loop *nast.WhileLoop) error {
 	startLabel := fmt.Sprintf("while%d", loopnr)
 	endLabel := fmt.Sprintf("endwhile%d", loopnr)
 
-	condition := c.boolexpOptimizer.OptimizeExpression(&ast.UnaryOperation{
-		Operator: "not",
-		Exp:      loop.Condition,
-		Position: loop.Condition.Start(),
-	})
 	repl := []ast.Node{
 		&nast.StatementLine{
 			Position: loop.Position,
 			Label:    startLabel,
 			Line: ast.Line{
-				Statements: []ast.Statement{
-					&ast.IfStatement{
-						Position:  loop.Condition.Start(),
-						Condition: condition,
-						IfBlock: []ast.Statement{
-							&nast.GoToLabelStatement{
-								Position: loop.Position,
-								Label:    endLabel,
-							},
-						},
+				Statements: []ast.Statement{},
+			},
+		},
+	}
+
+	condition := c.sexpOptimizer.OptimizeExpression(loop.Condition)
+
+	conditionIsAlwaysTrue := false
+	if numberconst, is := condition.(*ast.NumberConstant); is {
+		variable := vm.VariableFromString(numberconst.Value)
+		if !variable.Number().IsZero() {
+			conditionIsAlwaysTrue = true
+		}
+	}
+
+	// if the condition is always true, we do not need to add a condition-check
+	// this makes infinite loops smaller
+	if !conditionIsAlwaysTrue {
+		condition = c.boolexpOptimizer.OptimizeExpression(&ast.UnaryOperation{
+			Operator: "not",
+			Exp:      condition,
+			Position: condition.Start(),
+		})
+
+		repl[0].(*nast.StatementLine).Line.Statements = []ast.Statement{
+			&ast.IfStatement{
+				Position:  loop.Condition.Start(),
+				Condition: condition,
+				IfBlock: []ast.Statement{
+					&nast.GoToLabelStatement{
+						Position: loop.Position,
+						Label:    endLabel,
 					},
 				},
 			},
-		},
+		}
 	}
 
 	for _, blockline := range loop.Block.Elements {
