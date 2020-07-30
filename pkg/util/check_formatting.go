@@ -11,7 +11,7 @@ import (
 	"github.com/dbaumgarten/yodk/pkg/parser/ast"
 )
 
-var positionRegex = regexp.MustCompile("\"Position\":{[^}]+}")
+var positionRegex = regexp.MustCompile(`("Line":\d+)|("Coloumn":\d+)`)
 var errmsg = "Formatting failed because of a bug (%s). Please open an issue containing the yolol-code that caused this at https://github.com/dbaumgarten/yodk/issues\n\nResult of formatting:\n\n%s\n"
 
 func getErrmsgCompile(formatted string) error {
