@@ -100,12 +100,27 @@ func (c *Converter) Convert(prog *nast.Program, files FileSystem) (*ast.Program,
 		return nil, err
 	}
 
+	err = c.resolveGotoChains(prog)
+	if err != nil {
+		return nil, err
+	}
+
+	err = c.removeUnusedLabels(prog)
+	if err != nil {
+		return nil, err
+	}
+
 	// merge the statemens of the program as good as possible
 	merged, err := c.mergeNololElements(prog.Elements)
 	if err != nil {
 		return nil, err
 	}
 	prog.Elements = merged
+
+	err = c.removeDuplicateGotos(prog)
+	if err != nil {
+		return nil, err
+	}
 
 	// find all line-labels
 	err = c.findJumpLabels(prog)

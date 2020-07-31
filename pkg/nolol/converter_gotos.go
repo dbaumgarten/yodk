@@ -23,6 +23,94 @@ func (c *Converter) setJumpLabel(name string, val int) {
 	c.jumpLabels[name] = val
 }
 
+// removeDuplicateGotos removes gotos that are unreachable, because they are directly behin another goto
+func (c *Converter) removeDuplicateGotos(p ast.Node) error {
+	lastWasGoto := false
+	f := func(node ast.Node, visitType int) error {
+		switch n := node.(type) {
+		case *nast.GoToLabelStatement:
+			if lastWasGoto {
+				return ast.NewNodeReplacement()
+			}
+			lastWasGoto = true
+			break
+		case *nast.StatementLine:
+			if visitType == ast.PreVisit && n.Label != "" {
+				lastWasGoto = false
+			}
+		default:
+			if visitType < 0 {
+				lastWasGoto = false
+			}
+		}
+		return nil
+	}
+	return p.Accept(ast.VisitorFunc(f))
+}
+
+// removeUnusedLabels removes all labels that are not used by at least one goto
+// this helpes in reducing the number of lines
+func (c *Converter) removeUnusedLabels(p *nast.Program) error {
+	used := make(map[string]bool)
+	f := func(node ast.Node, visitType int) error {
+		if gotostmt, isGoto := node.(*nast.GoToLabelStatement); isGoto {
+			used[gotostmt.Label] = true
+		}
+		return nil
+	}
+	err := p.Accept(ast.VisitorFunc(f))
+	if err != nil {
+		return err
+	}
+	for _, element := range p.Elements {
+		if line, isLine := element.(*nast.StatementLine); isLine {
+			if _, isused := used[line.Label]; !isused {
+				line.Label = ""
+			}
+		}
+	}
+	return nil
+}
+
+// resolveGotoChains replaces the target-label of gotos that lead to another goto with the target of the second goto
+func (c *Converter) resolveGotoChains(p *nast.Program) error {
+
+	// this function finds the goto another goto jumps to (if it exists)
+	getTargetGoto := func(label string) *nast.GoToLabelStatement {
+		foundlabel := false
+		for _, element := range p.Elements {
+			if line, isLine := element.(*nast.StatementLine); isLine {
+				if line.Label == label {
+					foundlabel = true
+				}
+				if foundlabel {
+					if len(line.Statements) > 0 {
+						if gotostmt, is := line.Statements[0].(*nast.GoToLabelStatement); is {
+							return gotostmt
+						}
+						break
+					}
+					if line.HasEOL {
+						break
+					}
+				}
+			}
+		}
+		return nil
+	}
+
+	f := func(node ast.Node, visitType int) error {
+		if gotostmt, isGoto := node.(*nast.GoToLabelStatement); isGoto {
+			targetgoto := getTargetGoto(gotostmt.Label)
+			if targetgoto != nil {
+				gotostmt.Label = targetgoto.Label
+			}
+		}
+		return nil
+	}
+	return p.Accept(ast.VisitorFunc(f))
+}
+
 // findJumpLabels finds all line-labels in the program
 func (c *Converter) findJumpLabels(p ast.Node) error {
 	c.jumpLabels = make(map[string]int)
