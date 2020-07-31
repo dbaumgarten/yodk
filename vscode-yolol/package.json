@@ -40,6 +40,22 @@
             "Add spaces to improve readability",
             "Only add spaces when reasonable necessary"
           ]
+        },
+        "yolol.lengthChecking.mode": {
+          "scope": "window",
+          "type": "string",
+          "enum": [
+            "Strict",
+            "Optimize",
+            "Off"
+          ],
+          "default": "Strict",
+          "description": "Controls when errors about too long programs are emitted",
+          "enumDescriptions": [
+            "Always complain",
+            "Complain only when optimization does not help",
+            "Never complain"
+          ]
         }
       }
     },

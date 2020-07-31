@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path"
 	"strings"
 
@@ -29,14 +30,25 @@ func compileFile(fpath string) {
 	outfile := strings.Replace(fpath, path.Ext(fpath), ".yolol", -1)
 	converter := nolol.NewConverter()
 	converter.Debug(debugLog)
-	converted, err := converter.ConvertFile(fpath)
-	exitOnError(err, "converting to yolol")
+	converted, compileerr := converter.ConvertFile(fpath)
+
+	// compilation failed completely. Fail now!
+	if converted == nil {
+		exitOnError(compileerr, "converting to yolol")
+	}
+
 	gen := parser.Printer{}
 	gen.Mode = parser.PrintermodeCompact
 	generated, err := gen.Print(converted)
 	exitOnError(err, "generating code")
 	err = ioutil.WriteFile(outfile, []byte(generated), 0700)
 	exitOnError(err, "writing file")
+
+	if compileerr != nil {
+		fmt.Println("Compilation succeeded with errors. Please check the output:", compileerr)
+		os.Exit(1)
+	}
+
 }
 
 func init() {

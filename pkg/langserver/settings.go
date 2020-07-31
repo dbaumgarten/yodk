@@ -2,22 +2,35 @@ package langserver
 
 import (
 	"encoding/json"
-	"log"
+)
+
+const (
+	FormatModeCompact       = "Compact"
+	FormatModeReadale       = "Readable"
+	LengthCheckModeStrict   = "Strict"
+	LengthCheckModeOptimize = "Optimize"
+	LengthCheckModeOff      = "Off"
 )
 
 // Settings contains settings for the language-server
 type Settings struct {
-	Yolol YololSettings
+	Yolol YololSettings `json:"yolol"`
 }
 
 // YololSettings contains settings specific to yolol
 type YololSettings struct {
-	Formatting FormatSettings
+	Formatting     FormatSettings      `json:"formatting"`
+	LengthChecking LengthCheckSettings `json:"lengthChecking"`
 }
 
 // FormatSettings contains formatting settings
 type FormatSettings struct {
-	Mode string
+	Mode string `json:"mode"`
+}
+
+// LengthCheckSettings contains settings for the lenght-validation
+type LengthCheckSettings struct {
+	Mode string `json:"mode"`
 }
 
 func (s *Settings) Read(inp interface{}) error {
@@ -25,7 +38,6 @@ func (s *Settings) Read(inp interface{}) error {
 	if err != nil {
 		return err
 	}
-	log.Println(string(by))
 	return json.Unmarshal(by, s)
 }
 
@@ -34,7 +46,10 @@ func DefaultSettings() *Settings {
 	return &Settings{
 		Yolol: YololSettings{
 			Formatting: FormatSettings{
-				Mode: "Compact",
+				Mode: FormatModeCompact,
+			},
+			LengthChecking: LengthCheckSettings{
+				Mode: LengthCheckModeStrict,
 			},
 		},
 	}

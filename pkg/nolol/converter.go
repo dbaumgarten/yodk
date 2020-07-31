@@ -151,6 +151,20 @@ func (c *Converter) Convert(prog *nast.Program, files FileSystem) (*ast.Program,
 		}
 	}
 
+	if len(out.Lines) > 20 {
+		return out, &parser.Error{
+			Message: "Program is too large to be compiled into 20 lines of yolol.",
+			StartPosition: ast.Position{
+				Line:    1,
+				Coloumn: 1,
+			},
+			EndPosition: ast.Position{
+				Line:    30,
+				Coloumn: 70,
+			},
+		}
+	}
+
 	return out, nil
 }
 

@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/dbaumgarten/yodk/pkg/parser"
+	"github.com/dbaumgarten/yodk/pkg/validators"
 	"github.com/spf13/cobra"
 )
 
@@ -21,6 +22,10 @@ var verifyCmd = &cobra.Command{
 			file := loadInputFile(filepath)
 			_, errs := p.Parse(file)
 			exitOnError(errs, "parsing file")
+
+			err := validators.ValidateCodeLength(file)
+			exitOnError(err, "validating code")
+
 			fmt.Println(filepath, "is valid")
 		}
 	},

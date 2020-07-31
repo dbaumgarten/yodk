@@ -33,9 +33,9 @@ func (s *LangServer) Format(params *lsp.DocumentFormattingParams) ([]lsp.TextEdi
 			gen.Mode = parser.PrintermodeCompact
 		} else {
 			switch s.settings.Yolol.Formatting.Mode {
-			case "Readable":
+			case FormatModeReadale:
 				gen.Mode = parser.PrintermodeReadable
-			case "Compact":
+			case FormatModeCompact:
 				gen.Mode = parser.PrintermodeCompact
 			default:
 				gen.Mode = parser.PrintermodeCompact
