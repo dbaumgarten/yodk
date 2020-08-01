@@ -9,7 +9,7 @@ The yodk aims to be a toolkit that helps with the development of YOLOL-Scripts. 
 
 It mainly consists of:
 - A cli application that bundles helpful features for yolol-development ([docs](https://dbaumgarten.github.io/yodk/#/cli))
-- A vscode extension, that makes the features of the cli available directly in vscode ([docs](https://dbaumgarten.github.io/yodk/#/vscode-colol))
+- A vscode extension, that makes the features of the cli available directly in vscode ([docs](https://dbaumgarten.github.io/yodk/#/vscode-yolol))
 - A new programming language called NOLOL, that extends YOLOL with a lot of features, experienced dvelopers really miss when using yolol. Lern more about [nolol](https://dbaumgarten.github.io/yodk/#/nolol).
 
 # Features
