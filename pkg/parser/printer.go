@@ -92,14 +92,22 @@ func (p *Printer) Newline() {
 func (p *Printer) Print(prog ast.Node) (string, error) {
 	p.text = ""
 	p.lastWasSpace = false
+	numberoflines := 0
+	currentline := 0
 	err := prog.Accept(ast.VisitorFunc(func(node ast.Node, visitType int) error {
 		if (visitType == ast.PreVisit || visitType == ast.SingleVisit) && p.DebugPositions {
 			p.Write(fmt.Sprintf("{%s(%v - %v)", reflect.TypeOf(node).String(), node.Start(), node.End()))
 		}
 		switch n := node.(type) {
 		case *ast.Program:
+			if visitType == ast.PreVisit {
+				numberoflines = len(n.Lines)
+			}
 			break
 		case *ast.Line:
+			if visitType == ast.PreVisit {
+				currentline++
+			}
 			if visitType == ast.PostVisit {
 				if n.Comment != "" {
 					if len(n.Statements) != 0 {
@@ -107,7 +115,11 @@ func (p *Printer) Print(prog ast.Node) (string, error) {
 					}
 					p.Write(n.Comment)
 				}
-				p.Newline()
+
+				// Emit a newline after every line, except it is the last one and it is not empty
+				if currentline != numberoflines || (len(n.Statements) == 0 && len(n.Comment) == 0) {
+					p.Newline()
+				}
 			}
 			if visitType > 0 {
 				p.StatementSeparator()

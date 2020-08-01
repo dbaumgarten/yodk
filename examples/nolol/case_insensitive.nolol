@@ -25,4 +25,3 @@ macro fooBar(bar)
 end
 
 insert FOOBAR(TEST)
-
