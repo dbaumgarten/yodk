@@ -85,7 +85,9 @@ func CopyAst(inp ast.Node) ast.Node {
 				copy(m.Arguments, n.Arguments)
 				newnode = m
 			case *MacroInsetion:
-				m := &MacroInsetion{}
+				m := &MacroInsetion{
+					FuncCall: &FuncCall{},
+				}
 				copier.Copy(m, n)
 				newnode = m
 			case *FuncCall:
