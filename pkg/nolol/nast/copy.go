@@ -137,7 +137,7 @@ func CopyAst(inp ast.Node) ast.Node {
 				copier.Copy(m, n)
 				newnode = m
 			case *ContinueStatement:
-				m := &BreakStatement{}
+				m := &ContinueStatement{}
 				copier.Copy(m, n)
 				newnode = m
 			default:
