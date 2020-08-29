@@ -92,6 +92,7 @@ func (c *Converter) convertMacroInsertion(ins *nast.MacroInsetion) error {
 		if deref, is := node.(*ast.Dereference); is && visitType == ast.SingleVisit {
 			lvarname := strings.ToLower(deref.Variable)
 			if replacement, exists := replacements[lvarname]; exists {
+				replacement = nast.CopyAst(replacement)
 				if replacementVariable, isvar := replacement.(*ast.Dereference); isvar {
 					if deref.Operator != "" && replacementVariable.Operator != "" {
 						return &parser.Error{
