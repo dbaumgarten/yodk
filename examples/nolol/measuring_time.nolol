@@ -10,3 +10,5 @@
 wait time() < closewhen then :door = "closed" ; closedAfter = time() - start end
 // the line after wait is executed one tick after the then-block of the wait
 :out = "door closed after " + closedAfter + " cycles"
+
+:done = 1

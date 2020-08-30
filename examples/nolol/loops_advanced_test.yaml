@@ -1,6 +1,5 @@
 scripts: 
   - name: loops_advanced.nolol
-    iterations: 1
 cases:
   - name: Count up
     outputs:

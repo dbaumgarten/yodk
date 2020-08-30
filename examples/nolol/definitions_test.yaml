@@ -1,6 +1,5 @@
 scripts: 
   - name: definitions.nolol
-    iterations: 1
 cases:
   - name: TestDefinitions
     outputs:

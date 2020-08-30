@@ -22,3 +22,5 @@ end
 
 // This will programm will count from 0 to 10 twice, skip every even number and
 // append the remaining numbers to a string, which ends up beeing: "|1.3.5.7.9.|1.3.5.7.9."
+
+:done = 1

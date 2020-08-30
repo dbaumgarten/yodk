@@ -17,3 +17,4 @@ pi=3.141
 :testor=20 or 0
 :testif=0
 if pi>3 then :testif=1 else :testif=0 end
+:done = 1

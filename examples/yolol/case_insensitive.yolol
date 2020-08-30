@@ -5,3 +5,4 @@ FoO="test"
 :derefok=Foo==FoO
 :funcOK=sin 3==sin 3
 if foo==FOO then :ifok=1 end
+:done = 1

@@ -1,6 +1,5 @@
 scripts: 
   - name: measuring_time.nolol
-    iterations: 1
 cases:
   - name: TestClosingTime
     outputs:

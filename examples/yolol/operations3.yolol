@@ -14,3 +14,4 @@ k=2
 :testamul=:testamul==20
 :testadiv=:testadiv==5
 :testamod=:testamod==0
+:done = 1

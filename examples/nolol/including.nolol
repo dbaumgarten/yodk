@@ -5,3 +5,5 @@ define name = "daniel"
 // this happens during compilation. Therefore the included path can not be dynamically created
 include "included.nolol"
 :hello += " " + name
+
+:done = 1

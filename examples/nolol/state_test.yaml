@@ -1,9 +1,9 @@
 scripts: 
   - name: state_one.nolol
-    iterations: 7
   - name: state_two.nolol
-    iterations: 7
+stopwhen:
+  counter: 3
 cases:
   - name: TestInteraction
     outputs:
-      out: "ping pong ping pong ping pong ping pong ping pong ping pong ping pong "
+      out: "ping pong ping pong ping "

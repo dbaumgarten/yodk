@@ -23,3 +23,5 @@ insert greet(:out1, "world")
 define separator = "_"
 
 insert greet(:out2, "you")
+
+:done = 1

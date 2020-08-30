@@ -9,8 +9,6 @@ import (
 func TestTestcase(t *testing.T) {
 	testcase := `scripts: 
   - name: fizbuzz.yolol
-    iterations: 1
-    maxlines: 10000
 cases:
   - name: TestOutput
     inputs:
@@ -55,11 +53,7 @@ if :number%5==0 then :out+="buzz " end
 func TestTestcase2(t *testing.T) {
 	testcase := `scripts: 
     - name: fizbuzz.yolol
-      iterations: 1
-      maxlines: 10000
     - name: fizbuzz.yolol
-      iterations: 1
-      maxlines: 10000
 cases:
     - name: TestOutput
       inputs:

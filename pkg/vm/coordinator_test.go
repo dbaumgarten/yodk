@@ -28,6 +28,9 @@ func TestCoordinatedExecution(t *testing.T) {
 	vm1.SetCoordinator(coord)
 	vm2.SetCoordinator(coord)
 
+	vm1.SetMaxExecutedLines(10)
+	vm2.SetMaxExecutedLines(10)
+
 	fmt.Println("resume")
 	vm1.Resume()
 	vm2.Resume()

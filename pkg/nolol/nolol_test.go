@@ -30,8 +30,9 @@ while number<=upto do
     end
     :out += number + sep
     next>
-    number++
+	number++
 end
+:done = 1
 `
 
 var testProg2 = `
@@ -71,6 +72,7 @@ func TestNolol(t *testing.T) {
 	}
 
 	v, _ := vm.CreateFromSource(code)
+	v.SetVariableChangedHandler(vm.TerminateOnDoneVar)
 	v.Resume()
 	v.WaitForTermination()
 

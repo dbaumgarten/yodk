@@ -12,3 +12,5 @@ define :output = :out
 
 // :output is replaced by ":out" and message is replaced by "Hello world"
 :output = message
+
+:done = 1

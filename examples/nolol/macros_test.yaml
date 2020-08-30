@@ -1,6 +1,5 @@
 scripts: 
   - name: macros.nolol
-    iterations: 1
 cases:
   - name: TestGreetings
     outputs:

@@ -142,7 +142,6 @@ func FromScripts(workspace string, scripts []string, prepareVM VMPrepareFunc) (*
 		}
 
 		h.Vms[i] = thisVM
-		thisVM.SetIterations(0)
 		thisVM.SetCoordinator(h.Coordinator)
 		prepareVM(thisVM, inputFileName)
 		thisVM.Resume()
@@ -184,15 +183,14 @@ func FromTest(workspace string, testfile string, casenr int, prepareVM VMPrepare
 		}
 	}
 
-	c := t.Cases[casenr-1]
-
-	h.Coordinator = vm.NewCoordinator()
-	c.InitializeVariables(h.Coordinator)
-
-	h.Vms, h.VariableTranslations, err = t.CreateVMs(h.Coordinator, nil)
+	runner, err := t.GetRunner(casenr - 1)
 	if err != nil {
 		return nil, err
 	}
+
+	h.Vms = runner.VMs
+	h.Coordinator = runner.Coordinator
+	h.VariableTranslations = runner.VarTranslations
 
 	for i, iv := range h.Vms {
 		prepareVM(iv, h.ScriptNames[i])

@@ -17,3 +17,4 @@ goto counter-8 :testgotovar=0
 :testgte=2>=1 and not (1>=2) and 2>=2
 :testlt=1<2 and not (2<1) and -5<5
 :testlte=1<=2 and not (2<=1) and 2>=2
+:done=1

@@ -1,6 +1,5 @@
 scripts: 
   - name: loops.nolol
-    iterations: 1
 cases:
   - name: draw
     outputs:

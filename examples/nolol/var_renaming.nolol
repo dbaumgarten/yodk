@@ -4,3 +4,5 @@ bar = foo
 when = time()
 later = when + time()
 :out = peter + " " + dieter + foo + " " + later
+
+:done = 1

@@ -5,3 +5,5 @@ insert SMBEGIN(STATE_PONG)
 :OUTPUT += "pong "
 
 insert SMEND(STATE_PING)
+
+:done = 1

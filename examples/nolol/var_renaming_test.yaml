@@ -1,6 +1,5 @@
 scripts: 
   - name: var_renaming.nolol
-    iterations: 1
 cases:
   - name: TestRenaming
     outputs:

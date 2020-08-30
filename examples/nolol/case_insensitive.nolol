@@ -25,3 +25,5 @@ macro fooBar(bar)
 end
 
 insert FOOBAR(TEST)
+
+:done = 1

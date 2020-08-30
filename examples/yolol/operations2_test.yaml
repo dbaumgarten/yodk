@@ -1,14 +1,7 @@
 scripts: 
-  # list of scripts to run
   - name: operations2.yolol
-    # optional. Number of iterations for this script. Default: 1
-    iterations: 1
-    # optional. Number of lines to execute maximally for this script. Default: 0 = infinite
-    maxlines: 10000
 cases:
-  # list of testcases
   - name: TestOperationSuccess
-    # expected value for global variables after running
     outputs:
       testi: 1
       testhw: 1

@@ -1,6 +1,5 @@
 scripts: 
   - name: including.nolol
-    iterations: 1
 cases:
   - name: TestInclusion
     outputs:

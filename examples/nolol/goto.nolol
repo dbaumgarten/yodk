@@ -23,3 +23,5 @@ f> :out += "f"; goto eof
 
 :out = "skip this"
 eof> 
+
+:done = 1

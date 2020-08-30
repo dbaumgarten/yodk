@@ -32,6 +32,19 @@ type ErrorHandlerFunc func(vm *VM, err error) bool
 // FinishHandlerFunc is a function that is called when the programm finished execution (looping is disabled)
 type FinishHandlerFunc func(vm *VM)
 
+// VarChangedHandlerFunc is the type for functions that react on variable changes
+// If true is returned the execution is resumed. Otherwise the vm is paused
+type VarChangedHandlerFunc func(vm *VM, name string, value *Variable) bool
+
+// TerminateOnDoneVar is a predefined VarChangedHandlerFunc that can be used to terminate the VM once :done is set to 1
+var TerminateOnDoneVar = func(vm *VM, name string, value *Variable) bool {
+	if name == ":done" {
+		go vm.Terminate()
+		return false
+	}
+	return true
+}
+
 // RuntimeError represents an error encountered during execution
 type RuntimeError struct {
 	Base error
@@ -53,11 +66,13 @@ type VM struct {
 	// a lock to synchronize acces to variables
 	lock *sync.Mutex
 	// the current variables of the programm
-	variables         map[string]*Variable
+	variables map[string]*Variable
+	// event handlers
 	breakpointHandler BreakpointFunc
 	stepHandler       FinishHandlerFunc
 	errorHandler      ErrorHandlerFunc
 	finishHandler     FinishHandlerFunc
+	varChangedHandler VarChangedHandlerFunc
 	// current line in the ast is 1-indexed
 	currentAstLine int
 	// current line in the source code
@@ -80,15 +95,10 @@ type VM struct {
 	coordinatorPermission <-chan struct{}
 	// this channel is used to signal to the coordinator that we finished running a line
 	coordinatorDone chan<- struct{}
-	// 0 means run forever, >0 means execute x times
-	iterations int
 	// if != 0 and in the current iteration more the x lines are run, terminate VM
 	maxExecutedLines int
-	// number of performed iterations since run()
-	executedIterations int
 	// number of lines executed in the current run
 	executedLines int
-	// event handlers
 }
 
 // Create creates a new VM to run the given program in a seperate goroutine.
@@ -101,7 +111,6 @@ func Create(prog *ast.Program) *VM {
 		lock:               &sync.Mutex{},
 		currentAstLine:     1,
 		currentSourceLine:  1,
-		iterations:         1,
 		stateRequests:      make(chan int),
 		terminationChannel: make(chan interface{}),
 		program:            prog,
@@ -122,19 +131,17 @@ func CreateFromSource(prog string) (*VM, error) {
 
 // Getters and Setters ---------------------------------
 
-// SetIterations sets the number of iterations to perform for the script
-// 1 = run only once, <=0 run forever, >0 repeat x times
-// default is 1
-func (v *VM) SetIterations(reps int) {
-	v.iterations = reps
-}
-
 // SetMaxExecutedLines sets the maximum number of lines to run
 // if the amount is reached the VM terminates
 // Can be used to prevent blocking by endless loops
 // <= 0 disables this. Default is 0
 func (v *VM) SetMaxExecutedLines(lines int) {
 	v.maxExecutedLines = lines
+}
+
+// GetExecutedLines returns the number of lines executed by this VM
+func (v *VM) GetExecutedLines() int {
+	return v.executedLines
 }
 
 // AddBreakpoint adds a breakpoint at the line. Breakpoint-lines always refer to the position recorded in the
@@ -243,6 +250,13 @@ func (v *VM) SetFinishHandler(f FinishHandlerFunc) {
 	v.finishHandler = f
 }
 
+// SetVariableChangedHandler registers a callback that is executed when the value of a variable changes
+func (v *VM) SetVariableChangedHandler(handler VarChangedHandlerFunc) {
+	v.lock.Lock()
+	defer v.lock.Unlock()
+	v.varChangedHandler = handler
+}
+
 // SetCoordinator sets the coordinator that is used to coordinate execution with other vms
 func (v *VM) SetCoordinator(c *Coordinator) {
 	v.lock.Lock()
@@ -331,10 +345,24 @@ func (v *VM) getVariable(name string) (*Variable, bool) {
 // setting variables is case-insensitive
 func (v *VM) setVariable(name string, value *Variable) error {
 	name = strings.ToLower(name)
-	if v.coordinator != nil && strings.HasPrefix(name, ":") {
-		return v.coordinator.SetVariable(name, value)
-	}
 	v.variables[name] = value
+	if v.coordinator != nil && strings.HasPrefix(name, ":") {
+		err := v.coordinator.SetVariable(name, value)
+		if err != nil {
+			return err
+		}
+	}
+
+	if v.varChangedHandler != nil {
+		v.lock.Unlock()
+		cont := v.varChangedHandler(v, name, value)
+		v.lock.Lock()
+		if !cont {
+			v.pause()
+		}
+
+	}
+
 	return nil
 }
 
@@ -409,6 +437,9 @@ func (v *VM) run() {
 		if v.coordinatorDone != nil {
 			close(v.coordinatorDone)
 		}
+		if v.finishHandler != nil {
+			v.finishHandler(v)
+		}
 	}()
 
 	v.pause()
@@ -427,16 +458,6 @@ func (v *VM) run() {
 		// roll back to line 1
 		if v.currentAstLine > 20 {
 			v.currentAstLine = 1
-			v.executedIterations++
-		}
-
-		if v.iterations != 0 && v.executedIterations >= v.iterations {
-			if v.finishHandler != nil {
-				v.lock.Unlock()
-				v.finishHandler(v)
-				v.lock.Lock()
-			}
-			panic(errKillVM)
 		}
 
 		if v.currentAstLine-1 < len(v.program.Lines) {
@@ -465,11 +486,6 @@ func (v *VM) run() {
 
 		v.executedLines++
 		if v.maxExecutedLines > 0 && v.executedLines > v.maxExecutedLines {
-			if v.finishHandler != nil {
-				v.lock.Unlock()
-				v.finishHandler(v)
-				v.lock.Lock()
-			}
 			panic(errKillVM)
 		}
 	}
@@ -602,19 +618,14 @@ func (v *VM) runStmt(stmt ast.Statement) error {
 		}
 		linenr := line.Number().IntPart()
 
-		// the goto is the last statement of the last line and leads back to line 1
-		// count this as completed script-execution
-		if v.currentAstLine == len(v.program.Lines) && linenr == 1 {
-			v.executedIterations++
-		}
-
 		if linenr < 1 {
 			linenr = 1
 		}
 		if linenr > 20 {
 			linenr = 20
 		}
-		// go to one line before the actual target. After the jump, currentAstLine will be incremented and then match the target
+
+		// goto one line before the actual target. After the jump, currentAstLine will be incremented and then match the target
 		v.currentAstLine = int(linenr) - 1
 		v.jumped = true
 		return errAbortLine

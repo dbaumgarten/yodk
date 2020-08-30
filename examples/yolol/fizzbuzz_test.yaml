@@ -1,22 +1,29 @@
+# required: list of scripts to run in parallel. Can be as many as you like
 scripts: 
-  # list of scripts to run
   - name: fizzbuzz.yolol
-    # optional. Number of iterations for this script. Default: 1
-    iterations: 1
-    # optional. Number of lines to execute maximally for this script. Default: 0 = infinite
-    maxlines: 10000
+# optional: stop execution once one of the listed global variables has the given value
+# default is "done: 1"
+stopwhen:
+  number: 101
+# optional: Stop execution after running set amount of lines (per script)
+# default value is 2000. Set to -1 for unlimited
+maxlines: 2000
+# required: list of testcases
 cases:
-  # list of testcases
   - name: TestOutput
-    # global variables to set before running. ':' can be omitted
+    # optional: global variables to set before running. ':' can be omitted
     inputs:
       number: 0
-    # expected value for global variables after running
+    # optional: expected value for global variables after running
+    # it he values after execution the scipts do not match the values here, the test fails
     outputs:
       out: "fizzbuzz fizz buzz fizz fizz buzz fizz fizzbuzz fizz buzz fizz fizz buzz fizz fizzbuzz fizz buzz fizz fizz buzz fizz fizzbuzz fizz buzz fizz fizz buzz fizz fizzbuzz fizz buzz fizz fizz buzz fizz fizzbuzz fizz buzz fizz fizz buzz fizz fizzbuzz fizz buzz fizz fizz buzz "
       number: 101
   - name: TestOutput2
     inputs:
-      number: 99
+      number: 0
+    # optional: the global "stopwhen" value from above can be overriden on a per test-case basis
+    stopwhen:
+      number: 10
     outputs:
-       out: "fizz buzz "
+       out: "fizzbuzz fizz buzz fizz fizz "
