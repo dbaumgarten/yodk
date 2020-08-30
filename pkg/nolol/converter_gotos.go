@@ -147,6 +147,11 @@ func (c *Converter) replaceGotoLabels(p ast.Node) error {
 	f := func(node ast.Node, visitType int) error {
 		if gotostmt, is := node.(*nast.GoToLabelStatement); is {
 			line, exists := c.getJumpLabel(gotostmt.Label)
+			// __start is a special label pointing to line 1
+			if gotostmt.Label == "__start" {
+				line = 1
+				exists = true
+			}
 			if !exists {
 				return &parser.Error{
 					Message:       "Unknown jump-label: " + gotostmt.Label,
@@ -166,4 +171,50 @@ func (c *Converter) replaceGotoLabels(p ast.Node) error {
 		return nil
 	}
 	return p.Accept(ast.VisitorFunc(f))
+}
+
+// addFinalGoto adds a goto 1 to the end of the programm to speed up execution
+func (c *Converter) addFinalGoto(prog *nast.Program) error {
+	pos := ast.Position{
+		Line: len(prog.Elements) + 1,
+	}
+
+	prog.Elements = append(prog.Elements, &nast.StatementLine{
+		Position: pos,
+		Line: ast.Line{
+			Position: pos,
+			Statements: []ast.Statement{
+				&nast.GoToLabelStatement{
+					Position: pos,
+					Label:    "__start",
+				},
+			},
+		},
+	})
+
+	return nil
+}
+
+// removeFinalGotoIfNeeded removes the final goto added by addFinalGoto
+// if it is the only reason for the programm to bust the line-limit
+// as this is the last step of the converion, the input is a yolol ast
+func (c *Converter) removeFinalGotoIfNeeded(prog *ast.Program) error {
+	// one line too much
+	if len(prog.Lines) == 21 {
+		line := prog.Lines[len(prog.Lines)-1]
+		// line has only one element
+		if len(line.Statements) == 1 {
+			// stmt is a goto
+			if stmt, isgoto := line.Statements[0].(*ast.GoToStatement); isgoto {
+				// goto target is line 1
+				if number, isnumber := stmt.Line.(*ast.NumberConstant); isnumber {
+					if number.Value == "1" {
+						// remove the line
+						prog.Lines = prog.Lines[:len(prog.Lines)-2]
+					}
+				}
+			}
+		}
+	}
+	return nil
 }

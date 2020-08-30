@@ -100,6 +100,11 @@ func (c *Converter) Convert(prog *nast.Program, files FileSystem) (*ast.Program,
 		return nil, err
 	}
 
+	err = c.addFinalGoto(prog)
+	if err != nil {
+		return nil, err
+	}
+
 	err = c.resolveGotoChains(prog)
 	if err != nil {
 		return nil, err
@@ -150,6 +155,8 @@ func (c *Converter) Convert(prog *nast.Program, files FileSystem) (*ast.Program,
 			Statements: line.Statements,
 		}
 	}
+
+	c.removeFinalGotoIfNeeded(out)
 
 	if len(out.Lines) > 20 {
 		return out, &parser.Error{

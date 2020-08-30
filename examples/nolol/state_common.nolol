@@ -13,12 +13,10 @@ define :OUTPUT = :out
 
 // define some macros
 macro SMBEGIN(waitfor)
-	start> 
 	wait :STATEVAR != waitfor	
 end
 
 macro SMEND(newstate)
 	:STATEVAR = newstate
-	goto start
 end
 

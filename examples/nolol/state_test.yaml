@@ -1,9 +1,9 @@
 scripts: 
   - name: state_one.nolol
-    maxlines: 20
+    iterations: 7
   - name: state_two.nolol
-    maxlines: 20
+    iterations: 7
 cases:
   - name: TestInteraction
     outputs:
-      out: "ping pong ping pong ping pong ping pong ping pong ping pong ping "
+      out: "ping pong ping pong ping pong ping pong ping pong ping pong ping pong "
