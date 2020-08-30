@@ -2,6 +2,7 @@ scripts:
   # list of scripts to run
   - name: fizzbuzz.nolol
     # optional. Number of iterations for this script. Default: 1
+    # If the last statement of the last line is a "goto 1" and the goto is taken, it also counts as one completed iteration
     iterations: 1
     # optional. Number of lines to execute maximally for this script. Default: 0 = infinite
     maxlines: 10000

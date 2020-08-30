@@ -413,43 +413,56 @@ func (v *VM) run() {
 
 	v.pause()
 
+	// compensate the increment on the first iteration of the loop
+	// necessary because of the pesky 1-indexing of lines
+	v.currentAstLine--
+
 	for {
+		v.currentAstLine++
 
 		// give other goroutines a chance to aquire the lock
 		v.lock.Unlock()
 		v.lock.Lock()
 
-		if v.currentAstLine > len(v.program.Lines) {
+		// roll back to line 1
+		if v.currentAstLine > 20 {
 			v.currentAstLine = 1
 			v.executedIterations++
-			if v.iterations == 0 || v.iterations < v.executedIterations {
-				continue
-			} else {
-				if v.finishHandler != nil {
-					v.lock.Unlock()
-					v.finishHandler(v)
-					v.lock.Lock()
-				}
-				panic(errKillVM)
-			}
 		}
 
-		// lines are counted from 1. Compensate this
-		line := v.program.Lines[v.currentAstLine-1]
-		err := v.runLine(line)
-		if err != nil {
-			if v.errorHandler != nil {
+		if v.iterations != 0 && v.executedIterations >= v.iterations {
+			if v.finishHandler != nil {
 				v.lock.Unlock()
-				cont := v.errorHandler(v, err)
+				v.finishHandler(v)
 				v.lock.Lock()
-				if !cont {
-					v.pause()
-				}
-			} else {
-				// no error handler. Kill VM.
-				panic(errKillVM)
 			}
+			panic(errKillVM)
 		}
+
+		if v.currentAstLine-1 < len(v.program.Lines) {
+			// lines are counted from 1. Compensate this when indexing the array
+			line := v.program.Lines[v.currentAstLine-1]
+			err := v.runLine(line)
+			if err != nil {
+				if v.errorHandler != nil {
+					v.lock.Unlock()
+					cont := v.errorHandler(v, err)
+					v.lock.Lock()
+					if !cont {
+						v.pause()
+					}
+				} else {
+					// no error handler. Kill VM.
+					panic(errKillVM)
+				}
+			}
+		} else {
+			// nothing to to but to trigger a line-change notification
+			v.currentSourceLine = v.currentAstLine
+			v.currentSourceColoumn = 0
+			v.sourceLineChanged()
+		}
+
 		v.executedLines++
 		if v.maxExecutedLines > 0 && v.executedLines > v.maxExecutedLines {
 			if v.finishHandler != nil {
@@ -459,7 +472,6 @@ func (v *VM) run() {
 			}
 			panic(errKillVM)
 		}
-		v.currentAstLine++
 	}
 }
 
@@ -589,12 +601,20 @@ func (v *VM) runStmt(stmt ast.Statement) error {
 			return RuntimeError{fmt.Errorf("Can not goto a string (%s)", line.String()), e}
 		}
 		linenr := line.Number().IntPart()
+
+		// the goto is the last statement of the last line and leads back to line 1
+		// count this as completed script-execution
+		if v.currentAstLine == len(v.program.Lines) && linenr == 1 {
+			v.executedIterations++
+		}
+
 		if linenr < 1 {
 			linenr = 1
 		}
 		if linenr > 20 {
 			linenr = 20
 		}
+		// go to one line before the actual target. After the jump, currentAstLine will be incremented and then match the target
 		v.currentAstLine = int(linenr) - 1
 		v.jumped = true
 		return errAbortLine

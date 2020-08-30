@@ -1,6 +1,6 @@
 scripts: 
   # list of scripts to run
-  - name: operations.yolol
+  - name: operations3.yolol
     # optional. Number of iterations for this script. Default: 1
     iterations: 1
     # optional. Number of lines to execute maximally for this script. Default: 0 = infinite
@@ -10,20 +10,17 @@ cases:
   - name: TestOperationSuccess
     # expected value for global variables after running
     outputs:
-      testsum: 1
-      testsub: 1
-      testmul: 1
-      testdiv: 1
-      testmod: 1
-      testgoto: 1
-      testgotovar: 1
-      testgotovar: 1
-      testexp: 1
-      testeq: 1
-      testneq: 1
-      testgt: 1
-      testgte: 1
-      testlt: 1
-      testlte: 1
-
-      
+      testnestedif: 1
+      testnested: 1
+      testnestedop: 1
+      testautoconv: 1
+      testaadd: 1
+      testasub: 1
+      testamul: 1
+      testadiv: 1
+      testamod: 1
+      testaadd: 1
+      testasub: 1
+      testamul: 1
+      testadiv: 1
+      testamod: 1
