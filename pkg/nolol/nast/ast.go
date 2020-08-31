@@ -54,9 +54,10 @@ func (n *StatementLine) Start() ast.Position {
 
 // Definition declares a constant
 type Definition struct {
-	Position ast.Position
-	Name     string
-	Value    ast.Expression
+	Position     ast.Position
+	Name         string
+	Placeholders []string
+	Value        ast.Expression
 }
 
 // Start is needed to implement ast.Node

@@ -200,6 +200,12 @@ func (np *Printer) handleNololNodes(node ast.Node, visitType int, p *parser.Prin
 			p.Write("define")
 			p.Space()
 			p.Write(n.Name)
+			if len(n.Placeholders) != 0 {
+				p.Write("(")
+				phlist := strings.Join(n.Placeholders, ", ")
+				p.Write(phlist)
+				p.Write(")")
+			}
 			p.OptionalSpace()
 			p.Write("=")
 			p.OptionalSpace()

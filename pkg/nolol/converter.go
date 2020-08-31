@@ -17,7 +17,7 @@ type Converter struct {
 	jumpLabels map[string]int
 	// the names of definitions are case-insensitive. Keys are converted to lowercase before using them
 	// all lookups MUST also use lowercased keys
-	definitions      map[string]ast.Expression
+	definitions      map[string]*nast.Definition
 	usesTimeTracking bool
 	iflabelcounter   int
 	waitlabelcounter int
@@ -39,7 +39,7 @@ type Converter struct {
 func NewConverter() *Converter {
 	return &Converter{
 		jumpLabels:       make(map[string]int),
-		definitions:      make(map[string]ast.Expression),
+		definitions:      make(map[string]*nast.Definition),
 		macros:           make(map[string]*nast.MacroDefinition),
 		macroLevel:       make([]string, 0),
 		sexpOptimizer:    optimizers.NewStaticExpressionOptimizer(),
@@ -190,7 +190,7 @@ func (c *Converter) convertNodes(node ast.Node) error {
 				return c.convertAssignment(n)
 			}
 		case *nast.Definition:
-			if visitType == ast.PostVisit {
+			if visitType == ast.PreVisit {
 				return c.convertDefinition(n)
 			}
 		case *nast.MacroDefinition:
@@ -211,7 +211,7 @@ func (c *Converter) convertNodes(node ast.Node) error {
 				return c.convertWait(n)
 			}
 		case *nast.FuncCall:
-			if visitType == ast.PostVisit {
+			if visitType == ast.PreVisit {
 				return c.convertFuncCall(n)
 			}
 		case *ast.Dereference:

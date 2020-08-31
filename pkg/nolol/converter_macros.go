@@ -58,8 +58,6 @@ func (c *Converter) convertMacroInsertion(ins *nast.MacroInsetion) error {
 		}
 	}
 
-	copy := nast.CopyAst(m).(*nast.MacroDefinition)
-
 	// gather replacements
 	replacements := make(map[string]ast.Expression)
 	for i := range ins.Arguments {
@@ -67,7 +65,29 @@ func (c *Converter) convertMacroInsertion(ins *nast.MacroInsetion) error {
 		replacements[lvarname] = ins.Arguments[i]
 	}
 
-	performReplacements := func(node ast.Node, visitType int) error {
+	copy := nast.CopyAst(m).(*nast.MacroDefinition)
+
+	err := c.replacePlaceholders(copy, replacements, true)
+	if err != nil {
+		return err
+	}
+
+	nodes := make([]ast.Node, len(copy.Block.Elements)+1)
+	for i, el := range copy.Block.Elements {
+		nodes[i] = el
+	}
+	nodes[len(nodes)-1] = &nast.Trigger{
+		Kind: "macroleft",
+	}
+
+	// remove the node from the output-code
+	return ast.NewNodeReplacement(nodes...)
+}
+
+// replacePlaceholders replaces all dereferences of and assignments to placeholders in a sub-ast with the given replacements
+// if aliasRemaining is true, all not-replaced non-global vars will be given new unique names (=are made local to the sub-ast)
+func (c *Converter) replacePlaceholders(m ast.Node, replacements map[string]ast.Expression, aliasRemaining bool) error {
+	f := func(node ast.Node, visitType int) error {
 		// replace the variable name inside assignments
 		if ass, is := node.(*ast.Assignment); is && visitType == ast.PreVisit {
 			lvarname := strings.ToLower(ass.Variable)
@@ -88,6 +108,7 @@ func (c *Converter) convertMacroInsertion(ins *nast.MacroInsetion) error {
 				}
 			}
 		}
+
 		// replace the variable name of dereferences
 		if deref, is := node.(*ast.Dereference); is && visitType == ast.SingleVisit {
 			lvarname := strings.ToLower(deref.Variable)
@@ -113,8 +134,7 @@ func (c *Converter) convertMacroInsertion(ins *nast.MacroInsetion) error {
 					}
 				}
 				return ast.NewNodeReplacementSkip(replacement)
-			} else if !strings.HasPrefix(deref.Variable, ":") {
-
+			} else if aliasRemaining && !strings.HasPrefix(deref.Variable, ":") {
 				if _, isDefinition := c.getDefinition(lvarname); !isDefinition {
 					// replace local vars with a insertion-scoped version
 					deref.Variable = strings.Join(c.macroLevel, "_") + "_" + deref.Variable
@@ -124,19 +144,5 @@ func (c *Converter) convertMacroInsertion(ins *nast.MacroInsetion) error {
 		return nil
 	}
 
-	err := copy.Accept(ast.VisitorFunc(performReplacements))
-	if err != nil {
-		return err
-	}
-
-	nodes := make([]ast.Node, len(copy.Block.Elements)+1)
-	for i, el := range copy.Block.Elements {
-		nodes[i] = el
-	}
-	nodes[len(nodes)-1] = &nast.Trigger{
-		Kind: "macroleft",
-	}
-
-	// remove the node from the output-code
-	return ast.NewNodeReplacement(nodes...)
+	return m.Accept(ast.VisitorFunc(f))
 }

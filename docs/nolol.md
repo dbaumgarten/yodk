@@ -70,7 +70,9 @@ will result in:
 
 [definitions.yolol](generated/code/nolol/definitions.yolol ':include')
 
-The feature to re-define variable names is usefull if you want to be able to easily change what global variables a script works on. Just use define to create an alias for the global variable and then use the alias in your code. If you want to exchange the undelaying global var, just change to definition.
+The feature to re-define variable names is usefull if you want to be able to easily change what global variables a script works on. Just use define to create an alias for the global variable and then use the alias in your code. If you want to exchange the undelaying global var, just change to definition.  
+
+You may wonder why there are definitions with placeholders AND macros. While they are very similar, they have a key difference. All definitions (even those with placeholders) are expressions (=values, that you could for example assign to a variable). You can't for example do ```define foo=a+=b``` (because f+=b is a statement and not an expression). Macros however can contain arbitary statements and even multiple lines. But macros can not be used as values in an expression. 
 
 ## Labeled Gotos
 As NOLOL moves statements around during compilation to generate as compact code as possible, using goto with line numbers would not work. Instead goto no jump to labeled lines.

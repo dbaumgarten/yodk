@@ -338,10 +338,33 @@ func (p *Parser) ParseDefinition() *nast.Definition {
 		p.ErrorCurrent("const keyword must be followed by an identifier")
 	}
 	decl := &nast.Definition{
-		Name:     p.CurrentToken.Value,
-		Position: startpos,
+		Name:         p.CurrentToken.Value,
+		Position:     startpos,
+		Placeholders: make([]string, 0),
 	}
 	p.Advance()
+
+	if p.IsCurrent(ast.TypeSymbol, "(") {
+		starttoken := p.Advance()
+		for !p.IsCurrent(ast.TypeSymbol, ")") {
+			if !p.IsCurrentType(ast.TypeID) {
+				p.ErrorCurrent("Only comma separated identifiers are allowed as arguments in a definition")
+				break
+			}
+			decl.Placeholders = append(decl.Placeholders, p.CurrentToken.Value)
+			p.Advance()
+			if p.IsCurrent(ast.TypeSymbol, ",") {
+				p.Advance()
+				continue
+			}
+			break
+		}
+		endpos := p.Expect(ast.TypeSymbol, ")")
+		if len(decl.Placeholders) == 0 {
+			p.Error("Definitions with placeholder-parenthesis need at least one placeholder", starttoken.Position, endpos)
+		}
+	}
+
 	p.Expect(ast.TypeSymbol, "=")
 	value := p.ParseExpression()
 	if value == nil {

@@ -48,6 +48,14 @@ func (c *Converter) convertWait(wait *nast.WaitDirective) error {
 
 // convert a built-in function to yolol
 func (c *Converter) convertFuncCall(function *nast.FuncCall) error {
+
+	// first try if the funccall refers to a definition with replacements
+	// if it returns nil, it doesnt
+	err := c.convertDefinedFunction(function)
+	if err != nil {
+		return err
+	}
+
 	nfunc := strings.ToLower(function.Function)
 	switch nfunc {
 	case "time":
@@ -75,7 +83,7 @@ func (c *Converter) convertFuncCall(function *nast.FuncCall) error {
 		}
 	}
 	return &parser.Error{
-		Message:       "Unknown function: " + function.Function,
+		Message:       fmt.Sprintf("Unknown function: %s(%d arguments)", function.Function, len(function.Arguments)),
 		StartPosition: function.Start(),
 		EndPosition:   function.End(),
 	}
