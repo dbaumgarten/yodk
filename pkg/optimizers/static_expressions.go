@@ -64,6 +64,13 @@ func (o *StaticExpressionOptimizer) OptimizeExpressionNonRecursive(exp ast.Expre
 		if err != nil {
 			break
 		}
+
+		// Most of the times the results of exponentiation are far longer then the original expression
+		// Only pre-evaluate if the result is relatively short
+		if n.Operator == "^" && res.IsNumber() && len(res.Number().String()) > 3 {
+			break
+		}
+
 		return varToConst(res, n.Exp1.Start())
 	}
 	return nil
