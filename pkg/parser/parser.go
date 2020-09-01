@@ -448,25 +448,25 @@ func (p *Parser) ParseLogicExpression() ast.Expression {
 // ParseCompareExpression parses a compare expression
 func (p *Parser) ParseCompareExpression() ast.Expression {
 	p.Log()
-	exp1 := p.This.ParseSumExpression()
-	if exp1 == nil {
+	exp := p.This.ParseSumExpression()
+	if exp == nil {
 		return nil
 	}
 	logOps := []string{"==", "!=", "<=", ">=", "<", ">"}
 
-	if p.IsCurrentType(ast.TypeSymbol) && p.IsCurrentValueIn(logOps) {
+	for p.IsCurrentType(ast.TypeSymbol) && p.IsCurrentValueIn(logOps) {
 		binexp := &ast.BinaryOperation{
 			Operator: p.CurrentToken.Value,
-			Exp1:     exp1,
+			Exp1:     exp,
 		}
 		p.Advance()
 		binexp.Exp2 = p.This.ParseSumExpression()
 		if binexp.Exp2 == nil {
 			p.ErrorCurrent(fmt.Sprintf("Expected expression on right side of %s", binexp.Operator))
 		}
-		return binexp
+		exp = binexp
 	}
-	return exp1
+	return exp
 }
 
 // ParseSumExpression parses a sum-expression
