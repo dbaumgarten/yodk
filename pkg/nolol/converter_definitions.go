@@ -49,7 +49,7 @@ func (c *Converter) convertDefinedFunction(fc *nast.FuncCall) error {
 	}
 
 	copy := nast.CopyAst(def.Value)
-	err := c.replacePlaceholders(copy, replacements, false)
+	err := c.replacePlaceholders(copy, replacements, nil, false)
 	if err != nil {
 		return err
 	}

@@ -180,7 +180,7 @@ As arguments work by straigh replacing the mentionings of the argument with the 
 
 In the end, arguments behave like [definitions](/nolol?id=cimpile-time-definitions) that are scoped to the specific macro usage. 
 
-All non-global variables inside a macro, that are no arguments, are "scoped" to the use of a macro. This means, if the macro works with such a variable named "foo", it will NOT modify the variable outside of the macro that is also called "foo". This way, accidental collisions between macro internal variables and your variables are prevented. Also, subsequent insertions of the same macro will work on different variables and will not interfere with each other.
+All non-global variables inside a macro, that are no arguments, are "scoped" to the use of a macro. This means, if the macro works with such a variable named "bar", it will NOT modify the variable outside of the macro that is also called "bar". This way, accidental collisions between macro internal variables and your variables are prevented. Also, subsequent insertions of the same macro will work on different variables and will not interfere with each other. If you want to share a variable (that is not a :global) between insertions and the rest of the script, you need to mark it as external, by appending a second set of parenthesis to the macro-definition, containing the comma-separated names of variables that are to be shared.
 
 [macros.nolol](generated/code/nolol/macros.nolol ':include')
 
@@ -193,6 +193,8 @@ and will result in:
 ```
 out1="Hello.....world"
 out2="Hello_____you"
+out3=0
+out4="foo"
 ```
 
 Macros are especially useful when combined with [includes](/nolol?id=including-files). You can create a file full of macro-definitions, include it and then use the macros you need for the specific program.  

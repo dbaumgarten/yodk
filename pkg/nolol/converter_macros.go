@@ -67,7 +67,7 @@ func (c *Converter) convertMacroInsertion(ins *nast.MacroInsetion) error {
 
 	copy := nast.CopyAst(m).(*nast.MacroDefinition)
 
-	err := c.replacePlaceholders(copy, replacements, true)
+	err := c.replacePlaceholders(copy, replacements, m.Externals, true)
 	if err != nil {
 		return err
 	}
@@ -85,8 +85,8 @@ func (c *Converter) convertMacroInsertion(ins *nast.MacroInsetion) error {
 }
 
 // replacePlaceholders replaces all dereferences of and assignments to placeholders in a sub-ast with the given replacements
-// if aliasRemaining is true, all not-replaced non-global vars will be given new unique names (=are made local to the sub-ast)
-func (c *Converter) replacePlaceholders(m ast.Node, replacements map[string]ast.Expression, aliasRemaining bool) error {
+// if aliasRemaining is true, all not-replaced non-global vars, that are not listed in ignore, will be given new unique names (=are made local to the sub-ast)
+func (c *Converter) replacePlaceholders(m ast.Node, replacements map[string]ast.Expression, ignore []string, aliasRemaining bool) error {
 	f := func(node ast.Node, visitType int) error {
 		// replace the variable name inside assignments
 		if ass, is := node.(*ast.Assignment); is && visitType == ast.PreVisit {
@@ -101,7 +101,7 @@ func (c *Converter) replacePlaceholders(m ast.Node, replacements map[string]ast.
 						EndPosition:   replacement.End(),
 					}
 				}
-			} else if !strings.HasPrefix(ass.Variable, ":") {
+			} else if aliasRemaining && !strings.HasPrefix(ass.Variable, ":") && !contains(ignore, ass.Variable) {
 				if _, isDefinition := c.getDefinition(lvarname); !isDefinition {
 					// replace local vars with a insertion-scoped version
 					ass.Variable = strings.Join(c.macroLevel, "_") + "_" + ass.Variable
@@ -134,7 +134,7 @@ func (c *Converter) replacePlaceholders(m ast.Node, replacements map[string]ast.
 					}
 				}
 				return ast.NewNodeReplacementSkip(replacement)
-			} else if aliasRemaining && !strings.HasPrefix(deref.Variable, ":") {
+			} else if aliasRemaining && !strings.HasPrefix(deref.Variable, ":") && !contains(ignore, deref.Variable) {
 				if _, isDefinition := c.getDefinition(lvarname); !isDefinition {
 					// replace local vars with a insertion-scoped version
 					deref.Variable = strings.Join(c.macroLevel, "_") + "_" + deref.Variable
@@ -145,4 +145,16 @@ func (c *Converter) replacePlaceholders(m ast.Node, replacements map[string]ast.
 	}
 
 	return m.Accept(ast.VisitorFunc(f))
+}
+
+func contains(arr []string, s string) bool {
+	if arr == nil {
+		return false
+	}
+	for _, el := range arr {
+		if el == s {
+			return true
+		}
+	}
+	return false
 }

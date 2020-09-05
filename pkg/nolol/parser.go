@@ -142,6 +142,7 @@ func (p *Parser) ParseMacroDefinition() *nast.MacroDefinition {
 	mdef := &nast.MacroDefinition{
 		Position:  p.CurrentToken.Position,
 		Arguments: []string{},
+		Externals: []string{},
 	}
 	if !p.IsCurrentType(ast.TypeID) {
 		p.ErrorCurrent("Expected an idantifier after the macro keyword")
@@ -151,7 +152,6 @@ func (p *Parser) ParseMacroDefinition() *nast.MacroDefinition {
 	p.Advance()
 
 	p.Expect(ast.TypeSymbol, "(")
-
 	for !p.IsCurrent(ast.TypeSymbol, ")") {
 		if !p.IsCurrentType(ast.TypeID) {
 			p.ErrorCurrent("Only comma separated identifiers are allowed as arguments in a macro definition")
@@ -165,8 +165,25 @@ func (p *Parser) ParseMacroDefinition() *nast.MacroDefinition {
 		}
 		break
 	}
-
 	p.Expect(ast.TypeSymbol, ")")
+
+	if p.IsCurrent(ast.TypeSymbol, "(") {
+		p.Advance()
+		for !p.IsCurrent(ast.TypeSymbol, ")") {
+			if !p.IsCurrentType(ast.TypeID) {
+				p.ErrorCurrent("Only comma separated identifiers are allowed as globals in a macro definition")
+				break
+			}
+			mdef.Externals = append(mdef.Externals, p.CurrentToken.Value)
+			p.Advance()
+			if p.IsCurrent(ast.TypeSymbol, ",") {
+				p.Advance()
+				continue
+			}
+			break
+		}
+		p.Expect(ast.TypeSymbol, ")")
+	}
 
 	p.Expect(ast.TypeNewline, "")
 

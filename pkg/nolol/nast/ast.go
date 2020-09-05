@@ -201,6 +201,7 @@ type MacroDefinition struct {
 	Position  ast.Position
 	Name      string
 	Arguments []string
+	Externals []string
 	Block     *Block
 }
 

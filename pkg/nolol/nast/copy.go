@@ -82,6 +82,7 @@ func CopyAst(inp ast.Node) ast.Node {
 				m := &MacroDefinition{}
 				copier.Copy(m, n)
 				m.Arguments = make([]string, len(n.Arguments))
+				m.Externals = make([]string, len(n.Externals))
 				copy(m.Arguments, n.Arguments)
 				newnode = m
 			case *MacroInsetion:

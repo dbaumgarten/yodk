@@ -5,3 +5,5 @@ cases:
     outputs:
       out1: "Hello.....world"
       out2: "Hello_____you"
+      out3: 0
+      out4: "foo"

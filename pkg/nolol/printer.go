@@ -69,6 +69,12 @@ func (np *Printer) handleNololNodes(node ast.Node, visitType int, p *parser.Prin
 			p.Write("(")
 			p.Write(arglist)
 			p.Write(")")
+			if len(n.Externals) != 0 {
+				extlist := strings.Join(n.Externals, ", ")
+				p.Write("(")
+				p.Write(extlist)
+				p.Write(")")
+			}
 			p.Newline()
 			break
 		case ast.PostVisit:

@@ -7,6 +7,7 @@ macro greet(output, name)
 	// "output" is replaced by the first argument provided when inserting the macro
 	output = "Hello"
 	// i is a macro-local variable. Changes to i are local to macro-insertions
+	// if you insert greet() multipe time, all insertions will have their own version of i
 	while i++ < 5 do
 		output += separator
 	end
@@ -23,5 +24,21 @@ insert greet(:out1, "world")
 define separator = "_"
 
 insert greet(:out2, "you")
+
+avar="foo"
+
+// because all non-global vars are private to an insertion of a macro, this does not work
+// the code inside the macro does not have access to the variable avar defined above
+macro doesntwork()
+	:out3=avar
+end
+insert doesntwork()
+
+// to give the code inside the macro access to an outside var, you either need to pass the var as an argument, or
+// mark the variable as an external variable. You can do this as follows:
+macro works()(avar)
+	:out4=avar
+end
+insert works()
 
 :done = 1
