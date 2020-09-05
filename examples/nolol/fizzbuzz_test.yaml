@@ -1,5 +1,5 @@
 scripts: 
-  - name: fizzbuzz.nolol
+  - fizzbuzz.nolol
 stopwhen:
       number: 101
 cases:

@@ -1,5 +1,5 @@
 scripts: 
-  - name: definitions.nolol
+  - definitions.nolol
 cases:
   - name: TestDefinitions
     outputs:

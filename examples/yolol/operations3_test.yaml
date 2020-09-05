@@ -1,5 +1,5 @@
 scripts: 
-  - name: operations3.yolol
+  - operations3.yolol
 cases:
   - name: TestOperationSuccess
     outputs:
@@ -7,11 +7,6 @@ cases:
       testnested: 1
       testnestedop: 1
       testautoconv: 1
-      testaadd: 1
-      testasub: 1
-      testamul: 1
-      testadiv: 1
-      testamod: 1
       testaadd: 1
       testasub: 1
       testamul: 1

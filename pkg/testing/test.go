@@ -18,7 +18,9 @@ type Test struct {
 	// The path where the test-file was located. Used to retrieve the script files.
 	Path string
 	// Scripts to use in this test
-	Scripts []Script
+	Scripts []string
+	// ScriptContents contains the contents of the scripts in .Scripts, Used mainly for testing
+	ScriptContents []string
 	// Cases for this test
 	Cases []Case
 	// Maximum number of lines to run from the script (0=infinite)
@@ -26,16 +28,6 @@ type Test struct {
 	// Stop when is a map from global variable-name to value
 	// Execution is stopped when at least one of the listed variables is equal to the value
 	StopWhen map[string]interface{}
-}
-
-// Script contains run-options for a script in the test
-type Script struct {
-	// The absolut path where the test-file was located. Used to retrieve the script files.
-	TestPath string
-	// Name of the script to run
-	Name string
-	// Content is the content of the script. If empty, it is loaded from disk at run-time
-	Content string
 }
 
 // Case defines inputs and expected outputs for a run
@@ -67,34 +59,38 @@ func prefixVarname(inp string) string {
 }
 
 // Parse parses a yaml file into a Test
-// path is the path from where the test was loaded. This is needed as the scripts are located relatice to the test-file
+// path is the path from where the test was loaded. This is needed as the scripts are located relative to the test-file
 func Parse(file []byte, path string) (Test, error) {
 	var test Test
-	err := yaml.Unmarshal(file, &test)
+	err := yaml.UnmarshalStrict(file, &test)
 	if err != nil {
 		return test, fmt.Errorf("The provided test-file is invalid: %s", err.Error())
 	}
 	test.Path = path
+	// set a default for MaxLines
 	if test.MaxLines == 0 {
 		test.MaxLines = 2000
 	}
-	for i := range test.Scripts {
-		test.Scripts[i].TestPath = path
+	// If there are no stop-conditions, set a default
+	if len(test.StopWhen) == 0 {
+		test.StopWhen = map[string]interface{}{
+			":done": 1,
+		}
 	}
 	return test, nil
 }
 
-// GetCode returns the code for script either from the script struct itself or from the referenced file
-func (script Script) GetCode() (string, error) {
-	file := filepath.Join(filepath.Dir(script.TestPath), script.Name)
-	if script.Content == "" {
-		f, err := ioutil.ReadFile(file)
-		if err != nil {
-			return "", err
-		}
-		return string(f), nil
+// GetScriptCode returns the code for indexed script.
+func (t Test) GetScriptCode(index int) (string, error) {
+	file := filepath.Join(filepath.Dir(t.Path), t.Scripts[index])
+	if len(t.ScriptContents) > index && t.ScriptContents[index] != "" {
+		return t.ScriptContents[index], nil
 	}
-	return script.Content, nil
+	f, err := ioutil.ReadFile(file)
+	if err != nil {
+		return "", err
+	}
+	return string(f), nil
 }
 
 // Run runs all test-cases
@@ -173,9 +169,9 @@ func (t Test) createVMs(coord *vm.Coordinator) ([]*vm.VM, []map[string]string, e
 	for i, script := range t.Scripts {
 		var v *vm.VM
 
-		if strings.HasSuffix(script.Name, ".nolol") {
+		if strings.HasSuffix(script, ".nolol") {
 			conv := nolol.NewConverter()
-			file := filepath.Join(filepath.Dir(script.TestPath), script.Name)
+			file := filepath.Join(filepath.Dir(t.Path), script)
 			prog, err := conv.ConvertFile(file)
 			translationTables[i] = conv.GetVariableTranslations()
 			if err != nil {
@@ -183,7 +179,7 @@ func (t Test) createVMs(coord *vm.Coordinator) ([]*vm.VM, []map[string]string, e
 			}
 			v = vm.Create(prog)
 		} else {
-			scriptContent, err := script.GetCode()
+			scriptContent, err := t.GetScriptCode(i)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -203,10 +199,6 @@ func (t Test) createVMs(coord *vm.Coordinator) ([]*vm.VM, []map[string]string, e
 
 func mergeStopConditions(test *Test, c *Case) map[string]*vm.Variable {
 	conds := make(map[string]*vm.Variable)
-	// If there are no stop-conditions, set a default
-	if len(test.StopWhen) == 0 {
-		conds[":done"] = vm.VariableFromString("1")
-	}
 	for k, v := range test.StopWhen {
 		k = prefixVarname(k)
 		conds[k], _ = vm.VariableFromType(v)

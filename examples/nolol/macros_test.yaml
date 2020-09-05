@@ -1,5 +1,5 @@
 scripts: 
-  - name: macros.nolol
+  - macros.nolol
 cases:
   - name: TestGreetings
     outputs:

@@ -1,5 +1,5 @@
 scripts: 
-  - name: operations.yolol
+  - operations.yolol
 cases:
   - name: TestOperationSuccess
     outputs:
@@ -9,7 +9,6 @@ cases:
       testdiv: 1
       testmod: 1
       testgoto: 1
-      testgotovar: 1
       testgotovar: 1
       testexp: 1
       testeq: 1

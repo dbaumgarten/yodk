@@ -1,6 +1,6 @@
 # required: list of scripts to run in parallel. Can be as many as you like
 scripts: 
-  - name: fizzbuzz.yolol
+  - fizzbuzz.yolol
 # optional: stop execution once one of the listed global variables has the given value
 # default is "done: 1"
 stopwhen:

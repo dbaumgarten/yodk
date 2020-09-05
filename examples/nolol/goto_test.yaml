@@ -1,5 +1,5 @@
 scripts: 
-  - name: goto.nolol
+  - goto.nolol
 cases:
   - name: TestOutputstring
     outputs:

@@ -1,5 +1,5 @@
 scripts: 
-  - name: including.nolol
+  - including.nolol
 cases:
   - name: TestInclusion
     outputs:

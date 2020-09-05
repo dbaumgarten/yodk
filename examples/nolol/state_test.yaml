@@ -1,6 +1,6 @@
 scripts: 
-  - name: state_one.nolol
-  - name: state_two.nolol
+  - state_one.nolol
+  - state_two.nolol
 stopwhen:
   counter: 3
 cases:

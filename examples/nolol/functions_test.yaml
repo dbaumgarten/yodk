@@ -1,5 +1,5 @@
 scripts: 
-  - name: functions.nolol
+  - functions.nolol
 cases:
   - name: TestFunctions
     outputs:

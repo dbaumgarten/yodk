@@ -176,8 +176,8 @@ func FromTest(workspace string, testfile string, casenr int, prepareVM VMPrepare
 	}
 
 	for i, script := range t.Scripts {
-		h.ScriptNames[i] = script.Name
-		h.Scripts[i], err = script.GetCode()
+		h.ScriptNames[i] = script
+		h.Scripts[i], err = t.GetScriptCode(i)
 		if err != nil {
 			return nil, err
 		}

@@ -8,7 +8,7 @@ import (
 
 func TestTestcase(t *testing.T) {
 	testcase := `scripts: 
-  - name: fizbuzz.yolol
+  - fizbuzz.yolol
 cases:
   - name: TestOutput
     inputs:
@@ -33,7 +33,8 @@ if :number%5==0 then :out+="buzz " end
 	if err != nil {
 		t.Error(err)
 	}
-	test.Scripts[0].Content = script
+	test.ScriptContents = make([]string, 1)
+	test.ScriptContents[0] = script
 	fails := test.Run(nil)
 	if len(fails) > 0 {
 		t.Log("Testcase had errors but should not")
@@ -52,8 +53,8 @@ if :number%5==0 then :out+="buzz " end
 
 func TestTestcase2(t *testing.T) {
 	testcase := `scripts: 
-    - name: fizbuzz.yolol
-    - name: fizbuzz.yolol
+    - fizbuzz.yolol
+    - fizbuzz.yolol
 cases:
     - name: TestOutput
       inputs:
@@ -86,8 +87,9 @@ if :number%5==0 then :out+="buzz " end
 	if err != nil {
 		t.Error(err)
 	}
-	test.Scripts[0].Content = script
-	test.Scripts[1].Content = script2
+	test.ScriptContents = make([]string, 2)
+	test.ScriptContents[0] = script
+	test.ScriptContents[1] = script2
 	fails := test.Run(nil)
 	if len(fails) > 0 {
 		t.Log("Testcase had errors but should not")

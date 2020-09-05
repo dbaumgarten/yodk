@@ -1,5 +1,5 @@
 scripts: 
-  - name: loops.nolol
+  - loops.nolol
 cases:
   - name: draw
     outputs:

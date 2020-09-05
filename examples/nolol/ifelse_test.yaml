@@ -1,5 +1,5 @@
 scripts: 
-  - name: ifelse.nolol
+  - ifelse.nolol
 cases:
   - name: day1
     inputs:
