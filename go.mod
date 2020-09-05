@@ -13,7 +13,6 @@ require (
 	github.com/jinzhu/copier v0.0.0-20190924061706-b57f9002281a
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/pmezard/go-difflib v1.0.0
-	github.com/shopspring/decimal v0.0.0-20200105231215-408a2507e114
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/viper v1.6.1
 	gopkg.in/yaml.v2 v2.2.7

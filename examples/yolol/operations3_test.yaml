@@ -13,3 +13,4 @@ cases:
       testadiv: 1
       testamod: 1
       testmxor: 1
+      testfloor: 1

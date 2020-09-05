@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/dbaumgarten/yodk/pkg/number"
 	"github.com/dbaumgarten/yodk/pkg/vm"
-	"github.com/shopspring/decimal"
 )
 
 var TestProgram = `:testsum = 1 + 2 == 3
@@ -52,7 +52,7 @@ func ExecuteTestProgram(prog string) error {
 			if !value.IsNumber() {
 				return fmt.Errorf("Operator-test %s returend string '%s' instead of 1", name, value.String())
 			}
-			if !value.Number().Equal(decimal.NewFromFloat(1)) {
+			if value.Number() != number.One {
 				return fmt.Errorf("Operator-test %s failed", name)
 			}
 		}

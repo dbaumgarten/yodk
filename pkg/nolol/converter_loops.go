@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/dbaumgarten/yodk/pkg/nolol/nast"
+	"github.com/dbaumgarten/yodk/pkg/number"
 	"github.com/dbaumgarten/yodk/pkg/parser"
 	"github.com/dbaumgarten/yodk/pkg/parser/ast"
 	"github.com/dbaumgarten/yodk/pkg/vm"
@@ -35,7 +36,7 @@ func (c *Converter) convertWhileLoop(loop *nast.WhileLoop) error {
 	conditionIsAlwaysTrue := false
 	if numberconst, is := condition.(*ast.NumberConstant); is {
 		variable := vm.VariableFromString(numberconst.Value)
-		if !variable.Number().IsZero() {
+		if variable.Number() != number.Zero {
 			conditionIsAlwaysTrue = true
 		}
 	}

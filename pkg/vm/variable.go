@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/shopspring/decimal"
+	"github.com/dbaumgarten/yodk/pkg/number"
 )
 
 // VariableFromString tries to create a variable of the correct type from the given string.
@@ -15,7 +15,7 @@ func VariableFromString(str string) *Variable {
 	if strings.HasPrefix(str, "\"") && strings.HasSuffix(str, "\"") && len(str) >= 2 {
 		value = str[1 : len(str)-1]
 	} else {
-		deci, err := decimal.NewFromString(str)
+		deci, err := number.FromString(str)
 		if err == nil {
 			value = deci
 		} else {
@@ -36,17 +36,15 @@ func VariableFromType(inp interface{}) (*Variable, error) {
 	case *string:
 		value = *v
 	case int:
-		value = decimal.NewFromInt(int64(v))
+		value = number.FromInt(v)
 	case int32:
-		value = decimal.NewFromInt32(v)
+		value = number.FromInt(int(v))
 	case int64:
-		value = decimal.NewFromInt(v)
+		value = number.FromInt(int(v))
 	case float32:
-		value = decimal.NewFromFloat32(v)
+		value = number.FromFloat64(float64(v))
 	case float64:
-		value = decimal.NewFromFloat(v)
-	case decimal.Decimal:
-		value = v
+		value = number.FromFloat64(v)
 	default:
 		return nil, fmt.Errorf("Can not convert type %T to variable", inp)
 	}
@@ -62,8 +60,8 @@ type Variable struct {
 
 // IsNumber returns true if the variable represents a number
 func (v *Variable) IsNumber() bool {
-	_, isNum := v.Value.(decimal.Decimal)
-	_, isNump := v.Value.(*decimal.Decimal)
+	_, isNum := v.Value.(number.Number)
+	_, isNump := v.Value.(*number.Number)
 	return isNum || isNump
 }
 
@@ -96,7 +94,7 @@ func (v *Variable) Equals(other *Variable) bool {
 		return v.String() == other.String()
 	}
 	if v.IsNumber() {
-		return v.Number().Equal(other.Number())
+		return v.Number() == other.Number()
 	}
 	return false
 }
@@ -119,16 +117,16 @@ func (v *Variable) Repr() string {
 
 // Itoa returns the string-representation of the number stored in the variable
 func (v *Variable) Itoa() string {
-	if val, isNum := v.Value.(decimal.Decimal); isNum {
+	if val, isNum := v.Value.(number.Number); isNum {
 		return val.String()
 	}
 	return ""
 }
 
 // Number returns the value of the variable as number
-func (v *Variable) Number() decimal.Decimal {
-	if val, isNum := v.Value.(decimal.Decimal); isNum {
+func (v *Variable) Number() number.Number {
+	if val, isNum := v.Value.(number.Number); isNum {
 		return val
 	}
-	return decimal.Zero
+	return number.Zero
 }

@@ -5,8 +5,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/shopspring/decimal"
-
+	"github.com/dbaumgarten/yodk/pkg/number"
 	"github.com/dbaumgarten/yodk/pkg/parser"
 	"github.com/dbaumgarten/yodk/pkg/parser/ast"
 )
@@ -592,7 +591,7 @@ func (v *VM) runStmt(stmt ast.Statement) error {
 		if !conditionResult.IsNumber() {
 			return RuntimeError{fmt.Errorf("If-condition can not be a string"), stmt}
 		}
-		if !conditionResult.Number().Equal(decimal.Zero) {
+		if conditionResult.Number() != number.Zero {
 			for _, st := range e.IfBlock {
 				err := v.runStmt(st)
 				if err != nil {
@@ -616,7 +615,7 @@ func (v *VM) runStmt(stmt ast.Statement) error {
 		if !line.IsNumber() {
 			return RuntimeError{fmt.Errorf("Can not goto a string (%s)", line.String()), e}
 		}
-		linenr := line.Number().IntPart()
+		linenr := line.Number().Int()
 
 		if linenr < 1 {
 			linenr = 1
@@ -665,7 +664,7 @@ func (v *VM) runExpr(expr ast.Expression) (*Variable, error) {
 	case *ast.StringConstant:
 		return &Variable{Value: e.Value}, nil
 	case *ast.NumberConstant:
-		num, err := decimal.NewFromString(e.Value)
+		num, err := number.FromString(e.Value)
 		if err != nil {
 			return nil, err
 		}
@@ -686,7 +685,7 @@ func (v *VM) runDeref(d *ast.Dereference) (*Variable, error) {
 	if !exists {
 		// uninitialized variables have a default value of 0
 		oldval = &Variable{
-			decimal.Zero,
+			number.Zero,
 		}
 	}
 	var newval Variable
@@ -695,10 +694,10 @@ func (v *VM) runDeref(d *ast.Dereference) (*Variable, error) {
 		case "":
 			return oldval, nil
 		case "++":
-			newval.Value = oldval.Number().Add(decimal.NewFromFloat(1))
+			newval.Value = oldval.Number().Add(number.One)
 			break
 		case "--":
-			newval.Value = oldval.Number().Sub(decimal.NewFromFloat(1))
+			newval.Value = oldval.Number().Sub(number.One)
 			break
 		default:
 			return nil, RuntimeError{fmt.Errorf("Unknown operator '%s'", d.Operator), d}

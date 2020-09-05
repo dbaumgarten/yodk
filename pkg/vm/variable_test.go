@@ -18,7 +18,7 @@ func TestVariableFromString(t *testing.T) {
 	if !var2.IsNumber() {
 		t.Fatal("var2 should be a number")
 	}
-	if var2.Number().IntPart() != 123 {
+	if var2.Number().Int() != 123 {
 		t.Fatal("var2 has wrong value")
 	}
 
@@ -26,7 +26,7 @@ func TestVariableFromString(t *testing.T) {
 	if !var3.IsNumber() {
 		t.Fatal("var2 should be a number")
 	}
-	floatval, _ := var3.Number().Float64()
+	floatval := var3.Number().Float64()
 	if math.Abs(floatval-123.5) > 0.000001 {
 		t.Fatal("var3 has wrong value")
 	}
@@ -59,7 +59,7 @@ func TestVariableFromType(t *testing.T) {
 	if !var2.IsNumber() {
 		t.Fatal("var2 should be a number")
 	}
-	if var2.Number().IntPart() != 123 {
+	if var2.Number().Int() != 123 {
 		t.Fatal("var2 has wrong value")
 	}
 
@@ -70,7 +70,7 @@ func TestVariableFromType(t *testing.T) {
 	if !var3.IsNumber() {
 		t.Fatal("var2 should be a number")
 	}
-	floatval, _ := var3.Number().Float64()
+	floatval := var3.Number().Float64()
 	if math.Abs(floatval-123.5) > 0.000001 {
 		t.Fatal("var3 has wrong value")
 	}

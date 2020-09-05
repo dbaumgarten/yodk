@@ -2,10 +2,9 @@ package vm
 
 import (
 	"fmt"
-	"math"
 	"strings"
 
-	"github.com/shopspring/decimal"
+	"github.com/dbaumgarten/yodk/pkg/number"
 )
 
 // RunUnaryOperation executes the given operation with the given argument and returns the result
@@ -16,21 +15,20 @@ func RunUnaryOperation(arg *Variable, operator string) (*Variable, error) {
 	var result Variable
 	switch strings.ToLower(operator) {
 	case "-":
-		result.Value = arg.Number().Mul(decimal.NewFromFloat(-1))
+		result.Value = arg.Number().Mul(number.FromInt(-1))
 		break
 	case "not":
-		if arg.Number().Equal(decimal.Zero) {
-			result.Value = decimal.NewFromFloat(1)
+		if arg.Number() == number.Zero {
+			result.Value = number.One
 		} else {
-			result.Value = decimal.Zero
+			result.Value = number.Zero
 		}
 		break
 	case "abs":
 		result.Value = arg.Number().Abs()
 		break
 	case "sqrt":
-		v, _ := arg.Number().Float64()
-		result.Value = decimal.NewFromFloat(math.Sqrt(v))
+		result.Value = arg.Number().Sqrt()
 		break
 	case "sin":
 		result.Value = arg.Number().Sin()
@@ -42,12 +40,10 @@ func RunUnaryOperation(arg *Variable, operator string) (*Variable, error) {
 		result.Value = arg.Number().Tan()
 		break
 	case "asin":
-		v, _ := arg.Number().Float64()
-		result.Value = decimal.NewFromFloat(math.Asin(v))
+		result.Value = arg.Number().Asin()
 		break
 	case "acos":
-		v, _ := arg.Number().Float64()
-		result.Value = decimal.NewFromFloat(math.Acos(v))
+		result.Value = arg.Number().Acos()
 		break
 	case "atan":
 		result.Value = arg.Number().Atan()
@@ -76,8 +72,6 @@ func RunBinaryOperation(arg1 *Variable, arg2 *Variable, operator string) (*Varia
 	}
 	var endResult Variable
 
-	one := decimal.NewFromFloat(1)
-
 	if arg1.IsNumber() {
 		switch operator {
 		case "+":
@@ -90,71 +84,76 @@ func RunBinaryOperation(arg1 *Variable, arg2 *Variable, operator string) (*Varia
 			endResult.Value = arg1.Number().Mul(arg2.Number())
 			break
 		case "/":
-			if arg2.Number().IsZero() {
-				return nil, fmt.Errorf("Can not divide by 0")
+			var err error
+			endResult.Value, err = arg1.Number().Div(arg2.Number())
+			if err != nil {
+				return nil, err
 			}
-			endResult.Value = arg1.Number().Div(arg2.Number())
 			break
 		case "%":
-			endResult.Value = arg1.Number().Mod(arg2.Number())
+			var err error
+			endResult.Value, err = arg1.Number().Mod(arg2.Number())
+			if err != nil {
+				return nil, err
+			}
 			break
 		case "^":
 			endResult.Value = arg1.Number().Pow(arg2.Number())
 			break
 		case "==":
-			if arg1.Number().Equal(arg2.Number()) {
-				endResult.Value = one
+			if arg1.Number() == arg2.Number() {
+				endResult.Value = number.One
 			} else {
-				endResult.Value = decimal.Zero
+				endResult.Value = number.Zero
 			}
 			break
 		case "!=":
-			if !arg1.Number().Equal(arg2.Number()) {
-				endResult.Value = one
+			if arg1.Number() != arg2.Number() {
+				endResult.Value = number.One
 			} else {
-				endResult.Value = decimal.Zero
+				endResult.Value = number.Zero
 			}
 			break
 		case ">=":
-			if arg1.Number().GreaterThanOrEqual(arg2.Number()) {
-				endResult.Value = one
+			if arg1.Number() >= arg2.Number() {
+				endResult.Value = number.One
 			} else {
-				endResult.Value = decimal.Zero
+				endResult.Value = number.Zero
 			}
 			break
 		case "<=":
-			if arg1.Number().LessThanOrEqual(arg2.Number()) {
-				endResult.Value = one
+			if arg1.Number() <= arg2.Number() {
+				endResult.Value = number.One
 			} else {
-				endResult.Value = decimal.Zero
+				endResult.Value = number.Zero
 			}
 			break
 		case ">":
-			if arg1.Number().GreaterThan(arg2.Number()) {
-				endResult.Value = one
+			if arg1.Number() > arg2.Number() {
+				endResult.Value = number.One
 			} else {
-				endResult.Value = decimal.Zero
+				endResult.Value = number.Zero
 			}
 			break
 		case "<":
-			if arg1.Number().LessThan(arg2.Number()) {
-				endResult.Value = one
+			if arg1.Number() < arg2.Number() {
+				endResult.Value = number.One
 			} else {
-				endResult.Value = decimal.Zero
+				endResult.Value = number.Zero
 			}
 			break
 		case "and":
-			if !arg1.Number().Equal(decimal.Zero) && !arg2.Number().Equal(decimal.Zero) {
-				endResult.Value = one
+			if arg1.Number() != number.Zero && arg2.Number() != number.Zero {
+				endResult.Value = number.One
 			} else {
-				endResult.Value = decimal.Zero
+				endResult.Value = number.Zero
 			}
 			break
 		case "or":
-			if !arg1.Number().Equal(decimal.Zero) || !arg2.Number().Equal(decimal.Zero) {
-				endResult.Value = one
+			if arg1.Number() != number.Zero || arg2.Number() != number.Zero {
+				endResult.Value = number.One
 			} else {
-				endResult.Value = decimal.Zero
+				endResult.Value = number.Zero
 			}
 			break
 		default:
@@ -178,16 +177,16 @@ func RunBinaryOperation(arg1 *Variable, arg2 *Variable, operator string) (*Varia
 			break
 		case "==":
 			if arg1.String() == arg2.String() {
-				endResult.Value = decimal.NewFromFloat(1)
+				endResult.Value = number.One
 			} else {
-				endResult.Value = decimal.Zero
+				endResult.Value = number.Zero
 			}
 			break
 		case "!=":
 			if arg1.String() != arg2.String() {
-				endResult.Value = decimal.NewFromFloat(1)
+				endResult.Value = number.One
 			} else {
-				endResult.Value = decimal.Zero
+				endResult.Value = number.Zero
 			}
 			break
 		default:

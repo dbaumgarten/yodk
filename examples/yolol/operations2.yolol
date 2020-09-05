@@ -4,17 +4,17 @@ hw+="world"
 :testhw=hw=="hello world" //comment2
 abc="abc"
 :testssub=hw-"world"=="hello " and abc-- =="abc" and abc=="ab" and --abc=="a" and abc=="a"
-pi=3.141
-:testsinpi=abs (sin pi-0)<0.01
-:testcospi=abs (cos pi- -1)<0.01
-:testtanpi=abs (tan pi-0)<0.01
-:testasin=abs (asin sin pi-0)<0.1
-:testacos=abs (acos cos pi-pi)<0.1
-:testatan=abs (atan tan pi-0)<0.1
+:testsin=abs (sin 90-1)<0.01
+:testcos=abs (cos 90-0)<0.01
+:testtan=abs (tan 0-0)<0.01
+:testasin=abs (asin sin 90-90)<0.111
+:testacos=abs (acos cos 90-90)<0.1
+:testatan=abs (atan tan 0-0)<0.1
 :testsq=sqrt 16==4
 :testab=abs -5==5 and abs 5==5 and abs 5==abs 5
 :testz=(not 1 and not 10 and not not 0)==0
 :testor=20 or 0
 :testif=0
+pi=3.141
 if pi>3 then :testif=1 else :testif=0 end
 :done = 1

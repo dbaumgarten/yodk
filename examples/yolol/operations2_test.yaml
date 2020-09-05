@@ -6,9 +6,9 @@ cases:
       testi: 1
       testhw: 1
       testssub: 1
-      testsinpi: 1
-      testcospi: 1
-      testtanpi: 1
+      testsin: 1
+      testcos: 1
+      testtan: 1
       testasin: 1
       testacos: 1
       testatan: 1

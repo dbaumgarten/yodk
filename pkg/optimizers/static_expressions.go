@@ -3,9 +3,9 @@ package optimizers
 import (
 	"fmt"
 
+	"github.com/dbaumgarten/yodk/pkg/number"
 	"github.com/dbaumgarten/yodk/pkg/parser/ast"
 	"github.com/dbaumgarten/yodk/pkg/vm"
-	"github.com/shopspring/decimal"
 )
 
 // StaticExpressionOptimizer evaluates static expressions at compile-time
@@ -93,7 +93,7 @@ func constToVar(exp ast.Expression) *vm.Variable {
 	case *ast.StringConstant:
 		return &vm.Variable{Value: e.Value}
 	case *ast.NumberConstant:
-		num, err := decimal.NewFromString(e.Value)
+		num, err := number.FromString(e.Value)
 		if err != nil {
 			panic("This should never happen")
 		}
