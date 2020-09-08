@@ -35,7 +35,7 @@
 			]
 		},
 		"keyword": {
-			"match": "(?i)\\b(if|then|else|end|goto|abs|sqrt|sin|cos|tan|asin|acos|atan)\\b",
+			"match": "(?i)(?<=\\b|[^a-zA-Z])(if|then|else|end|goto|abs|sqrt|sin|cos|tan|asin|acos|atan)+",
 			"name": "keyword.control"
 		},
 		"string": {
@@ -55,7 +55,7 @@
 			}
 		},
 		"operator": {
-			"match": "(?i)\\b(and|or|not)\\b",
+			"match": "(?i)(?<=\\b|[^a-zA-Z])(and|or|not)+",
 			"name": "keyword.operator"
 		},
 		"extvariable": {

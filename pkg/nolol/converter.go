@@ -326,7 +326,7 @@ func (c *Converter) mergeStatementElements(lines []*nast.StatementLine) ([]*nast
 		}
 
 		for i+1 < len(lines) {
-			currlen := getLengthOfLine(&current.Line)
+			currlen := c.getLengthOfLine(&current.Line)
 
 			if currlen > maxlen {
 				return newElements, &parser.Error{
@@ -344,7 +344,7 @@ func (c *Converter) mergeStatementElements(lines []*nast.StatementLine) ([]*nast
 				current.Statements = append(current.Statements, prev...)
 				current.Statements = append(current.Statements, nextline.Statements...)
 
-				newlen := getLengthOfLine(&current.Line)
+				newlen := c.getLengthOfLine(&current.Line)
 				if newlen > maxlen {
 					// the newly created line is longer then allowed. roll back.
 					current.Statements = prev
@@ -365,12 +365,13 @@ func (c *Converter) mergeStatementElements(lines []*nast.StatementLine) ([]*nast
 }
 
 //getLengthOfLine returns the amount of characters needed to represent the given line as yolol-code
-func getLengthOfLine(line ast.Node) int {
+func (c *Converter) getLengthOfLine(line ast.Node) int {
 	ygen := parser.Printer{}
-	ygen.Mode = parser.PrintermodeCompact
+	ygen.Mode = parser.PrintermodeSpaceless
+
 	ygen.UnknownHandlerFunc = func(node ast.Node, visitType int, p *parser.Printer) error {
 		if _, is := node.(*nast.GoToLabelStatement); is {
-			p.Write("goto XX")
+			p.Write("gotoXX")
 			return nil
 		}
 		return fmt.Errorf("Unknown node-type: %T", node)

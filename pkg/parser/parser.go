@@ -257,11 +257,6 @@ func (p *Parser) ParseLine() *ast.Line {
 			p.Advance()
 			return &ret
 		}
-
-		// more statements on this line?
-		if !p.SkippedWhitespace {
-			p.ErrorCurrent("Statements must be followed by space or newline")
-		}
 	}
 
 	if !p.IsCurrentType(ast.TypeEOF) {

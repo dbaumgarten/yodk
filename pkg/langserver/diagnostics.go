@@ -121,7 +121,7 @@ func (s *LangServer) Diagnose(ctx context.Context, uri lsp.DocumentURI) {
 				err := opt.Optimize(parsed)
 				if err == nil {
 					printer := parser.Printer{
-						Mode: parser.PrintermodeCompact,
+						Mode: parser.PrintermodeSpaceless,
 					}
 					optimized, err := printer.Print(parsed)
 					if err == nil {

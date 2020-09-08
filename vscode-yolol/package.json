@@ -32,13 +32,15 @@
           "type": "string",
           "enum": [
             "Readable",
-            "Compact"
+            "Compact",
+            "Spaceless"
           ],
           "default": "Compact",
           "description": "Controls how yolol is formatted",
           "enumDescriptions": [
             "Add spaces to improve readability",
-            "Only add spaces when reasonable necessary"
+            "Only add spaces when reasonable",
+            "Only add spaces when ABSOLUTELY necessary"
           ]
         },
         "yolol.lengthChecking.mode": {
@@ -53,7 +55,7 @@
           "description": "Controls when errors about too long programs are emitted",
           "enumDescriptions": [
             "Always complain",
-            "Complain only when optimization does not help",
+            "Complain only when even optimization does not help",
             "Never complain"
           ]
         }

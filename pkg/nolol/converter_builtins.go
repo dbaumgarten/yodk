@@ -36,7 +36,7 @@ func (c *Converter) convertWait(wait *nast.WaitDirective) error {
 	if wait.Statements != nil {
 		line.Statements = append(line.Statements, wait.Statements...)
 	}
-	if getLengthOfLine(&line.Line) > c.maxLineLength() {
+	if c.getLengthOfLine(&line.Line) > c.maxLineLength() {
 		return &parser.Error{
 			Message:       "The line is too long to be converted to yolol",
 			StartPosition: wait.Start(),

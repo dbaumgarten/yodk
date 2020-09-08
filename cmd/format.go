@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 	"strings"
 
 	"github.com/dbaumgarten/yodk/pkg/nolol"
@@ -11,7 +12,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var formatReadable bool
+var formatMode string
 
 // formatCmd represents the format command
 var formatCmd = &cobra.Command{
@@ -27,6 +28,12 @@ var formatCmd = &cobra.Command{
 }
 
 func format(filepath string) {
+
+	if formatMode != "readable" && formatMode != "compact" && formatMode != "spaceless" {
+		fmt.Println("Fomatting mode must be one of: readable|compact|spaceless")
+		os.Exit(1)
+	}
+
 	file := loadInputFile(filepath)
 	generated := ""
 	var err error
@@ -37,10 +44,16 @@ func format(filepath string) {
 			exitOnError(errs, "parsing file")
 		}
 		gen := parser.Printer{}
-		if formatReadable {
+		switch formatMode {
+		case "readable":
 			gen.Mode = parser.PrintermodeReadable
-		} else {
+			break
+		case "compact":
 			gen.Mode = parser.PrintermodeCompact
+			break
+		case "spaceless":
+			gen.Mode = parser.PrintermodeSpaceless
+			break
 		}
 		generated, err = gen.Print(parsed)
 		exitOnError(err, "generating code")
@@ -66,15 +79,5 @@ func format(filepath string) {
 
 func init() {
 	rootCmd.AddCommand(formatCmd)
-	formatCmd.Flags().BoolVarP(&formatReadable, "readable", "r", false, "Do add extra spaces to improve readability")
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// formatCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// formatCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	formatCmd.Flags().StringVarP(&formatMode, "mode", "m", "compact", "Formatting mode [readable,compact,spaceless]")
 }

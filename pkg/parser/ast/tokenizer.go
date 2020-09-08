@@ -68,7 +68,7 @@ func (p Position) Before(other Position) bool {
 var symbols = []string{"++", "--", ">=", "<=", "!=", "==", "==", "+=", "-=", "*=", "/=", "%=",
 	"=", ">", "<", "+", "-", "*", "/", "^", "%", ",", "(", ")"}
 
-var keywordRegex = regexp.MustCompile("(?i)^\\b(if|else|end|then|goto|and|or|not|abs|sqrt|sin|cos|tan|asin|acos|atan)\\b")
+var keywordRegex = regexp.MustCompile("(?i)^(if|else|end|then|goto|and|or|not|abs|sqrt|sin|cos|tan|asin|acos|atan)")
 
 var identifierRegex = regexp.MustCompile("^:?[a-zA-Z]+[a-zA-Z0-9_]*")
 
@@ -114,13 +114,14 @@ type Tokenizer struct {
 
 // NewTokenizer creates a new tokenizer
 func NewTokenizer() *Tokenizer {
-	return &Tokenizer{
+	tk := &Tokenizer{
 		Symbols:         symbols,
 		KeywordRegex:    keywordRegex,
 		IdentifierRegex: identifierRegex,
 		NumberRegex:     numberRegex,
 		CommentRegex:    commentRegex,
 	}
+	return tk
 }
 
 // SetFilename sets the filename that is set in the position if all returned tokens

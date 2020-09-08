@@ -3,7 +3,9 @@ package parser
 import (
 	"fmt"
 	"reflect"
+	"regexp"
 	"strings"
+	"unicode"
 
 	"github.com/dbaumgarten/yodk/pkg/parser/ast"
 )
@@ -16,6 +18,8 @@ const (
 	PrintermodeReadable Printermode = 0
 	// PrintermodeCompact inserts only spaces that are reasonably necessary
 	PrintermodeCompact Printermode = 1
+	// PrintermodeSpaceless inserts only spaces that are strictly necessary
+	PrintermodeSpaceless Printermode = 2
 )
 
 // Printer generates yolol-code from an AST
@@ -25,9 +29,11 @@ type Printer struct {
 	// returns the yolol-code for the giben node or an error
 	UnknownHandlerFunc func(node ast.Node, visitType int, p *Printer) error
 	// If true, only insert spaces where absolutely necessary
-	Mode         Printermode
-	text         string
-	lastWasSpace bool
+	Mode           Printermode
+	text           string
+	lastWasSpace   bool
+	prevWasKeyword bool
+	requestedSpace bool
 	// If true, at position-information to every printed token.
 	// Does not produce valid yolol, but is usefull for debugging
 	DebugPositions bool
@@ -51,14 +57,51 @@ var operatorPriority = map[string]int{
 	"not": 4,
 }
 
+var keywordRegex = regexp.MustCompile("(if|else|end|then|goto|and|or|not|abs|sqrt|sin|cos|tan|asin|acos|atan)")
+
+func charType(b byte) int {
+	s := rune(b)
+	if unicode.IsLetter(s) {
+		return 0
+	}
+	if unicode.IsDigit(s) {
+		return 1
+	}
+	if s == '-' {
+		return 2
+	}
+	if s == '+' {
+		return 3
+	}
+	if s == ':' {
+		return 4
+	}
+	return 5
+}
+
 // Write adds text to the source-code that is currently build
 func (p *Printer) Write(content string) {
+	if p.requestedSpace && !p.prevWasKeyword && charType(p.text[len(p.text)-1]) == charType(content[0]) {
+		p.forceSpace()
+	}
 	p.text += content
+	p.prevWasKeyword = keywordRegex.MatchString(content)
 	p.lastWasSpace = false
+	p.requestedSpace = false
 }
 
 // Space adds a space to the source-code that is currently build
 func (p *Printer) Space() {
+	if p.Mode == PrintermodeSpaceless {
+		// in spaceless-mode, just recod a space was requested.
+		// If it it really necessary, it will be added with the next Write()
+		p.requestedSpace = true
+		return
+	}
+	p.forceSpace()
+}
+
+func (p *Printer) forceSpace() {
 	if !p.lastWasSpace {
 		p.text += " "
 	}

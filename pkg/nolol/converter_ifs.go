@@ -87,7 +87,7 @@ func (c *Converter) convertConditionInline(mlif *nast.MultilineIf, index int, en
 	// if the user used goto inside the block, our additional goto may be useless
 	c.removeDuplicateGotos(repl)
 
-	if getLengthOfLine(&repl.Line) > c.maxLineLength() {
+	if c.getLengthOfLine(&repl.Line) > c.maxLineLength() {
 		return nil, errInlineIfImpossible
 	}
 

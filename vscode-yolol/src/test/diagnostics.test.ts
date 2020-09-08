@@ -9,7 +9,7 @@ describe('Should get diagnostics', () => {
       const docUri = getDocUri('has_errors.yolol')
       await testDiagnostics(docUri, [
         { message: 'If-block needs at least one statement. Found Token: \'then\'(Keyword)', range: toRange(1, 27, 1, 27), severity: vscode.DiagnosticSeverity.Error, source: 'parser' },
-        { message: 'Expected a statement. Found Token: \'iff\'(ID)', range: toRange(4, 0, 4, 0), severity: vscode.DiagnosticSeverity.Error, source: 'parser' }
+        { message: 'Expected a statement. Found Token: \'iif\'(ID)', range: toRange(4, 0, 4, 0), severity: vscode.DiagnosticSeverity.Error, source: 'parser' }
       ])
     })
   

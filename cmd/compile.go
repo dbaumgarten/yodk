@@ -38,7 +38,7 @@ func compileFile(fpath string) {
 	}
 
 	gen := parser.Printer{}
-	gen.Mode = parser.PrintermodeCompact
+	gen.Mode = parser.PrintermodeSpaceless
 	generated, err := gen.Print(converted)
 	exitOnError(err, "generating code")
 	err = ioutil.WriteFile(outfile, []byte(generated), 0700)

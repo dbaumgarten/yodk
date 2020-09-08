@@ -5,6 +5,7 @@ import (
 )
 
 const (
+	FormatModeSpaceless     = "Spaceless"
 	FormatModeCompact       = "Compact"
 	FormatModeReadale       = "Readable"
 	LengthCheckModeStrict   = "Strict"
