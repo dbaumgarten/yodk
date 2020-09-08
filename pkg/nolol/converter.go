@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/dbaumgarten/yodk/pkg/nolol/nast"
 	"github.com/dbaumgarten/yodk/pkg/optimizers"
@@ -336,10 +337,20 @@ func (c *Converter) mergeStatementElements(lines []*nast.StatementLine) ([]*nast
 			}
 
 			nextline := lines[i+1]
-			nextlen := getLengthOfLine(&nextline.Line)
 
-			if nextline.Label == "" && currlen+nextlen <= maxlen && !nextline.HasBOL {
+			if nextline.Label == "" && !nextline.HasBOL {
+				prev := current.Statements
+				current.Statements = make([]ast.Statement, 0, len(current.Statements)+len(nextline.Statements))
+				current.Statements = append(current.Statements, prev...)
 				current.Statements = append(current.Statements, nextline.Statements...)
+
+				newlen := getLengthOfLine(&current.Line)
+				if newlen > maxlen {
+					// the newly created line is longer then allowed. roll back.
+					current.Statements = prev
+					break
+				}
+
 				i++
 				if nextline.HasEOL {
 					break
@@ -369,5 +380,10 @@ func getLengthOfLine(line ast.Node) int {
 		panic(err)
 	}
 
-	return len(generated)
+	linelen := len(generated)
+	if strings.HasSuffix(generated, "\n") {
+		linelen--
+	}
+
+	return linelen
 }
