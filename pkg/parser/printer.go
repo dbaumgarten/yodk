@@ -57,7 +57,8 @@ var operatorPriority = map[string]int{
 	"not": 4,
 }
 
-var keywordRegex = regexp.MustCompile("(if|else|end|then|goto|and|or|not|abs|sqrt|sin|cos|tan|asin|acos|atan)")
+// end and else are missing here, because unlike other keywords they might require a space after them
+var keywordRegex = regexp.MustCompile("(if|then|goto|and|or|not|abs|sqrt|sin|cos|tan|asin|acos|atan)")
 
 func charType(b byte) int {
 	s := rune(b)
