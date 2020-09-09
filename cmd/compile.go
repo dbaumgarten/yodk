@@ -13,6 +13,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var spaces bool
+
 // compileCmd represents the compile command
 var compileCmd = &cobra.Command{
 	Use:   "compile [file]+",
@@ -29,6 +31,7 @@ var compileCmd = &cobra.Command{
 func compileFile(fpath string) {
 	outfile := strings.Replace(fpath, path.Ext(fpath), ".yolol", -1)
 	converter := nolol.NewConverter()
+	converter.UseSpaces = spaces
 	converter.Debug(debugLog)
 	converted, compileerr := converter.ConvertFile(fpath)
 
@@ -39,6 +42,9 @@ func compileFile(fpath string) {
 
 	gen := parser.Printer{}
 	gen.Mode = parser.PrintermodeSpaceless
+	if spaces {
+		gen.Mode = parser.PrintermodeCompact
+	}
 	generated, err := gen.Print(converted)
 	exitOnError(err, "generating code")
 	err = ioutil.WriteFile(outfile, []byte(generated), 0700)
@@ -55,4 +61,5 @@ func init() {
 	rootCmd.AddCommand(compileCmd)
 	compileCmd.Flags().StringVarP(&outputFile, "out", "o", "<inputfile>.out", "The output file")
 	compileCmd.Flags().BoolVarP(&debugLog, "debug", "d", false, "Print debug logs while parsing")
+	compileCmd.Flags().BoolVar(&spaces, "spaces", false, "If true, output code with spaces where normal languages would expect them")
 }

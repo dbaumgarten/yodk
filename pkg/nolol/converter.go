@@ -34,6 +34,8 @@ type Converter struct {
 	macroLevel          []string
 	macroInsertionCount int
 	debug               bool
+	// UseSpaces disables the default spaceless-mode
+	UseSpaces bool
 }
 
 // NewConverter creates a new converter
@@ -368,10 +370,17 @@ func (c *Converter) mergeStatementElements(lines []*nast.StatementLine) ([]*nast
 func (c *Converter) getLengthOfLine(line ast.Node) int {
 	ygen := parser.Printer{}
 	ygen.Mode = parser.PrintermodeSpaceless
+	if c.UseSpaces {
+		ygen.Mode = parser.PrintermodeCompact
+	}
 
 	ygen.UnknownHandlerFunc = func(node ast.Node, visitType int, p *parser.Printer) error {
 		if _, is := node.(*nast.GoToLabelStatement); is {
-			p.Write("gotoXX")
+			if c.UseSpaces {
+				p.Write("goto XX")
+			} else {
+				p.Write("gotoXX")
+			}
 			return nil
 		}
 		return fmt.Errorf("Unknown node-type: %T", node)
