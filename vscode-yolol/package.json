@@ -20,6 +20,7 @@
   "activationEvents": [
     "onLanguage:yolol",
     "onLanguage:nolol",
+    "onLanguage:yaml",
     "onDebug"
   ],
   "contributes": {
@@ -99,6 +100,14 @@
       {
         "command": "yodk.restartLangserver",
         "title": "YODK: Restart Language Server"
+      },
+      {
+        "command": "yodk.runTest",
+        "title": "YODK: Run the current test.yaml"
+      },
+      {
+        "command": "yodk.runAllTests",
+        "title": "YODK: Run all *_test.yaml in the current directory"
       }
     ],
     "breakpoints": [

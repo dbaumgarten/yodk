@@ -17,6 +17,8 @@ export function getContext(){
 	return context
 }
 
+let testResultChannel: vscode.OutputChannel
+
 export function getExePath(platform?){
 
 	if (!platform){
@@ -34,7 +36,7 @@ export function getExePath(platform?){
 	return context.asAbsolutePath(executable);
 }
 
-export async function runYodkCommand(cmd): Promise<{}> {
+export async function runYodkCommand(cmd,resultChannel=null): Promise<{}> {
 	const cp = require('child_process')
 
 	let binary = cp.spawn(getExePath(),cmd);
@@ -52,7 +54,11 @@ export async function runYodkCommand(cmd): Promise<{}> {
 				code: code,
 				output: buffer
 			})
-			if (code != 0) {
+			if (resultChannel != null){
+				resultChannel.clear()
+				resultChannel.append(buffer)
+				resultChannel.show()
+			} else if (code != 0) {
 				vscode.window.showErrorMessage(buffer)
 			}
 		})
@@ -119,9 +125,33 @@ export function activate(lcontext: ExtensionContext) {
 		restartLangServer()
 	};
 
+	testResultChannel = vscode.window.createOutputChannel("Test results")
+
+	const runTestCommandHandler = () => {
+		if (!vscode.window.activeTextEditor.document.fileName.endsWith(".yaml")){
+			vscode.window.showErrorMessage("You need to have a .yaml file opened to use this command.")
+			return
+		}
+		runYodkCommand(["test", vscode.window.activeTextEditor.document.fileName],testResultChannel)
+	}
+
+	const runAllTestsCommandHandler = async () => {
+		var files = await (await vscode.workspace.findFiles("*_test.yaml"))
+		
+		var filepaths = files.map((f)=>{
+			return f.fsPath
+		})
+		
+		runYodkCommand(["test"].concat(filepaths),testResultChannel)
+	}
+
 	context.subscriptions.push(vscode.commands.registerCommand('yodk.compileNolol', compileCommandHandler));
 	context.subscriptions.push(vscode.commands.registerCommand('yodk.optimizeYolol', optimizeCommandHandler));
 	context.subscriptions.push(vscode.commands.registerCommand('yodk.restartLangserver', restartCommandHandler));
+
+	context.subscriptions.push(vscode.commands.registerCommand('yodk.runTest', runTestCommandHandler));
+	context.subscriptions.push(vscode.commands.registerCommand('yodk.runAllTests', runAllTestsCommandHandler));
+
 
 
 	context.subscriptions.push(vscode.debug.registerDebugAdapterDescriptorFactory('yodk', new DebugAdapterExecutableFactory()));
