@@ -46,9 +46,14 @@ You can find pre-build versions of the binaries [here](https://github.com/dbaumg
 Just download them, unpack the zip file and place the binary somewhere in your PATH.
 
 ## CLI - From source
-You will need to have the go-toolchain installed.  
-```go install github.com/dbaumgarten/yodk```   
-Note: It is helpful to add the yodk-binary to your path.
+You will need to have the go-toolchain (>=v1.14) installed.  
+Run: ```go get -v github.com/dbaumgarten/yodk```  
+This will download yodk and it's dependencies, compile it and store the binary in the bin folder of your gopath.
+- If $GOPATH is set: $GOPATH/bin/yodk
+- Default on linux: $HOME/go/yodk
+- Default on windows: %USERPROFILE%\\go\\yodk  
+
+It is helpful to add the yodk-binary to your path.
 
 ## VScode extension
 You can install ```vscode-yolol``` directly from the vscode marketplace. For more information, see the [documentation](https://dbaumgarten.github.io/yodk/#/vscode-yolol).
