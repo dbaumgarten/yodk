@@ -189,6 +189,34 @@ func RunBinaryOperation(arg1 *Variable, arg2 *Variable, operator string) (*Varia
 				endResult.Value = number.Zero
 			}
 			break
+		case "<":
+			if arg1.String() < arg2.String() {
+				endResult.Value = number.One
+			} else {
+				endResult.Value = number.Zero
+			}
+			break
+		case ">":
+			if arg1.String() > arg2.String() {
+				endResult.Value = number.One
+			} else {
+				endResult.Value = number.Zero
+			}
+			break
+		case "<=":
+			if arg1.String() <= arg2.String() {
+				endResult.Value = number.One
+			} else {
+				endResult.Value = number.Zero
+			}
+			break
+		case ">=":
+			if arg1.String() >= arg2.String() {
+				endResult.Value = number.One
+			} else {
+				endResult.Value = number.Zero
+			}
+			break
 		default:
 			return nil, fmt.Errorf("Unknown binary operator for strings '%s'", operator)
 		}

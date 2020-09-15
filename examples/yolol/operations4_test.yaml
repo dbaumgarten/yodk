@@ -1,0 +1,17 @@
+scripts: 
+  - operations4.yolol
+cases:
+  - name: TestOperationSuccess
+    outputs:
+      testi: 1
+      testd: 1
+      testsum: 1
+      testsub: 1
+      testeq: 1
+      testneq: 1
+      testgt: 1
+      testgte: 1
+      testlt: 1
+      testlte: 1
+
+      

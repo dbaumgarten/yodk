@@ -23,6 +23,7 @@ if counter < 20 then goto 7 end
 :testneq = 1 != 42 and not (1!=1)
 :testgt = 2 > 1 and not (1>2) and 5 > -5
 :testgte = 2 >= 1 and not (1 >= 2) and 2 >= 2
+:testlt = "a" < "b" and not ("b" < "a") and "z" > "a"
 :done = 1
 `
 
