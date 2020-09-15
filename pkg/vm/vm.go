@@ -588,10 +588,8 @@ func (v *VM) runStmt(stmt ast.Statement) error {
 		if err != nil {
 			return err
 		}
-		if !conditionResult.IsNumber() {
-			return RuntimeError{fmt.Errorf("If-condition can not be a string"), stmt}
-		}
-		if conditionResult.Number() != number.Zero {
+		if (conditionResult.IsString() && conditionResult.String() != "0") ||
+			conditionResult.Number() != number.Zero {
 			for _, st := range e.IfBlock {
 				err := v.runStmt(st)
 				if err != nil {
