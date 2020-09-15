@@ -38,7 +38,7 @@ There are essentialy two different ways to specify what script to debug in a lau
 
 1. Set the "scripts"-field in the launch.json to a list of script-names. You can also use globs (like for example "subdir/*.yolol") to include all files that match a specific pattern. You can mix .yolol and .nolol scripts.  
 
-2. Create a yodk testfile ([see here](/cli?id=testing)) that defines which scripts to run, how long to run them and what the inputs and expected outputs are. You can now set the "test" field of you launch.json to the path of the testfile.  
+2. Create a yodk testfile ([see here](https://dbaumgarten.github.io/yodk/#/cli?id=testing)) that defines which scripts to run, how long to run them and what the inputs and expected outputs are. You can now set the "test" field of you launch.json to the path of the testfile.  
 
 You can either debug a list of scripts or a single test. You can NOT do both at once.  
 
