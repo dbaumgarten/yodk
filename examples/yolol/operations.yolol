@@ -15,6 +15,6 @@ goto counter-8 :testgotovar=0
 :testneq=1!=42 and not (1!=1)
 :testgt=2>1 and not (1>2) and 5> -5
 :testgte=2>=1 and not (1>=2) and 2>=2
-:testlt=1<2 and not (2<1) and -5<5
+:testlt="a"<"b" and not ("b"<"a") and "z">"a"
 :testlte=1<=2 and not (2<=1) and 2>=2
 :done=1
