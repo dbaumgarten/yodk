@@ -176,7 +176,8 @@ export class YodkDebugConfigurationProvider implements vscode.DebugConfiguration
 					name: "Debug current script",
 					scripts: [
 						"${file}"
-					]
+					],
+					ignoreErrs: false
 				},
 				{
 					type: "yodk",
@@ -226,7 +227,7 @@ export class YodkDebugConfigurationProvider implements vscode.DebugConfiguration
 				return {
 					type: "yodk",
 					request: "launch",
-					name: "Debug current test",
+					name: "Debug current script",
 					scripts: [
 						activeEditor.document.fileName
 					]
@@ -236,8 +237,9 @@ export class YodkDebugConfigurationProvider implements vscode.DebugConfiguration
 				return {
 					type: "yodk",
 					request: "launch",
-					name: "Debug current script",
-					test: activeEditor.document.fileName
+					name: "Debug current test",
+					test: activeEditor.document.fileName,
+					ignoreErrs: false,
 				}
 			}
 		}

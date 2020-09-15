@@ -28,6 +28,8 @@ var cliargs []string
 
 var running bool
 
+var ignoreErrs bool
+
 // debugCmd represents the debug command
 var debugCmd = &cobra.Command{
 	Use:   "debug [script]+ / debug [testfile]",
@@ -74,6 +76,7 @@ func load(args []string) {
 	} else {
 		helper, err = debug.FromScripts("", args, prepareVM)
 	}
+	helper.IgnoreErrs = ignoreErrs
 	exitOnError(err, "starting debugger")
 
 	debugShell.Println("Loaded and paused programs. Enter 'c' to start execution.")
@@ -105,6 +108,8 @@ func prepareVM(thisVM *vm.VM, inputFileName string) {
 // initialize the shell
 func init() {
 	debugCmd.Flags().IntVarP(&caseNumber, "case", "c", 1, "Numer of the case to execute when debugging a test")
+	debugCmd.Flags().BoolVarP(&ignoreErrs, "ignore", "i", false, "If true, ignore runtime-errors when debugging scripts")
+
 	rootCmd.AddCommand(debugCmd)
 
 	debugShell = ishell.New()

@@ -96,6 +96,7 @@ func (h *YODKHandler) helperFromArguments(arguments map[string]interface{}) (*He
 	ws = normalizePath(ws)
 
 	if scriptsfield, exists := arguments["scripts"]; exists {
+		var helper *Helper
 		if scripts, is := scriptsfield.([]interface{}); is {
 			scriptlist := make([]string, 0, len(scripts))
 			for _, script := range scripts {
@@ -107,8 +108,18 @@ func (h *YODKHandler) helperFromArguments(arguments map[string]interface{}) (*He
 			if err != nil {
 				return nil, err
 			}
-			return FromScripts(ws, scriptlist, h.configureVM)
+			helper, err = FromScripts(ws, scriptlist, h.configureVM)
+			if err != nil {
+				return nil, err
+			}
 		}
+
+		if errsfield, exists := arguments["ignoreErrs"]; exists {
+			if ignoreErrs, is := errsfield.(bool); is {
+				helper.IgnoreErrs = ignoreErrs
+			}
+		}
+		return helper, nil
 
 	} else if testfield, exists := arguments["test"]; exists {
 		tcase := 1

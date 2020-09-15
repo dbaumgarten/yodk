@@ -136,6 +136,11 @@
                   "type": "string"
                 }
               },
+              "ignoreErrs": {
+                "type": "boolean",
+                "description": "Ignore errors when debugging scripts",
+                "default": false
+              },
               "test": {
                 "type": "string",
                 "description": "Path to a yodk-test-file to debug",
