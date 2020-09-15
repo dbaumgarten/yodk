@@ -28,6 +28,8 @@ type Test struct {
 	// Stop when is a map from global variable-name to value
 	// Execution is stopped when at least one of the listed variables is equal to the value
 	StopWhen map[string]interface{}
+	// When true, ignore runtime errors during testing
+	IgnoreErrs bool
 }
 
 // Case defines inputs and expected outputs for a run
@@ -47,6 +49,7 @@ type CaseRunner struct {
 	Coordinator     *vm.Coordinator
 	VMs             []*vm.VM
 	VarTranslations []map[string]string
+	Test            *Test
 	Case            *Case
 	StopConditions  map[string]*vm.Variable
 }
@@ -118,6 +121,7 @@ func (t Test) GetRunner(casenr int) (runner *CaseRunner, err error) {
 	runner = &CaseRunner{
 		Coordinator:    vm.NewCoordinator(),
 		Case:           &c,
+		Test:           &t,
 		StopConditions: make(map[string]*vm.Variable, len(t.Scripts)),
 		VMs:            make([]*vm.VM, len(t.Scripts)),
 	}
@@ -217,10 +221,12 @@ func (cr CaseRunner) Run() []error {
 	flock := &sync.Mutex{}
 
 	errHandler := func(vm *vm.VM, err error) bool {
-		flock.Lock()
-		defer flock.Unlock()
-		fails = append(fails, err)
-		go cr.Coordinator.Terminate()
+		if !cr.Test.IgnoreErrs {
+			flock.Lock()
+			defer flock.Unlock()
+			fails = append(fails, err)
+			go cr.Coordinator.Terminate()
+		}
 		return true
 	}
 

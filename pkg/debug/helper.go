@@ -41,6 +41,8 @@ type Helper struct {
 	ValidBreakpoints map[int]map[int]bool
 	// CompiledCode contains the generated yolol-code for for VMs that are running NOLOL
 	CompiledCode map[int]string
+	// If set to true, runtime-errors should not interrupt script execution
+	IgnoreErrs bool
 }
 
 // JoinPath wraps filepath.Join, but returns only the second part if the second part is an absolute path
@@ -173,6 +175,7 @@ func FromTest(workspace string, testfile string, casenr int, prepareVM VMPrepare
 		FinishedVMs:          make(map[int]bool),
 		ValidBreakpoints:     make(map[int]map[int]bool),
 		CompiledCode:         make(map[int]string),
+		IgnoreErrs:           t.IgnoreErrs,
 	}
 
 	for i, script := range t.Scripts {

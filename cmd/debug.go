@@ -86,10 +86,13 @@ func prepareVM(thisVM *vm.VM, inputFileName string) {
 		return false
 	})
 	thisVM.SetErrorHandler(func(x *vm.VM, err error) bool {
-		debugShell.Printf("--A runtime error occured at %s:%d--\n", inputFileName, x.CurrentSourceLine())
-		debugShell.Println(err)
-		debugShell.Println("--Execution paused--")
-		return false
+		if !helper.IgnoreErrs {
+			debugShell.Printf("--A runtime error occured at %s:%d--\n", inputFileName, x.CurrentSourceLine())
+			debugShell.Println(err)
+			debugShell.Println("--Execution paused--")
+			return false
+		}
+		return true
 	})
 	thisVM.SetFinishHandler(func(x *vm.VM) {
 		debugShell.Printf("--Program %s finished--\n", inputFileName)
@@ -184,6 +187,10 @@ func init() {
 			if !running {
 				running = true
 				helper.Coordinator.Run()
+			}
+			if helper.Vms[0].State() == vm.StateTerminated {
+				debugShell.Println("Can not step. Programm already terminated.")
+				return
 			}
 			helper.Vms[helper.CurrentScript].Step()
 		},

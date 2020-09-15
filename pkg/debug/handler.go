@@ -156,15 +156,18 @@ func (h *YODKHandler) configureVM(yvm *vm.VM, filename string) {
 		return false
 	})
 	yvm.SetErrorHandler(func(x *vm.VM, err error) bool {
-		h.session.SendEvent(&dap.StoppedEvent{
-			Body: dap.StoppedEventBody{
-				Reason:      "exception",
-				Description: "A runtim-error occured",
-				ThreadId:    h.helper.ScriptIndexByName(filename) + 1,
-				Text:        err.Error(),
-			},
-		})
-		return false
+		if !h.helper.IgnoreErrs {
+			h.session.SendEvent(&dap.StoppedEvent{
+				Body: dap.StoppedEventBody{
+					Reason:      "exception",
+					Description: "A runtim-error occured",
+					ThreadId:    h.helper.ScriptIndexByName(filename) + 1,
+					Text:        err.Error(),
+				},
+			})
+			return false
+		}
+		return true
 	})
 	yvm.SetFinishHandler(func(x *vm.VM) {
 		id := h.helper.ScriptIndexByName(filename) + 1

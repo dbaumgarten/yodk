@@ -1,0 +1,8 @@
+scripts: 
+  - abuse_errors.yolol
+ignoreerrs: true
+cases:
+  - name: TestIgnoreErr
+    outputs:
+      a: 123
+      b: 1

@@ -5,6 +5,8 @@ scripts:
 # default is "done: 1"
 stopwhen:
   number: 101
+# optional: if true, ignore runtime-errors during script-execution. Default: false
+ignoreerrs: false
 # optional: Stop execution after running set amount of lines (per script)
 # default value is 2000. Set to -1 for unlimited
 maxlines: 2000
