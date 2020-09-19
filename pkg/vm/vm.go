@@ -104,12 +104,13 @@ type VM struct {
 // The returned VM is paused. Configure it using the setters and then call Resume()
 func Create(prog *ast.Program) *VM {
 	vm := &VM{
-		variables:          make(map[string]*Variable),
-		state:              StatePaused,
-		breakpoints:        make(map[int]bool),
-		lock:               &sync.Mutex{},
-		currentAstLine:     1,
-		currentSourceLine:  1,
+		variables:      make(map[string]*Variable),
+		state:          StatePaused,
+		breakpoints:    make(map[int]bool),
+		lock:           &sync.Mutex{},
+		currentAstLine: 1,
+		// initialize to 0, so the first executed line triggers a lineChanged()
+		currentSourceLine:  0,
 		stateRequests:      make(chan int),
 		terminationChannel: make(chan interface{}),
 		program:            prog,
