@@ -131,19 +131,22 @@ func (t Test) GetRunner(casenr int) (runner *CaseRunner, err error) {
 
 	runner.StopConditions = mergeStopConditions(&t, &c)
 
-	varChangeHandler := func(vm *vm.VM, name string, value *vm.Variable) bool {
-		if cond, is := runner.StopConditions[name]; is {
-			if cond.Equals(value) {
+	lineExecutedHandler := func(vm *vm.VM) bool {
+
+		for name, want := range runner.StopConditions {
+			current, exists := vm.GetVariable(name)
+			if exists && current.Equals(want) {
 				// stop condition reached. Terminate all VMs
 				go runner.Coordinator.Terminate()
 				return false
 			}
 		}
+
 		return true
 	}
 
 	for _, vm := range runner.VMs {
-		vm.SetVariableChangedHandler(varChangeHandler)
+		vm.SetLineExecutedHandler(lineExecutedHandler)
 	}
 
 	return runner, nil

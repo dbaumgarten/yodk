@@ -31,13 +31,14 @@ type ErrorHandlerFunc func(vm *VM, err error) bool
 // FinishHandlerFunc is a function that is called when the programm finished execution (looping is disabled)
 type FinishHandlerFunc func(vm *VM)
 
-// VarChangedHandlerFunc is the type for functions that react on variable changes
-// If true is returned the execution is resumed. Otherwise the vm is paused
-type VarChangedHandlerFunc func(vm *VM, name string, value *Variable) bool
+// LineExecutedHandlerFunc it the type for the handler that is called after a line has been executed
+type LineExecutedHandlerFunc func(vm *VM) bool
 
-// TerminateOnDoneVar is a predefined VarChangedHandlerFunc that can be used to terminate the VM once :done is set to 1
-var TerminateOnDoneVar = func(vm *VM, name string, value *Variable) bool {
-	if name == ":done" {
+// TerminateOnDoneVar is a predefined LineExecutedHandlerFunc that can be used to terminate the VM once :done is set to 1
+var TerminateOnDoneVar = func(vm *VM) bool {
+	value, exists := vm.GetVariable(":done")
+	wantnot, _ := VariableFromType(0)
+	if exists && !value.Equals(wantnot) {
 		go vm.Terminate()
 		return false
 	}
@@ -67,11 +68,11 @@ type VM struct {
 	// the current variables of the programm
 	variables map[string]*Variable
 	// event handlers
-	breakpointHandler BreakpointFunc
-	stepHandler       FinishHandlerFunc
-	errorHandler      ErrorHandlerFunc
-	finishHandler     FinishHandlerFunc
-	varChangedHandler VarChangedHandlerFunc
+	breakpointHandler   BreakpointFunc
+	stepHandler         FinishHandlerFunc
+	errorHandler        ErrorHandlerFunc
+	finishHandler       FinishHandlerFunc
+	lineExecutedHandler LineExecutedHandlerFunc
 	// current line in the ast is 1-indexed
 	currentAstLine int
 	// current line in the source code
@@ -250,11 +251,12 @@ func (v *VM) SetFinishHandler(f FinishHandlerFunc) {
 	v.finishHandler = f
 }
 
-// SetVariableChangedHandler registers a callback that is executed when the value of a variable changes
-func (v *VM) SetVariableChangedHandler(handler VarChangedHandlerFunc) {
+// SetLineExecutedHandler registers a callback that is executed when a line has been completely executed
+// When running coordinated, this handler is called before passing execution to the next VM
+func (v *VM) SetLineExecutedHandler(handler LineExecutedHandlerFunc) {
 	v.lock.Lock()
 	defer v.lock.Unlock()
-	v.varChangedHandler = handler
+	v.lineExecutedHandler = handler
 }
 
 // SetCoordinator sets the coordinator that is used to coordinate execution with other vms
@@ -352,17 +354,6 @@ func (v *VM) setVariable(name string, value *Variable) error {
 			return err
 		}
 	}
-
-	if v.varChangedHandler != nil {
-		v.lock.Unlock()
-		cont := v.varChangedHandler(v, name, value)
-		v.lock.Lock()
-		if !cont {
-			v.pause()
-		}
-
-	}
-
 	return nil
 }
 
@@ -572,9 +563,19 @@ func (v *VM) runLine(line *ast.Line) error {
 			if err != errAbortLine {
 				return err
 			}
-			return nil
+			break
 		}
 	}
+
+	if v.lineExecutedHandler != nil {
+		v.lock.Unlock()
+		cont := v.lineExecutedHandler(v)
+		v.lock.Lock()
+		if !cont {
+			v.pause()
+		}
+	}
+
 	return nil
 }
 

@@ -72,7 +72,7 @@ func TestNolol(t *testing.T) {
 	}
 
 	v, _ := vm.CreateFromSource(code)
-	v.SetVariableChangedHandler(vm.TerminateOnDoneVar)
+	v.SetLineExecutedHandler(vm.TerminateOnDoneVar)
 	v.Resume()
 	v.WaitForTermination()
 

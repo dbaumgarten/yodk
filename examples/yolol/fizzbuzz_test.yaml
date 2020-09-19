@@ -1,7 +1,8 @@
 # required: list of scripts to run in parallel. Can be as many as you like
 scripts: 
   - fizzbuzz.yolol
-# optional: stop execution once one of the listed global variables has the given value
+# optional: stop execution once one of the listed global variables has the given value.
+# this is checked after every executed line, which means the line which sets the done-variable is executed completely before stopping the VM
 # default is "done: 1"
 stopwhen:
   number: 101

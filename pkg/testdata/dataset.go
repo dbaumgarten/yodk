@@ -36,7 +36,7 @@ func ExecuteTestProgram(prog string) error {
 		return true
 	}))
 
-	v.SetVariableChangedHandler(vm.TerminateOnDoneVar)
+	v.SetLineExecutedHandler(vm.TerminateOnDoneVar)
 	v.Resume()
 	v.WaitForTermination()
 
