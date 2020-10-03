@@ -6,7 +6,8 @@
 :d = "this is too long, so it will start a new line"
 
 :e = 0
-jumplbl> :f = 123 // lines that have jump labels can not be merged with previous lines
+goto jumplbl
+jumplbl> :f = 123 // lines that have jump labels (that are in-use) can not be merged with previous lines
 :g = "xyz" // lines following jump labels however can be merged with the previous line
 
 
