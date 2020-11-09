@@ -24,10 +24,11 @@ const (
 
 // Printer generates yolol-code from an AST
 type Printer struct {
-	// This function is called whenever an unknown node-type is encountered.
-	// It can be used to add support for additional types to the generator
-	// returns the yolol-code for the giben node or an error
-	UnknownHandlerFunc func(node ast.Node, visitType int, p *Printer) error
+	// If this functiontion is set, it is called for every AST-node, before printing anything for that node.
+	// It can be used to customize printing of certain nodes or add new kinds of nodes.
+	// If it returns an errior, that errors is bubbled up.
+	// The function should return true, if it can handle the given node and does not want this printer to continue processing it
+	PrinterExtensionFunc func(node ast.Node, visitType int, p *Printer) (bool, error)
 	// If true, only insert spaces where absolutely necessary
 	Mode           Printermode
 	text           string
@@ -142,6 +143,15 @@ func (p *Printer) Print(prog ast.Node) (string, error) {
 		if (visitType == ast.PreVisit || visitType == ast.SingleVisit) && p.DebugPositions {
 			p.Write(fmt.Sprintf("{%s(%v - %v)", reflect.TypeOf(node).String(), node.Start(), node.End()))
 		}
+		if p.PrinterExtensionFunc != nil {
+			skip, err := p.PrinterExtensionFunc(node, visitType, p)
+			if err != nil {
+				return err
+			}
+			if skip {
+				return nil
+			}
+		}
 		switch n := node.(type) {
 		case *ast.Program:
 			if visitType == ast.PreVisit {
@@ -223,13 +233,7 @@ func (p *Printer) Print(prog ast.Node) (string, error) {
 			}
 			break
 		default:
-			if p.UnknownHandlerFunc == nil {
-				return fmt.Errorf("Unknown ast-node: %T%v", node, node)
-			}
-			err := p.UnknownHandlerFunc(node, visitType, p)
-			if err != nil {
-				return err
-			}
+			return fmt.Errorf("Unknown ast-node: %T%v", node, node)
 		}
 		if (visitType == ast.PostVisit || visitType == ast.SingleVisit) && p.DebugPositions {
 			p.Write("}")

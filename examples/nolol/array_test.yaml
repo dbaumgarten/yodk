@@ -1,0 +1,7 @@
+scripts: 
+  - array.nolol
+  - array_user.nolol
+cases:
+  - name: WriteAndRead
+    outputs:
+      sum: "2,4,6,8,"

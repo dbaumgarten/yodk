@@ -2,6 +2,7 @@ package nolol
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/dbaumgarten/yodk/pkg/nolol/nast"
@@ -15,6 +16,7 @@ var reservedTimeVariable = "_time"
 // convert a wait directive to yolol
 func (c *Converter) convertWait(wait *nast.WaitDirective) error {
 	label := fmt.Sprintf("wait%d", c.waitlabelcounter)
+	c.waitlabelcounter++
 	line := &nast.StatementLine{
 		Label:  label,
 		HasEOL: true,
@@ -60,10 +62,27 @@ func (c *Converter) convertFuncCall(function *nast.FuncCall) error {
 	switch nfunc {
 	case "time":
 		// time is a nolol-built-in function
+		if len(function.Arguments) != 0 {
+			return &parser.Error{
+				Message:       "The time() function takes no arguments",
+				StartPosition: function.Start(),
+				EndPosition:   function.End(),
+			}
+		}
 		c.usesTimeTracking = true
 		return ast.NewNodeReplacementSkip(&ast.Dereference{
 			Variable: c.varnameOptimizer.OptimizeVarName(reservedTimeVariable),
 		})
+	case "line":
+		if len(function.Arguments) != 0 {
+			return &parser.Error{
+				Message:       "The line() function takes no arguments",
+				StartPosition: function.Start(),
+				EndPosition:   function.End(),
+			}
+		}
+		// Do not replace the line() function for now. This can only be done once the final line-layout is determined
+		return nil
 	}
 	unaryops := []string{"abs", "sqrt", "sin", "cos", "tan", "asin", "acos", "atan"}
 	for _, unaryop := range unaryops {
@@ -87,6 +106,32 @@ func (c *Converter) convertFuncCall(function *nast.FuncCall) error {
 		StartPosition: function.Start(),
 		EndPosition:   function.End(),
 	}
+}
+
+// convertLineFuncCalls converts ALL remaining line() calls in the programm to the acual line-number at the position
+func (c *Converter) convertLineFuncCalls(prog *nast.Program) error {
+	linecounter := 0
+	f := func(node ast.Node, visitType int) error {
+		if _, is := node.(*nast.StatementLine); is && visitType == ast.PreVisit {
+			linecounter++
+		}
+		if function, is := node.(*nast.FuncCall); is {
+			nfunc := strings.ToLower(function.Function)
+			if nfunc != "line" {
+				return &parser.Error{
+					Message:       "This function can only convert the line() function",
+					StartPosition: function.Start(),
+					EndPosition:   function.End(),
+				}
+			}
+			return ast.NewNodeReplacementSkip(&ast.NumberConstant{
+				Position: function.Position,
+				Value:    strconv.Itoa(linecounter),
+			})
+		}
+		return nil
+	}
+	return prog.Accept(ast.VisitorFunc(f))
 }
 
 // checkes, if the program uses nolols time-tracking feature

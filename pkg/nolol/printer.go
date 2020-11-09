@@ -1,7 +1,6 @@
 package nolol
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/dbaumgarten/yodk/pkg/nolol/nast"
@@ -24,7 +23,7 @@ func NewPrinter() *Printer {
 		},
 		Indentation: "\t",
 	}
-	p.yololPrinter.UnknownHandlerFunc = p.handleNololNodes
+	p.yololPrinter.PrinterExtensionFunc = p.handleNololNodes
 	return p
 }
 
@@ -36,7 +35,7 @@ func (np *Printer) indentation() string {
 	return ind
 }
 
-func (np *Printer) handleNololNodes(node ast.Node, visitType int, p *parser.Printer) error {
+func (np *Printer) handleNololNodes(node ast.Node, visitType int, p *parser.Printer) (bool, error) {
 	switch n := node.(type) {
 	case *nast.GoToLabelStatement:
 		if visitType == ast.SingleVisit {
@@ -256,10 +255,43 @@ func (np *Printer) handleNololNodes(node ast.Node, visitType int, p *parser.Prin
 		p.Write("continue")
 		p.Space()
 		break
+	case *ast.GoToStatement:
+		if visitType == ast.PreVisit {
+			p.Write("_goto")
+			p.Space()
+		}
+		break
+	case *ast.IfStatement:
+		switch visitType {
+		case ast.PreVisit:
+			p.Write("_if")
+			p.Space()
+			break
+		case ast.InterVisit1:
+			p.Space()
+			p.Write("then")
+			p.Space()
+			break
+		case ast.InterVisit2:
+			p.Space()
+			p.Write("else")
+			p.Space()
+			break
+		case ast.PostVisit:
+			p.Space()
+			p.Write("end")
+			break
+		default:
+			if visitType > 0 {
+				p.StatementSeparator()
+			}
+		}
 	default:
-		return fmt.Errorf("Unknown node-type: %T", node)
+		// This is not a type this function can print.
+		// Return false, so the yolol-printer handles that node
+		return false, nil
 	}
-	return nil
+	return true, nil
 }
 
 // Print returns the nolol-code for the given ast

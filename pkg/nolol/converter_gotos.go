@@ -28,6 +28,12 @@ func (c *Converter) removeDuplicateGotos(p ast.Node) error {
 	lastWasGoto := false
 	f := func(node ast.Node, visitType int) error {
 		switch n := node.(type) {
+		case *ast.GoToStatement:
+			if lastWasGoto {
+				return ast.NewNodeReplacement()
+			}
+			lastWasGoto = true
+			break
 		case *nast.GoToLabelStatement:
 			if lastWasGoto {
 				return ast.NewNodeReplacement()

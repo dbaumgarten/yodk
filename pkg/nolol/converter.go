@@ -142,6 +142,19 @@ func (c *Converter) Convert(prog *nast.Program, files FileSystem) (*ast.Program,
 		return nil, err
 	}
 
+	// now that all line-positions are fixed, the line() calls can be replaced by their line-number
+	err = c.convertLineFuncCalls(prog)
+	if err != nil {
+		return nil, err
+	}
+
+	// convertLineFuncCalls might have introduced un-optimized expression
+	// re-run the static-expression optimizer
+	err = c.sexpOptimizer.Optimize(prog)
+	if err != nil {
+		return nil, err
+	}
+
 	if c.usesTimeTracking {
 		c.insertLineCounter(prog)
 	}
@@ -374,16 +387,20 @@ func (c *Converter) getLengthOfLine(line ast.Node) int {
 		ygen.Mode = parser.PrintermodeCompact
 	}
 
-	ygen.UnknownHandlerFunc = func(node ast.Node, visitType int, p *parser.Printer) error {
+	ygen.PrinterExtensionFunc = func(node ast.Node, visitType int, p *parser.Printer) (bool, error) {
 		if _, is := node.(*nast.GoToLabelStatement); is {
 			if c.UseSpaces {
 				p.Write("goto XX")
 			} else {
 				p.Write("gotoXX")
 			}
-			return nil
+			return true, nil
 		}
-		return fmt.Errorf("Unknown node-type: %T", node)
+		if fc, is := node.(*nast.FuncCall); is && fc.Function == "line" {
+			p.Write("00")
+			return true, nil
+		}
+		return false, nil
 	}
 	generated, err := ygen.Print(line)
 	if err != nil {

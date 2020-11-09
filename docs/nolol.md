@@ -83,12 +83,10 @@ YOLOL Output:
 
 [goto.yolol](generated/code/nolol/goto.yolol ':include')
 
-As jumping to line-numbers does not work, jumping to lines by using variables does also not work and is therefor not possible in nolol. The following does NOT work:
+In some rare cases you need to jump to a line, given by a variable (or some calculation). As you can't really know on which yolol-line your nolol-code will end up, this is really dangerous and should only be used when you know what you are doing. If you really need to, you can use the ```_goto <expression>``` keyword (the underscore is telling the compiler that you want to jump to the result of an expression and not to a label).  
+The ```line()``` function return the current yolol-line. You can use it to store the current line in a variable, so that you can later _goto to that variable. Also, if you make carefull use of the timing-control-features, you can perform calculated jumps, as seen in the following example.
 
-```
-linenr = 4
-goto linenr
-```
+[array.nolol](generated/code/nolol/array.nolol ':include')
 
 Features for dynamic gotos (choosing the target-line at runtime) will probably be added in the future.
 

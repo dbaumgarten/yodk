@@ -561,6 +561,7 @@ func (p *Parser) ParseBlock(stop func() bool) *nast.Block {
 // ParseGoto allows labeled-gotos and forbids line-based gotos
 func (p *Parser) ParseGoto() ast.Statement {
 	p.Log()
+	// this is a nolol label-goto
 	if p.IsCurrent(ast.TypeKeyword, "goto") {
 		p.Advance()
 
@@ -576,6 +577,22 @@ func (p *Parser) ParseGoto() ast.Statement {
 		}
 
 		return stmt
+	}
+
+	// this is a yolol-style expression-goto
+	if p.IsCurrent(ast.TypeKeyword, "_goto") {
+		stmt := ast.GoToStatement{
+			Position: p.CurrentToken.Position,
+		}
+		p.Advance()
+		stmt.Line = p.This.ParseExpression()
+		if stmt.Line == nil {
+			p.Error("Goto must be followed by an expression", stmt.Start(), stmt.Start())
+		}
+		if _, is := stmt.Line.(*ast.StringConstant); is {
+			p.Error("Can not go to a string", stmt.Start(), stmt.Start())
+		}
+		return &stmt
 	}
 	return nil
 }

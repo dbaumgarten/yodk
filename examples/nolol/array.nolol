@@ -1,0 +1,18 @@
+// This script implements a simple array data-structure that can be used by other chips
+// Set :d to the value you want to storem :a to the address to store it into and :m to 1 in order to store a value
+// Set :m to 0 and :a to the index to retrieve a value into :d
+
+define data = :d
+define addr = :a
+define write = :m
+
+start>
+// goto current line plus the value of offset
+$ _goto line()+addr $
+// By using "$ stmt1; stmt2 $" we make sure, that the resulting yolol-code will have the EXACT same line-layout
+$ _if write then mem1=data else data=mem1 end ; addr=0 ; goto start $
+$ _if write then mem2=data else data=mem2 end ; addr=0 ; goto start $
+$ _if write then mem3=data else data=mem3 end ; addr=0 ; goto start $
+$ _if write then mem4=data else data=mem4 end ; addr=0 ; goto start $
+$ _if write then mem5=data else data=mem5 end ; addr=0 ; goto start $
+$ _if write then mem6=data else data=mem6 end ; addr=0 ; goto start $
