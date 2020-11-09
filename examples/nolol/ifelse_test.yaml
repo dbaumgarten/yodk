@@ -36,3 +36,4 @@ cases:
       day: sunday
     outputs:
       msg: "Weekend!!! is almost over :("
+      foo: 1

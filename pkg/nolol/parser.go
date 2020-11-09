@@ -486,11 +486,60 @@ func (p *Parser) ParseWhile() nast.Element {
 	return &loop
 }
 
-// ParseIf overrides and disables the old yolol-style inline ifs
+// ParseIf is copied nearly exactly from the yolol-parser, but the start token changed from "if" to "_if"
 func (p *Parser) ParseIf() ast.Statement {
 	p.Log()
-	//Inline if is not supported by nolol. Always return nil
-	return nil
+	ret := ast.IfStatement{
+		Position: p.CurrentToken.Position,
+	}
+	if !p.IsCurrent(ast.TypeKeyword, "_if") {
+		return nil
+	}
+	p.Advance()
+
+	ret.Condition = p.This.ParseExpression()
+	if ret.Condition == nil {
+		p.ErrorCurrent("No expression found as inline-if-condition")
+	}
+
+	p.Expect(ast.TypeKeyword, "then")
+
+	stmt := p.This.ParseStatement()
+	if stmt == nil {
+		p.ErrorCurrent("If-block needs at least one statement")
+	}
+	ret.IfBlock = make([]ast.Statement, 0, 1)
+	ret.IfBlock = append(ret.IfBlock, stmt)
+
+	for {
+		stmt2 := p.This.ParseStatement()
+		if stmt2 == nil {
+			break
+		}
+		ret.IfBlock = append(ret.IfBlock, stmt2)
+	}
+
+	if p.IsCurrent(ast.TypeKeyword, "else") {
+		p.Advance()
+		stmt := p.This.ParseStatement()
+		if stmt == nil {
+			p.ErrorCurrent("Else-block needs at least one statement")
+		}
+		ret.ElseBlock = make([]ast.Statement, 0, 1)
+		ret.ElseBlock = append(ret.ElseBlock, stmt)
+
+		for {
+			stmt2 := p.This.ParseStatement()
+			if stmt2 == nil {
+				break
+			}
+			ret.ElseBlock = append(ret.IfBlock, stmt2)
+		}
+	}
+
+	p.Expect(ast.TypeKeyword, "end")
+
+	return &ret
 }
 
 // ParseBlock parse lines until stop() returns true
