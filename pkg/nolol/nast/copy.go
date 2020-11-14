@@ -40,8 +40,10 @@ func CopyAst(inp ast.Node) ast.Node {
 				copier.Copy(m, n)
 				m.IfBlock = make([]ast.Statement, len(n.IfBlock))
 				copy(m.IfBlock, n.IfBlock)
-				m.ElseBlock = make([]ast.Statement, len(n.ElseBlock))
-				copy(m.ElseBlock, n.ElseBlock)
+				if n.ElseBlock != nil {
+					m.ElseBlock = make([]ast.Statement, len(n.ElseBlock))
+					copy(m.ElseBlock, n.ElseBlock)
+				}
 				newnode = m
 			case *ast.GoToStatement:
 				m := &ast.GoToStatement{}

@@ -12,7 +12,6 @@ macro set(idx,value)
     // this will block until addr is 0.
     // the array will set addr to 0 once it stored the value
     wait addr
-    _if addr then _goto line() end
 end
 
 // retrieve value from idx
