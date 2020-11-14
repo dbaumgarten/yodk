@@ -88,8 +88,6 @@ The ```line()``` function return the current yolol-line. You can use it to store
 
 [array.nolol](generated/code/nolol/array.nolol ':include')
 
-Features for dynamic gotos (choosing the target-line at runtime) will probably be added in the future.
-
 ## Multiline ifs
 NOLOL features multiline ifs, including else-if blocks. Ifs can be aribitarily nested. YOLOLs on-line ifs are NOT supported anymore, but the multiline ifs are compiled to one-line if, whenever possible (when the compiled if is small enough to fit into one line of yolol).  
 In some rare cases you may need the old yolol-one-line-if, for example when you absolutely need to make sure the complete if stays on one line. The old-style if is still available, but you need to use the "_if" keyword for it.
