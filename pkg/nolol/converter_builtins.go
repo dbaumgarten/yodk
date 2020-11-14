@@ -74,15 +74,25 @@ func (c *Converter) convertFuncCall(function *nast.FuncCall) error {
 			Variable: c.varnameOptimizer.OptimizeVarName(reservedTimeVariable),
 		})
 	case "line":
-		if len(function.Arguments) != 0 {
+		if len(function.Arguments) > 1 {
 			return &parser.Error{
-				Message:       "The line() function takes no arguments",
+				Message:       "The line() function takes zero or one arguments",
 				StartPosition: function.Start(),
 				EndPosition:   function.End(),
 			}
 		}
-		// Do not replace the line() function for now. This can only be done once the final line-layout is determined
-		return nil
+		if len(function.Arguments) == 1 {
+			arg, is := function.Arguments[0].(*ast.Dereference)
+			if !is || arg.Operator != "" {
+				return &parser.Error{
+					Message:       "The line() function takes a jump-label name (or nothing) as an argument",
+					StartPosition: function.Arguments[0].Start(),
+					EndPosition:   function.Arguments[0].End(),
+				}
+			}
+		}
+		// Replace the function with itself. This way we keep it for later processing, but skip processing the arguments
+		return ast.NewNodeReplacementSkip(function)
 	}
 	unaryops := []string{"abs", "sqrt", "sin", "cos", "tan", "asin", "acos", "atan"}
 	for _, unaryop := range unaryops {
@@ -124,9 +134,26 @@ func (c *Converter) convertLineFuncCalls(prog *nast.Program) error {
 					EndPosition:   function.End(),
 				}
 			}
+			result := linecounter
+			// when the line() function has an argument, that argument is a label-name
+			// line(label) should then return the position of label
+			if len(function.Arguments) == 1 {
+				// at this point we are already sure, that it is a Dereference
+				deref := function.Arguments[0].(*ast.Dereference)
+				label := deref.Variable
+				line, exists := c.jumpLabels[label]
+				if !exists {
+					return &parser.Error{
+						Message:       "Unknown jump-label: " + label,
+						StartPosition: deref.Start(),
+						EndPosition:   deref.End(),
+					}
+				}
+				result = line
+			}
 			return ast.NewNodeReplacementSkip(&ast.NumberConstant{
 				Position: function.Position,
-				Value:    strconv.Itoa(linecounter),
+				Value:    strconv.Itoa(result),
 			})
 		}
 		return nil

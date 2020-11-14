@@ -5,3 +5,4 @@ cases:
   - name: WriteAndRead
     outputs:
       sum: "2,4,6,8,"
+      o: "start> is at line: 2"

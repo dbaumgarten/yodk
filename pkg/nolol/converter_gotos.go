@@ -62,6 +62,13 @@ func (c *Converter) removeUnusedLabels(p *nast.Program) error {
 		if gotostmt, isGoto := node.(*nast.GoToLabelStatement); isGoto {
 			used[gotostmt.Label] = true
 		}
+		if linefunc, isFunc := node.(*nast.FuncCall); isFunc {
+			if linefunc.Function == "line" && len(linefunc.Arguments) == 1 {
+				if arg, is := linefunc.Arguments[0].(*ast.Dereference); is {
+					used[arg.Variable] = true
+				}
+			}
+		}
 		return nil
 	}
 	err := p.Accept(ast.VisitorFunc(f))
