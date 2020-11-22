@@ -247,13 +247,12 @@ func (c *Converter) convertNodes(node ast.Node) error {
 				return result
 			}
 		case *ast.UnaryOperation:
+			if visitType == ast.PostVisit {
+				return ast.NewNodeReplacementSkip(c.optimizeExpression(n))
+			}
 		case *ast.BinaryOperation:
 			if visitType == ast.PostVisit {
-				repl := c.sexpOptimizer.OptimizeExpressionNonRecursive(n)
-				if repl != nil {
-					return ast.NewNodeReplacementSkip(repl)
-				}
-				return nil
+				return ast.NewNodeReplacementSkip(c.optimizeExpression(n))
 			}
 		case *nast.Trigger:
 			if n.Kind == "macroleft" {
@@ -269,6 +268,18 @@ func (c *Converter) convertNodes(node ast.Node) error {
 		return nil
 	}
 	return node.Accept(ast.VisitorFunc(f))
+}
+
+func (c *Converter) optimizeExpression(exp ast.Expression) ast.Node {
+	repl := c.boolexpOptimizer.OptimizeExpression(exp)
+	if repl != nil {
+		exp = repl
+	}
+	repl = c.sexpOptimizer.OptimizeExpressionNonRecursive(exp)
+	if repl != nil {
+		exp = repl
+	}
+	return exp
 }
 
 // mergeNololNestableElements is a type-wrapper for mergeStatementElements
