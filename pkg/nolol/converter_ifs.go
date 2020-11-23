@@ -11,7 +11,11 @@ import (
 var errInlineIfImpossible = fmt.Errorf("Can not convert to inline if")
 
 // convertIf converts nolol multiline-ifs to yolol
-func (c *Converter) convertIf(mlif *nast.MultilineIf) error {
+func (c *Converter) convertIf(mlif *nast.MultilineIf, visitType int) error {
+
+	if visitType != ast.PostVisit {
+		return nil
+	}
 
 	// try if we can convert to the simplest if
 	simple, err := c.convertIfTrivial(mlif)

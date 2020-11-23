@@ -14,42 +14,49 @@ import (
 var reservedTimeVariable = "_time"
 
 // convert a wait directive to yolol
-func (c *Converter) convertWait(wait *nast.WaitDirective) error {
-	label := fmt.Sprintf("wait%d", c.waitlabelcounter)
-	c.waitlabelcounter++
-	line := &nast.StatementLine{
-		Label:  label,
-		HasEOL: true,
-		Line: ast.Line{
-			Position: wait.Start(),
-			Statements: []ast.Statement{
-				&ast.IfStatement{
-					Position:  wait.Start(),
-					Condition: wait.Condition,
-					IfBlock: []ast.Statement{
-						&nast.GoToLabelStatement{
-							Label: label,
+func (c *Converter) convertWait(wait *nast.WaitDirective, visitType int) error {
+	if visitType == ast.PostVisit {
+		label := fmt.Sprintf("wait%d", c.waitlabelcounter)
+		c.waitlabelcounter++
+		line := &nast.StatementLine{
+			Label:  label,
+			HasEOL: true,
+			Line: ast.Line{
+				Position: wait.Start(),
+				Statements: []ast.Statement{
+					&ast.IfStatement{
+						Position:  wait.Start(),
+						Condition: wait.Condition,
+						IfBlock: []ast.Statement{
+							&nast.GoToLabelStatement{
+								Label: label,
+							},
 						},
 					},
 				},
 			},
-		},
-	}
-	if wait.Statements != nil {
-		line.Statements = append(line.Statements, wait.Statements...)
-	}
-	if c.getLengthOfLine(&line.Line) > c.maxLineLength() {
-		return &parser.Error{
-			Message:       "The line is too long to be converted to yolol",
-			StartPosition: wait.Start(),
-			EndPosition:   wait.End(),
 		}
+		if wait.Statements != nil {
+			line.Statements = append(line.Statements, wait.Statements...)
+		}
+		if c.getLengthOfLine(&line.Line) > c.maxLineLength() {
+			return &parser.Error{
+				Message:       "The line is too long to be converted to yolol",
+				StartPosition: wait.Start(),
+				EndPosition:   wait.End(),
+			}
+		}
+		return ast.NewNodeReplacementSkip(line)
 	}
-	return ast.NewNodeReplacementSkip(line)
+	return nil
 }
 
 // convert a built-in function to yolol
-func (c *Converter) convertFuncCall(function *nast.FuncCall) error {
+func (c *Converter) convertFuncCall(function *nast.FuncCall, visitType int) error {
+
+	if visitType != ast.PreVisit {
+		return nil
+	}
 
 	// first try if the funccall refers to a definition with replacements
 	// if it returns nil, it doesnt

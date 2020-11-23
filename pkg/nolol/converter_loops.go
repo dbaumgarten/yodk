@@ -16,7 +16,22 @@ func (c *Converter) getCurrentLoopNumber() int {
 }
 
 // convertWhileLoop converts while loops into yolol-code
-func (c *Converter) convertWhileLoop(loop *nast.WhileLoop) error {
+func (c *Converter) convertWhileLoop(loop *nast.WhileLoop, visitType int) error {
+
+	if visitType == ast.PreVisit {
+		c.loopcounter++
+		c.loopLevel = append(c.loopLevel, c.loopcounter)
+		return nil
+	}
+
+	if visitType != ast.PostVisit {
+		return nil
+	}
+
+	defer func() {
+		c.loopLevel = c.loopLevel[:len(c.loopLevel)-1]
+	}()
+
 	loopnr := c.getCurrentLoopNumber()
 	startLabel := fmt.Sprintf("while%d", loopnr)
 	endLabel := fmt.Sprintf("endwhile%d", loopnr)

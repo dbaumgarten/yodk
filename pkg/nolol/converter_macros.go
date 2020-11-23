@@ -2,6 +2,7 @@ package nolol
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/dbaumgarten/yodk/pkg/nolol/nast"
@@ -23,14 +24,25 @@ func (c *Converter) setMacro(name string, val *nast.MacroDefinition) {
 }
 
 // convertMacroDef takes a macro definition, stores it for later use and removes the definition from the code
-func (c *Converter) convertMacroDef(def *nast.MacroDefinition) error {
-	c.setMacro(def.Name, def)
-	// remove the node from the output-code
-	return ast.NewNodeReplacementSkip()
+func (c *Converter) convertMacroDef(def *nast.MacroDefinition, visitType int) error {
+	// using pre-visit here is important
+	// the definition must be resolved, BEFORE its contents are processed
+	if visitType == ast.PreVisit {
+		c.setMacro(def.Name, def)
+		// remove the node from the output-code
+		return ast.NewNodeReplacementSkip()
+	}
+	return nil
 }
 
 // convert a macro insetion, by inserting the code defined by the macro
-func (c *Converter) convertMacroInsertion(ins *nast.MacroInsetion) error {
+func (c *Converter) convertMacroInsertion(ins *nast.MacroInsetion, visitType int) error {
+	if visitType != ast.PreVisit {
+		return nil
+	}
+
+	c.macroLevel = append(c.macroLevel, ins.Function+":"+strconv.Itoa(ins.Start().Line))
+
 	c.macroInsertionCount++
 
 	if c.macroInsertionCount > 20 {

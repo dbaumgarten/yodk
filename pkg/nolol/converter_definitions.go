@@ -22,9 +22,12 @@ func (c *Converter) setDefinition(name string, val *nast.Definition) {
 }
 
 // convertDefinitions converts a definition to yolol by discarding it, but saving the defined value
-func (c *Converter) convertDefinition(decl *nast.Definition) error {
-	c.setDefinition(decl.Name, decl)
-	return ast.NewNodeReplacement()
+func (c *Converter) convertDefinition(decl *nast.Definition, visitType int) error {
+	if visitType == ast.PreVisit {
+		c.setDefinition(decl.Name, decl)
+		return ast.NewNodeReplacement()
+	}
+	return nil
 }
 
 // convertDefinedFunction converts a definition that contains placeholders (=behaves like a function)
@@ -58,19 +61,21 @@ func (c *Converter) convertDefinedFunction(fc *nast.FuncCall) error {
 }
 
 // convertAssignment optimizes the variable name and the expression of an assignment
-func (c *Converter) convertAssignment(ass *ast.Assignment) error {
-	if replacement, exists := c.getDefinition(ass.Variable); exists {
-		if replacementVariable, isvar := replacement.Value.(*ast.Dereference); isvar && replacementVariable.Operator == "" {
-			ass.Variable = replacementVariable.Variable
-		} else {
-			return &parser.Error{
-				Message:       "Can not assign to a definition that is an expression (need a single variable name)",
-				StartPosition: ass.Start(),
-				EndPosition:   ass.End(),
+func (c *Converter) convertAssignment(ass *ast.Assignment, visitType int) error {
+	if visitType == ast.PostVisit {
+		if replacement, exists := c.getDefinition(ass.Variable); exists {
+			if replacementVariable, isvar := replacement.Value.(*ast.Dereference); isvar && replacementVariable.Operator == "" {
+				ass.Variable = replacementVariable.Variable
+			} else {
+				return &parser.Error{
+					Message:       "Can not assign to a definition that is an expression (need a single variable name)",
+					StartPosition: ass.Start(),
+					EndPosition:   ass.End(),
+				}
 			}
+		} else {
+			ass.Variable = c.varnameOptimizer.OptimizeVarName(ass.Variable)
 		}
-	} else {
-		ass.Variable = c.varnameOptimizer.OptimizeVarName(ass.Variable)
 	}
 	return nil
 }

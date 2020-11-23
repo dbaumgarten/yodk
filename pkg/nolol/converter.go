@@ -3,7 +3,6 @@ package nolol
 import (
 	"fmt"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/dbaumgarten/yodk/pkg/nolol/nast"
@@ -202,50 +201,41 @@ func (c *Converter) convertNodes(node ast.Node) error {
 	f := func(node ast.Node, visitType int) error {
 		switch n := node.(type) {
 		case *ast.Assignment:
-			if visitType == ast.PostVisit {
-				return c.convertAssignment(n)
-			}
+			return c.convertAssignment(n, visitType)
+
 		case *nast.Definition:
-			if visitType == ast.PreVisit {
-				return c.convertDefinition(n)
-			}
+			return c.convertDefinition(n, visitType)
+
 		case *nast.MacroDefinition:
-			// using pre-visit here is important
-			// the definition must be resolved, BEFORE its contents are processed
-			if visitType == ast.PreVisit {
-				return c.convertMacroDef(n)
-			}
+			return c.convertMacroDef(n, visitType)
+
 		case *nast.MacroInsetion:
-			if visitType == ast.PreVisit {
-				c.macroLevel = append(c.macroLevel, n.Function+":"+strconv.Itoa(n.Start().Line))
-				return c.convertMacroInsertion(n)
-			}
+			return c.convertMacroInsertion(n, visitType)
+
 		case *nast.IncludeDirective:
 			return c.convertInclude(n)
+
 		case *nast.WaitDirective:
-			if visitType == ast.PostVisit {
-				return c.convertWait(n)
-			}
+			return c.convertWait(n, visitType)
+
 		case *nast.FuncCall:
-			if visitType == ast.PreVisit {
-				return c.convertFuncCall(n)
-			}
+			return c.convertFuncCall(n, visitType)
+
 		case *ast.Dereference:
 			return c.convertDereference(n)
+
 		case *nast.MultilineIf:
-			if visitType == ast.PostVisit {
-				return c.convertIf(n)
-			}
+			return c.convertIf(n, visitType)
+
 		case *nast.WhileLoop:
-			if visitType == ast.PreVisit {
-				c.loopcounter++
-				c.loopLevel = append(c.loopLevel, c.loopcounter)
-			}
-			if visitType == ast.PostVisit {
-				result := c.convertWhileLoop(n)
-				c.loopLevel = c.loopLevel[:len(c.loopLevel)-1]
-				return result
-			}
+			return c.convertWhileLoop(n, visitType)
+
+		case *nast.BreakStatement:
+			return c.convertBreakStatement(n)
+
+		case *nast.ContinueStatement:
+			return c.convertContinueStatement(n)
+
 		case *ast.UnaryOperation:
 			if visitType == ast.PostVisit {
 				return ast.NewNodeReplacementSkip(c.optimizeExpression(n))
@@ -259,10 +249,6 @@ func (c *Converter) convertNodes(node ast.Node) error {
 				c.macroLevel = c.macroLevel[:len(c.macroLevel)-1]
 				return ast.NewNodeReplacement()
 			}
-		case *nast.BreakStatement:
-			return c.convertBreakStatement(n)
-		case *nast.ContinueStatement:
-			return c.convertContinueStatement(n)
 		}
 
 		return nil
