@@ -12,6 +12,14 @@ var errInlineIfImpossible = fmt.Errorf("Can not convert to inline if")
 
 // convertIf converts nolol multiline-ifs to yolol
 func (c *Converter) convertIf(mlif *nast.MultilineIf) error {
+
+	// try if we can convert to the simplest if
+	simple, err := c.convertIfTrivial(mlif)
+	if err == nil {
+		return ast.NewNodeReplacementSkip(simple)
+	}
+
+	// the simplest if is not possible. Fall back to more complicated versions
 	endif := fmt.Sprintf("endif%d", c.iflabelcounter)
 	repl := []ast.Node{}
 	for i := range mlif.Conditions {
@@ -44,6 +52,55 @@ func (c *Converter) convertIf(mlif *nast.MultilineIf) error {
 
 	c.iflabelcounter++
 	return ast.NewNodeReplacementSkip(repl...)
+}
+
+// convertIfTrivial tries the most simple conversion possible. A simple yolol-style if-then-else-end without any gotos.
+func (c *Converter) convertIfTrivial(mlif *nast.MultilineIf) (ast.Node, error) {
+	if len(mlif.Conditions) != 1 {
+		return nil, errInlineIfImpossible
+	}
+
+	mergedIfElements, _ := c.mergeNololNestableElements(mlif.Blocks[0].Elements)
+	if len(mergedIfElements) > 1 || (len(mergedIfElements) > 0 && mergedIfElements[0].(*nast.StatementLine).Label != "") {
+		return nil, errInlineIfImpossible
+	}
+
+	var elseStatements []ast.Statement
+	if mlif.ElseBlock != nil {
+		mergedElseElements, _ := c.mergeNololNestableElements(mlif.ElseBlock.Elements)
+		if len(mergedElseElements) > 1 || (len(mergedElseElements) > 0 && mergedElseElements[0].(*nast.StatementLine).Label != "") {
+			return nil, errInlineIfImpossible
+		}
+		elseStatements = []ast.Statement{}
+		if len(mergedElseElements) > 0 {
+			elseStatements = mergedElseElements[0].(*nast.StatementLine).Line.Statements
+		}
+	}
+
+	statements := []ast.Statement{}
+	if len(mergedIfElements) > 0 {
+		statements = mergedIfElements[0].(*nast.StatementLine).Line.Statements
+	}
+
+	repl := &nast.StatementLine{
+		Position: mlif.Positions[0],
+		Line: ast.Line{
+			Statements: []ast.Statement{
+				&ast.IfStatement{
+					Position:  mlif.Positions[0],
+					Condition: mlif.Conditions[0],
+					IfBlock:   statements,
+					ElseBlock: elseStatements,
+				},
+			},
+		},
+	}
+
+	if c.getLengthOfLine(&repl.Line) > c.maxLineLength() {
+		return nil, errInlineIfImpossible
+	}
+
+	return repl, nil
 }
 
 // convertConditionInline converts a single conditional block of a multiline if and tries to produce a single yolol if

@@ -35,5 +35,5 @@ cases:
     inputs:
       day: sunday
     outputs:
-      msg: "Weekend!!! is almost over :("
+      msg: "Weekend!!! is over :("
       foo: 1

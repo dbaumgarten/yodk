@@ -19,7 +19,7 @@ else
 	if :day == "saturday" then
 		:msg += " PARTY!"
 	else
-		:msg += " is almost over :("
+		:msg += " is over :("
 	end
 end
 
