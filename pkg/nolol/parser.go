@@ -395,7 +395,7 @@ func (p *Parser) ParseDefinition() *nast.Definition {
 }
 
 // ParseMultilineIf parses a nolol-style multiline if
-func (p *Parser) ParseMultilineIf() nast.Element {
+func (p *Parser) ParseMultilineIf() nast.NestableElement {
 	p.Log()
 	mlif := nast.MultilineIf{
 		Positions:  make([]ast.Position, 1),
@@ -455,7 +455,7 @@ func (p *Parser) ParseMultilineIf() nast.Element {
 }
 
 // ParseWhile pasres a nolol while
-func (p *Parser) ParseWhile() nast.Element {
+func (p *Parser) ParseWhile() nast.NestableElement {
 	p.Log()
 	loop := nast.WhileLoop{
 		Position: p.CurrentToken.Position,

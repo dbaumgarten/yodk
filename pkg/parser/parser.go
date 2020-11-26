@@ -49,7 +49,7 @@ to leave vital fields empty in the returned value.
 // YololParserFunctions is used together with Parser.This to allow 'subclasses' to override 'virtual functions'
 type YololParserFunctions interface {
 	ParseStatement() ast.Statement
-	ParsePreOrPostOperation() ast.Statement
+	ParsePreOrPostOperation() *ast.Dereference
 	ParseGoto() ast.Statement
 	ParseAssignment() ast.Statement
 	ParseIf() ast.Statement
@@ -291,18 +291,18 @@ func (p *Parser) ParseStatement() ast.Statement {
 }
 
 // ParsePreOrPostOperation parses a pre-/post operation (x++, ++x) as a statement
-func (p *Parser) ParsePreOrPostOperation() ast.Statement {
+func (p *Parser) ParsePreOrPostOperation() *ast.Dereference {
 	p.Log()
 	preOpVarDeref := p.This.ParsePreOpExpression()
 	if preOpVarDeref != nil {
 		preOpVarDeref.(*ast.Dereference).IsStatement = true
-		return preOpVarDeref
+		return preOpVarDeref.(*ast.Dereference)
 	}
 
 	postOpVarDeref := p.This.ParsePostOpExpression()
 	if postOpVarDeref != nil {
 		postOpVarDeref.(*ast.Dereference).IsStatement = true
-		return postOpVarDeref
+		return postOpVarDeref.(*ast.Dereference)
 	}
 
 	return nil

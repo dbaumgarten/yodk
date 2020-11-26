@@ -30,11 +30,11 @@ func (o ExpressionInversionOptimizer) Optimize(prog ast.Node) error {
 // OptimizeExpression optimizes a single expression
 // Optimize() in contrast can only optimize whole programms
 func (o ExpressionInversionOptimizer) OptimizeExpression(e ast.Expression) ast.Expression {
-	e, _ = ast.AcceptChild(o, e)
+	e, _ = ast.MustExpression(ast.AcceptChild(o, e))
 	return e
 }
 
-func pushDownNots(node ast.Expression) ast.Expression {
+func pushDownNots(node ast.Node) ast.Expression {
 	if op, is := node.(*ast.UnaryOperation); is {
 		if op.Operator == "not" {
 			switch inner := op.Exp.(type) {
@@ -67,7 +67,7 @@ func pushDownNots(node ast.Expression) ast.Expression {
 	return nil
 }
 
-func bubbleUpNots(node ast.Expression) ast.Expression {
+func bubbleUpNots(node ast.Node) ast.Expression {
 	if bin, isbinary := node.(*ast.BinaryOperation); isbinary {
 		l, lisunary := bin.Exp1.(*ast.UnaryOperation)
 		r, risunary := bin.Exp2.(*ast.UnaryOperation)

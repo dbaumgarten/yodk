@@ -125,7 +125,7 @@ func (c *Converter) replacePlaceholders(m ast.Node, replacements map[string]ast.
 		if deref, is := node.(*ast.Dereference); is && visitType == ast.SingleVisit {
 			lvarname := strings.ToLower(deref.Variable)
 			if replacement, exists := replacements[lvarname]; exists {
-				replacement = nast.CopyAst(replacement)
+				replacement = nast.CopyAst(replacement).(ast.Expression)
 				if replacementVariable, isvar := replacement.(*ast.Dereference); isvar {
 					if deref.Operator != "" && replacementVariable.Operator != "" {
 						return &parser.Error{

@@ -24,7 +24,7 @@ func (o *StaticExpressionOptimizer) Optimize(prog ast.Node) error {
 
 // OptimizeExpression optimizes a single expression recursively
 func (o *StaticExpressionOptimizer) OptimizeExpression(e ast.Expression) ast.Expression {
-	e, _ = ast.AcceptChild(o, e)
+	e, _ = ast.MustExpression(ast.AcceptChild(o, e))
 	return e
 }
 

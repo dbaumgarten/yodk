@@ -141,7 +141,7 @@ func (u *UnaryOperation) Accept(v Visitor) error {
 	if err != nil {
 		return err
 	}
-	u.Exp, err = AcceptChild(v, u.Exp)
+	u.Exp, err = MustExpression(AcceptChild(v, u.Exp))
 	if err != nil {
 		return err
 	}
@@ -154,12 +154,12 @@ func (o *BinaryOperation) Accept(v Visitor) error {
 	if err != nil {
 		return err
 	}
-	o.Exp1, err = AcceptChild(v, o.Exp1)
+	o.Exp1, err = MustExpression(AcceptChild(v, o.Exp1))
 	if err != nil {
 		return err
 	}
 	err = v.Visit(o, InterVisit1)
-	o.Exp2, err = AcceptChild(v, o.Exp2)
+	o.Exp2, err = MustExpression(AcceptChild(v, o.Exp2))
 	if err != nil {
 		return err
 	}
@@ -172,7 +172,7 @@ func (a *Assignment) Accept(v Visitor) error {
 	if err != nil {
 		return err
 	}
-	a.Value, err = AcceptChild(v, a.Value)
+	a.Value, err = MustExpression(AcceptChild(v, a.Value))
 	if err != nil {
 		return err
 	}
@@ -185,7 +185,7 @@ func (s *IfStatement) Accept(v Visitor) error {
 	if err != nil {
 		return err
 	}
-	s.Condition, err = AcceptChild(v, s.Condition)
+	s.Condition, err = MustExpression(AcceptChild(v, s.Condition))
 	if err != nil {
 		return err
 	}
@@ -219,7 +219,7 @@ func (g *GoToStatement) Accept(v Visitor) error {
 		return err
 	}
 
-	g.Line, err = AcceptChild(v, g.Line)
+	g.Line, err = MustExpression(AcceptChild(v, g.Line))
 	if err != nil {
 		return err
 	}
@@ -307,4 +307,16 @@ func AcceptChildStatements(parent Node, v Visitor, old []Statement) ([]Statement
 		}
 	}
 	return old, nil
+}
+
+// MustExpression casts a (node,err)-pair to an (expression,err)
+func MustExpression(n Node, err error) (Expression, error) {
+	if err != nil {
+		return nil, err
+	}
+	exp, is := n.(Expression)
+	if !is {
+		panic("Internal error: Expected an expression but found something else")
+	}
+	return exp, err
 }

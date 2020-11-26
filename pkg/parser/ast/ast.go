@@ -54,6 +54,8 @@ func (n *Line) End() Position {
 // Expression is the interface for all expressions
 type Expression interface {
 	Node
+	// dummy function for type-safety
+	Expr()
 }
 
 // StringConstant represents a constant of type string
@@ -75,6 +77,9 @@ func (n *StringConstant) End() Position {
 	return pos
 }
 
+// Expr implements type-checking dummy-func
+func (n *StringConstant) Expr() {}
+
 // NumberConstant represents a constant of type number
 type NumberConstant struct {
 	Position Position
@@ -91,6 +96,9 @@ func (n *NumberConstant) Start() Position {
 func (n *NumberConstant) End() Position {
 	return n.Start().Add(len(n.Value))
 }
+
+// Expr implements type-checking dummy-func
+func (n *NumberConstant) Expr() {}
 
 // Dereference represents the dereferencing of a variable
 type Dereference struct {
@@ -115,6 +123,13 @@ func (n *Dereference) End() Position {
 	return n.Start().Add(len(n.Variable) + len(n.Operator))
 }
 
+// Expr implements type-checking dummy-func
+func (n *Dereference) Expr() {}
+
+// Stmt implements type-checking dummy-func
+// Dereferences can be used as statement when combined with a pre/post-op
+func (n *Dereference) Stmt() {}
+
 // UnaryOperation represents a unary operation (-, not)
 type UnaryOperation struct {
 	Position Position
@@ -134,6 +149,9 @@ func (n *UnaryOperation) End() Position {
 	}
 	return n.Exp.End()
 }
+
+// Expr implements type-checking dummy-func
+func (n *UnaryOperation) Expr() {}
 
 // BinaryOperation is a binary operation
 type BinaryOperation struct {
@@ -158,9 +176,13 @@ func (n *BinaryOperation) End() Position {
 	return n.Exp2.End()
 }
 
+// Expr implements type-checking dummy-func
+func (n *BinaryOperation) Expr() {}
+
 // Statement is the interface for all statements
 type Statement interface {
 	Node
+	Stmt()
 }
 
 // Assignment represents the assignment to a variable
@@ -187,6 +209,9 @@ func (n *Assignment) End() Position {
 	return n.Value.End()
 }
 
+// Stmt implements type-checking dummy-func
+func (n *Assignment) Stmt() {}
+
 // IfStatement represents an if-statement
 type IfStatement struct {
 	Position Position
@@ -211,6 +236,9 @@ func (n *IfStatement) End() Position {
 	return n.ElseBlock[len(n.ElseBlock)-1].End().Add(3)
 }
 
+// Stmt implements type-checking dummy-func
+func (n *IfStatement) Stmt() {}
+
 // GoToStatement represents a goto
 type GoToStatement struct {
 	Position Position
@@ -230,3 +258,6 @@ func (n *GoToStatement) End() Position {
 	}
 	return n.Line.End()
 }
+
+// Stmt implements type-checking dummy-func
+func (n *GoToStatement) Stmt() {}

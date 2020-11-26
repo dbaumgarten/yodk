@@ -45,7 +45,7 @@ func (l *Definition) Accept(v ast.Visitor) error {
 	if err != nil {
 		return err
 	}
-	l.Value, err = ast.AcceptChild(v, l.Value)
+	l.Value, err = ast.MustExpression(ast.AcceptChild(v, l.Value))
 	if err != nil {
 		return err
 	}
@@ -83,7 +83,7 @@ func (s *MultilineIf) Accept(v ast.Visitor) error {
 		if err != nil {
 			return err
 		}
-		s.Conditions[i], err = ast.AcceptChild(v, s.Conditions[i])
+		s.Conditions[i], err = ast.MustExpression(ast.AcceptChild(v, s.Conditions[i]))
 		if err != nil {
 			return err
 		}
@@ -117,7 +117,7 @@ func (s *WhileLoop) Accept(v ast.Visitor) error {
 	if err != nil {
 		return err
 	}
-	s.Condition, err = ast.AcceptChild(v, s.Condition)
+	s.Condition, err = ast.MustExpression(ast.AcceptChild(v, s.Condition))
 	if err != nil {
 		return err
 	}
@@ -139,7 +139,7 @@ func (s *WaitDirective) Accept(v ast.Visitor) error {
 	if err != nil {
 		return err
 	}
-	s.Condition, err = ast.AcceptChild(v, s.Condition)
+	s.Condition, err = ast.MustExpression(ast.AcceptChild(v, s.Condition))
 	if err != nil {
 		return err
 	}
@@ -297,7 +297,7 @@ func AcceptExpressionList(parent ast.Node, v ast.Visitor, old []ast.Expression) 
 			new := make([]ast.Expression, 0, len(old)+len(repl.Replacement)-1)
 			new = append(new, old[:i]...)
 			for _, el := range repl.Replacement {
-				new = append(new, el.(NestableElement))
+				new = append(new, el.(ast.Expression))
 			}
 			new = append(new, old[i+1:]...)
 			old = new
