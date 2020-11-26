@@ -41,21 +41,21 @@ type Printer struct {
 }
 
 var operatorPriority = map[string]int{
-	"or":  0,
 	"and": 0,
-	"==":  1,
-	"!=":  1,
-	">=":  2,
-	"<=":  2,
-	">":   2,
-	"<":   2,
-	"+":   3,
-	"-":   3,
-	"*":   4,
-	"/":   4,
-	"%":   4,
-	"^":   5,
-	"not": 6,
+	"or":  1,
+	"==":  2,
+	"!=":  2,
+	">=":  3,
+	"<=":  3,
+	">":   3,
+	"<":   3,
+	"+":   4,
+	"-":   4,
+	"*":   5,
+	"/":   5,
+	"%":   5,
+	"^":   6,
+	"not": 7,
 }
 
 // end and else are missing here, because unlike other keywords they might require a space after them

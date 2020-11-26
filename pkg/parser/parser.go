@@ -423,22 +423,26 @@ func (p *Parser) ParseBinaryExpression(idx int) ast.Expression {
 
 	switch idx {
 	case 0:
-		ops = []string{"or", "and"}
+		ops = []string{"and"}
 		expectedType = ast.TypeKeyword
 		break
 	case 1:
-		ops = []string{"==", "!="}
+		ops = []string{"or"}
+		expectedType = ast.TypeKeyword
 		break
 	case 2:
-		ops = []string{"<=", ">=", "<", ">"}
+		ops = []string{"==", "!="}
 		break
 	case 3:
-		ops = []string{"+", "-"}
+		ops = []string{"<=", ">=", "<", ">"}
 		break
 	case 4:
-		ops = []string{"*", "/", "%"}
+		ops = []string{"+", "-"}
 		break
 	case 5:
+		ops = []string{"*", "/", "%"}
+		break
+	case 6:
 		ops = []string{"^"}
 		leftAssoc = false
 		break
