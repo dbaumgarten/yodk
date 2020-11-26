@@ -53,9 +53,9 @@ var operatorPriority = map[string]int{
 	"-":   3,
 	"*":   4,
 	"/":   4,
-	"^":   4,
 	"%":   4,
-	"not": 5,
+	"^":   5,
+	"not": 6,
 }
 
 // end and else are missing here, because unlike other keywords they might require a space after them
@@ -259,16 +259,22 @@ func insertEscapesIntoString(in string) string {
 func (p *Printer) printBinaryOperation(o *ast.BinaryOperation, visitType int) {
 	lPrio := priorityForExpression(o.Exp1)
 	rPrio := priorityForExpression(o.Exp2)
-	_, rBinary := o.Exp2.(*ast.BinaryOperation)
+	rBinary, rIsBinary := o.Exp2.(*ast.BinaryOperation)
+	lBinary, lIsBinary := o.Exp1.(*ast.BinaryOperation)
 	myPrio := priorityForExpression(o)
+
+	// check if we need braces because of the right-associativity of the ^-operator
+	rightAssocL := o.Operator == "^" && lIsBinary && lBinary.Operator == "^"
+	rightAssocR := o.Operator == "^" && rIsBinary && rBinary.Operator == "^"
+
 	switch visitType {
 	case ast.PreVisit:
-		if lPrio < myPrio {
+		if lPrio < myPrio || rightAssocL {
 			p.Write("(")
 		}
 		break
 	case ast.InterVisit1:
-		if lPrio < myPrio {
+		if lPrio < myPrio || rightAssocL {
 			p.Write(")")
 		}
 		op := o.Operator
@@ -282,12 +288,12 @@ func (p *Printer) printBinaryOperation(o *ast.BinaryOperation, visitType int) {
 			p.OptionalSpace()
 		}
 
-		if rBinary && rPrio <= myPrio {
+		if rIsBinary && rPrio <= myPrio && !rightAssocR {
 			p.Write("(")
 		}
 		break
 	case ast.PostVisit:
-		if rBinary && rPrio <= myPrio {
+		if rIsBinary && rPrio <= myPrio && !rightAssocR {
 			p.Write(")")
 		}
 		break

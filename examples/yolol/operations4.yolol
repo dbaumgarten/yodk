@@ -1,5 +1,5 @@
-i="abc" j=i++ k=++i :testi=i=="abc  " and j=="abc" and k=="abc  "
-i="abc" j=i-- k=--i :testd=i=="a" and j=="abc" and k=="a"
+i="abc" j=i++ k= ++i :testi=i=="abc  " and j=="abc" and k=="abc  "
+i="abc" j=i-- k= --i :testd=i=="a" and j=="abc" and k=="a"
 :testsum="abc"+"xyz"=="abcxyz"
 :testsub="abcdecddc"-"cd"=="abcdedc"
 :testeq="abc"=="abc" and not ("mno"=="pqr")
@@ -8,4 +8,5 @@ i="abc" j=i-- k=--i :testd=i=="a" and j=="abc" and k=="a"
 :testgte="jkl">="aaa" and not ("aaa">="jkl") and "jkl">="jkl"
 :testlt="qqq"<"xyz" and not ("xyz"<"qqq") and ""<"a"
 :testlte="qqq"<="xyz" and not ("xyz"<="qqq") and "qqq">="qqq"
+:testra=2*3^4==162 and (2*3)^4==1296
 :done=1

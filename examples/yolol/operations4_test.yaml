@@ -13,5 +13,6 @@ cases:
       testgte: 1
       testlt: 1
       testlte: 1
+      testra: 1
 
       

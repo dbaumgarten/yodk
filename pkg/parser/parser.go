@@ -416,9 +416,10 @@ func (p *Parser) ParseExpression() ast.Expression {
 func (p *Parser) ParseBinaryExpression(idx int) ast.Expression {
 	p.LogI(idx)
 
-	var exp ast.Expression
+	var exp *ast.BinaryOperation
 	var ops []string
 	expectedType := ast.TypeSymbol
+	leftAssoc := true
 
 	switch idx {
 	case 0:
@@ -435,31 +436,57 @@ func (p *Parser) ParseBinaryExpression(idx int) ast.Expression {
 		ops = []string{"+", "-"}
 		break
 	case 4:
-		ops = []string{"*", "/", "%", "^"}
+		ops = []string{"*", "/", "%"}
+		break
+	case 5:
+		ops = []string{"^"}
+		leftAssoc = false
 		break
 	default:
-		exp = p.This.ParseUnaryExpression()
-		return exp
+		return p.This.ParseUnaryExpression()
 	}
 
 	idx++
 
-	exp = p.This.ParseBinaryExpression(idx)
-	if exp == nil {
+	leftExp := p.This.ParseBinaryExpression(idx)
+	if leftExp == nil {
 		return nil
 	}
+
 	for p.IsCurrentType(expectedType) && p.IsCurrentValueIn(ops) {
 		binexp := &ast.BinaryOperation{
 			Operator: p.CurrentToken.Value,
-			Exp1:     exp,
 		}
+
 		p.Advance()
-		binexp.Exp2 = p.This.ParseBinaryExpression(idx)
-		if binexp.Exp2 == nil {
+		rightExp := p.This.ParseBinaryExpression(idx)
+		if rightExp == nil {
 			p.ErrorCurrent(fmt.Sprintf("Expected expression on right side of %s", binexp.Operator))
+			return binexp
 		}
-		exp = binexp
+
+		if exp == nil {
+			binexp.Exp1 = leftExp
+			binexp.Exp2 = rightExp
+			exp = binexp
+			continue
+		}
+
+		if leftAssoc {
+			binexp.Exp1 = exp
+			binexp.Exp2 = rightExp
+			exp = binexp
+		} else {
+			binexp.Exp1 = exp.Exp2
+			binexp.Exp2 = rightExp
+			exp.Exp2 = binexp
+		}
 	}
+
+	if exp == nil {
+		return leftExp
+	}
+
 	return exp
 }
 
