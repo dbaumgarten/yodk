@@ -16,4 +16,5 @@ k=2
 :testamod=:testamod==0
 :testmxor=1!=1!=1
 :testfloor=100.123/1000*1000==100
-:done = 1
+x=3 y=2 z=1 :testprec=x>y==y>z
+:done=1

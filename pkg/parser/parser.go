@@ -54,10 +54,7 @@ type YololParserFunctions interface {
 	ParseAssignment() ast.Statement
 	ParseIf() ast.Statement
 	ParseExpression() ast.Expression
-	ParseLogicExpression() ast.Expression
-	ParseCompareExpression() ast.Expression
-	ParseSumExpression() ast.Expression
-	ParseProdExpression() ast.Expression
+	ParseBinaryExpression(int) ast.Expression
 	ParseUnaryExpression() ast.Expression
 	ParseBracketExpression() ast.Expression
 	ParseSingleExpression() ast.Expression
@@ -411,103 +408,53 @@ func (p *Parser) ParseIf() ast.Statement {
 // ParseExpression parses an expression
 func (p *Parser) ParseExpression() ast.Expression {
 	p.Log()
-	return p.This.ParseLogicExpression()
+	return p.This.ParseBinaryExpression(0)
 }
 
-// ParseLogicExpression parses a logical expression
-func (p *Parser) ParseLogicExpression() ast.Expression {
-	p.Log()
+// ParseBinaryExpression parses a binary expression
+// The kind of binary-expression to be parsed is given as idx
+func (p *Parser) ParseBinaryExpression(idx int) ast.Expression {
+	p.LogI(idx)
+
 	var exp ast.Expression
+	var ops []string
+	expectedType := ast.TypeSymbol
 
-	exp = p.This.ParseCompareExpression()
+	switch idx {
+	case 0:
+		ops = []string{"or", "and"}
+		expectedType = ast.TypeKeyword
+		break
+	case 1:
+		ops = []string{"==", "!="}
+		break
+	case 2:
+		ops = []string{"<=", ">=", "<", ">"}
+		break
+	case 3:
+		ops = []string{"+", "-"}
+		break
+	case 4:
+		ops = []string{"*", "/", "%", "^"}
+		break
+	default:
+		exp = p.This.ParseUnaryExpression()
+		return exp
+	}
+
+	idx++
+
+	exp = p.This.ParseBinaryExpression(idx)
 	if exp == nil {
 		return nil
 	}
-	logOps := []string{"or", "and"}
-
-	for p.IsCurrentType(ast.TypeKeyword) && p.IsCurrentValueIn(logOps) {
+	for p.IsCurrentType(expectedType) && p.IsCurrentValueIn(ops) {
 		binexp := &ast.BinaryOperation{
 			Operator: p.CurrentToken.Value,
 			Exp1:     exp,
 		}
 		p.Advance()
-		binexp.Exp2 = p.This.ParseCompareExpression()
-		if binexp.Exp2 == nil {
-			p.ErrorCurrent(fmt.Sprintf("Expected expression on right side of %s", binexp.Operator))
-		}
-		exp = binexp
-	}
-	return exp
-}
-
-// ParseCompareExpression parses a compare expression
-func (p *Parser) ParseCompareExpression() ast.Expression {
-	p.Log()
-	exp := p.This.ParseSumExpression()
-	if exp == nil {
-		return nil
-	}
-	logOps := []string{"==", "!=", "<=", ">=", "<", ">"}
-
-	for p.IsCurrentType(ast.TypeSymbol) && p.IsCurrentValueIn(logOps) {
-		binexp := &ast.BinaryOperation{
-			Operator: p.CurrentToken.Value,
-			Exp1:     exp,
-		}
-		p.Advance()
-		binexp.Exp2 = p.This.ParseSumExpression()
-		if binexp.Exp2 == nil {
-			p.ErrorCurrent(fmt.Sprintf("Expected expression on right side of %s", binexp.Operator))
-		}
-		exp = binexp
-	}
-	return exp
-}
-
-// ParseSumExpression parses a sum-expression
-func (p *Parser) ParseSumExpression() ast.Expression {
-	p.Log()
-	var exp ast.Expression
-
-	exp = p.This.ParseProdExpression()
-	if exp == nil {
-		return nil
-	}
-	logOps := []string{"+", "-"}
-
-	for p.IsCurrentType(ast.TypeSymbol) && p.IsCurrentValueIn(logOps) {
-		binexp := &ast.BinaryOperation{
-			Operator: p.CurrentToken.Value,
-			Exp1:     exp,
-		}
-		p.Advance()
-		binexp.Exp2 = p.This.ParseProdExpression()
-		if binexp.Exp2 == nil {
-			p.ErrorCurrent(fmt.Sprintf("Expected expression on right side of %s", binexp.Operator))
-		}
-		exp = binexp
-	}
-	return exp
-}
-
-// ParseProdExpression parses a product expression
-func (p *Parser) ParseProdExpression() ast.Expression {
-	p.Log()
-	var exp ast.Expression
-
-	exp = p.This.ParseUnaryExpression()
-	if exp == nil {
-		return nil
-	}
-	logOps := []string{"*", "/", "%", "^"}
-
-	for p.IsCurrentType(ast.TypeSymbol) && p.IsCurrentValueIn(logOps) {
-		binexp := &ast.BinaryOperation{
-			Operator: p.CurrentToken.Value,
-			Exp1:     exp,
-		}
-		p.Advance()
-		binexp.Exp2 = p.This.ParseUnaryExpression()
+		binexp.Exp2 = p.This.ParseBinaryExpression(idx)
 		if binexp.Exp2 == nil {
 			p.ErrorCurrent(fmt.Sprintf("Expected expression on right side of %s", binexp.Operator))
 		}
@@ -665,5 +612,13 @@ func (p *Parser) Log() {
 	if p.DebugLog {
 		// Print the name of the function
 		fmt.Println("Called:", callingFunctionName(), "from line", callingLineNumber(), "with", p.CurrentToken.String())
+	}
+}
+
+// Log logs the visiting of a parsing function
+func (p *Parser) LogI(arg int) {
+	if p.DebugLog {
+		// Print the name of the function
+		fmt.Println("Called:", callingFunctionName(), "from line", callingLineNumber(), "with", p.CurrentToken.String(), "arg", arg)
 	}
 }

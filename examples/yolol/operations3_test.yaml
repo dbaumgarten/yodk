@@ -14,3 +14,4 @@ cases:
       testamod: 1
       testmxor: 1
       testfloor: 1
+      testprec: 1
