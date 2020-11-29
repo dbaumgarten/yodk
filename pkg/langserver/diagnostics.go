@@ -55,47 +55,76 @@ func (f fs) Get(name string) (string, error) {
 	return string(content), err
 }
 
-func (s *LangServer) Diagnose(ctx context.Context, uri lsp.DocumentURI) {
+func convertToErrorlist(errs error) parser.Errors {
+	if errs == nil {
+		return make(parser.Errors, 0)
+	}
+	switch e := errs.(type) {
+	case parser.Errors:
+		return e
+	case *parser.Error:
+		// if it is a single error, convert it to a one-element list
+		errlist := make(parser.Errors, 1)
+		errlist[0] = e
+		return errlist
+	default:
+		log.Printf("Unknown error type: %T\n (%s)", errs, errs.Error())
+		return nil
+	}
+}
 
-	go func() {
-		var errs error
-		var parsed *ast.Program
-		text, _ := s.cache.Get(uri)
+func convertErrorsToDiagnostics(errs parser.Errors) []lsp.Diagnostic {
+	diags := make([]lsp.Diagnostic, 0)
 
-		if strings.HasSuffix(string(uri), ".yolol") {
-			p := parser.NewParser()
-			parsed, errs = p.Parse(text)
-		} else if strings.HasSuffix(string(uri), ".nolol") {
-			conv := nolol.NewConverter()
-			mainfile := string(uri)
-			_, errs = conv.ConvertFileEx(mainfile, newfs(s, uri))
-		} else {
-			return
+	for _, err := range errs {
+		diag := lsp.Diagnostic{
+			Source:   "parser",
+			Message:  err.Message,
+			Severity: lsp.SeverityError,
+			Range: lsp.Range{
+				Start: lsp.Position{
+					Line:      float64(err.StartPosition.Line) - 1,
+					Character: float64(err.StartPosition.Coloumn) - 1,
+				},
+				End: lsp.Position{
+					Line:      float64(err.EndPosition.Line) - 1,
+					Character: float64(err.EndPosition.Coloumn) - 1,
+				},
+			},
+		}
+		diags = append(diags, diag)
+	}
+
+	return diags
+}
+
+func (s *LangServer) validateCodeLength(uri lsp.DocumentURI, text string, parsed *ast.Program) *lsp.Diagnostic {
+	// check if the code-length of yolol-code is OK
+	if s.settings.Yolol.LengthChecking.Mode != LengthCheckModeOff && strings.HasSuffix(string(uri), ".yolol") {
+		lengtherror := validators.ValidateCodeLength(text)
+
+		// check if the code is small enough after optimizing it
+		if lengtherror != nil && s.settings.Yolol.LengthChecking.Mode == LengthCheckModeOptimize && parsed != nil {
+
+			opt := optimizers.NewCompoundOptimizer()
+			err := opt.Optimize(parsed)
+			if err == nil {
+				printer := parser.Printer{
+					Mode: parser.PrintermodeSpaceless,
+				}
+				optimized, err := printer.Print(parsed)
+				if err == nil {
+					lengtherror = validators.ValidateCodeLength(optimized)
+				}
+			}
 		}
 
-		diags := make([]lsp.Diagnostic, 0)
-
-		if errs == nil {
-			errs = make(parser.Errors, 0)
-		}
-		switch e := errs.(type) {
-		case parser.Errors:
-			break
-		case *parser.Error:
-			// if it is a single error, convert it to a one-element list
-			errlist := make(parser.Errors, 1)
-			errlist[0] = e
-			errs = errlist
-		default:
-			log.Printf("Unknown error type: %T\n (%s)", errs, errs.Error())
-			return
-		}
-
-		for _, err := range errs.(parser.Errors) {
-			diag := lsp.Diagnostic{
-				Source:   "parser",
+		if lengtherror != nil {
+			err := lengtherror.(*parser.Error)
+			return &lsp.Diagnostic{
+				Source:   "validator",
 				Message:  err.Message,
-				Severity: lsp.SeverityError,
+				Severity: lsp.SeverityWarning,
 				Range: lsp.Range{
 					Start: lsp.Position{
 						Line:      float64(err.StartPosition.Line) - 1,
@@ -107,49 +136,57 @@ func (s *LangServer) Diagnose(ctx context.Context, uri lsp.DocumentURI) {
 					},
 				},
 			}
-			diags = append(diags, diag)
+		}
+	}
+	return nil
+}
+
+func (s *LangServer) Diagnose(ctx context.Context, uri lsp.DocumentURI) {
+
+	go func() {
+		var errs error
+		var parsed *ast.Program
+		var diagRes DiagnosticResults
+		text, _ := s.cache.Get(uri)
+
+		prevDiag, err := s.cache.GetDiagnostics(uri)
+		if err == nil {
+			diagRes = *prevDiag
 		}
 
-		// check if the code-length of yolol-code is OK
-		if len(diags) == 0 && s.settings.Yolol.LengthChecking.Mode != LengthCheckModeOff && strings.HasSuffix(string(uri), ".yolol") {
-			lengtherror := validators.ValidateCodeLength(text)
+		if strings.HasSuffix(string(uri), ".yolol") {
+			p := parser.NewParser()
+			parsed, errs = p.Parse(text)
 
-			// check if the code is small enough after optimizing it
-			if lengtherror != nil && s.settings.Yolol.LengthChecking.Mode == LengthCheckModeOptimize && parsed != nil {
-
-				opt := optimizers.NewCompoundOptimizer()
-				err := opt.Optimize(parsed)
-				if err == nil {
-					printer := parser.Printer{
-						Mode: parser.PrintermodeSpaceless,
-					}
-					optimized, err := printer.Print(parsed)
-					if err == nil {
-						lengtherror = validators.ValidateCodeLength(optimized)
-					}
-				}
+			if parsed != nil {
+				diagRes.Variables = findUsedVariables(parsed)
 			}
 
-			if lengtherror != nil {
-				err := lengtherror.(*parser.Error)
-				diag := lsp.Diagnostic{
-					Source:   "validator",
-					Message:  err.Message,
-					Severity: lsp.SeverityWarning,
-					Range: lsp.Range{
-						Start: lsp.Position{
-							Line:      float64(err.StartPosition.Line) - 1,
-							Character: float64(err.StartPosition.Coloumn) - 1,
-						},
-						End: lsp.Position{
-							Line:      float64(err.EndPosition.Line) - 1,
-							Character: float64(err.EndPosition.Coloumn) - 1,
-						},
-					},
-				}
-				diags = append(diags, diag)
-			}
+		} else if strings.HasSuffix(string(uri), ".nolol") {
+			conv := nolol.NewConverter()
+			mainfile := string(uri)
+			_, errs = conv.ConvertFileEx(mainfile, newfs(s, uri))
+			diagRes.Definitions = conv.GetDefinitions()
+			diagRes.Macros = conv.GetMacros()
 
+		} else {
+			return
+		}
+
+		s.cache.SetDiagnostics(uri, diagRes)
+
+		parserErrors := convertToErrorlist(errs)
+		if parserErrors == nil {
+			return
+		}
+
+		diags := convertErrorsToDiagnostics(parserErrors)
+
+		if len(diags) == 0 {
+			diag := s.validateCodeLength(uri, text, parsed)
+			if diag != nil {
+				diags = append(diags, *diag)
+			}
 		}
 
 		s.client.PublishDiagnostics(ctx, &lsp.PublishDiagnosticsParams{

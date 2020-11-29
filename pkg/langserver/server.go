@@ -51,6 +51,9 @@ func (ls *LangServer) Initialize(ctx context.Context, params *lsp.InitializePara
 				OpenClose: true,
 			},
 			DocumentFormattingProvider: true,
+			CompletionProvider: &lsp.CompletionOptions{
+				TriggerCharacters: []string{" ", ":", "+", "-", "*", "/", "%", "=", "^", ">", "<"},
+			},
 		},
 	}, nil
 }
@@ -107,7 +110,7 @@ func (ls *LangServer) DidClose(ctx context.Context, params *lsp.DidCloseTextDocu
 	return unsupported()
 }
 func (ls *LangServer) Completion(ctx context.Context, params *lsp.CompletionParams) (*lsp.CompletionList, error) {
-	return nil, unsupported()
+	return ls.GetCompletions(params)
 }
 func (ls *LangServer) CompletionResolve(ctx context.Context, params *lsp.CompletionItem) (*lsp.CompletionItem, error) {
 	return nil, unsupported()

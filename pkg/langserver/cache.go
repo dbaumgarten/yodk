@@ -5,19 +5,28 @@ import (
 	"sync"
 
 	"github.com/dbaumgarten/yodk/pkg/lsp"
+	"github.com/dbaumgarten/yodk/pkg/nolol/nast"
 )
 
 var NotFoundError = fmt.Errorf("File not found in cache")
 
 type Cache struct {
-	Files map[lsp.DocumentURI]string
-	Lock  *sync.Mutex
+	Files       map[lsp.DocumentURI]string
+	Diagnostics map[lsp.DocumentURI]DiagnosticResults
+	Lock        *sync.Mutex
+}
+
+type DiagnosticResults struct {
+	Macros      map[string]*nast.MacroDefinition
+	Definitions map[string]*nast.Definition
+	Variables   []string
 }
 
 func NewCache() *Cache {
 	return &Cache{
-		Files: make(map[lsp.DocumentURI]string),
-		Lock:  &sync.Mutex{},
+		Files:       make(map[lsp.DocumentURI]string),
+		Diagnostics: make(map[lsp.DocumentURI]DiagnosticResults),
+		Lock:        &sync.Mutex{},
 	}
 }
 
@@ -35,4 +44,20 @@ func (c *Cache) Set(uri lsp.DocumentURI, content string) {
 	c.Lock.Lock()
 	defer c.Lock.Unlock()
 	c.Files[uri] = content
+}
+
+func (c *Cache) GetDiagnostics(uri lsp.DocumentURI) (*DiagnosticResults, error) {
+	c.Lock.Lock()
+	defer c.Lock.Unlock()
+	f, found := c.Diagnostics[uri]
+	if !found {
+		return nil, NotFoundError
+	}
+	return &f, nil
+}
+
+func (c *Cache) SetDiagnostics(uri lsp.DocumentURI, content DiagnosticResults) {
+	c.Lock.Lock()
+	defer c.Lock.Unlock()
+	c.Diagnostics[uri] = content
 }

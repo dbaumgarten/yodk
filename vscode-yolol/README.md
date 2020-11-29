@@ -10,6 +10,7 @@ It is a part of the [yolol development kit](https://github.com/dbaumgarten/yodk)
 - Syntax highlighting
 - Syntax validation
 - Automatic formatting
+- Auto-completion
 - Commands for optimizing yolol
 - Interactively debug YOLOL-code in vscode
 - Also supports nolol
