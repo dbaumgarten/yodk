@@ -67,13 +67,15 @@
         "id": "yolol",
         "extensions": [
           ".yolol"
-        ]
+        ],
+        "configuration": "./syntaxes/yolol-config.json"
       },
       {
         "id": "nolol",
         "extensions": [
           ".nolol"
-        ]
+        ],
+        "configuration": "./syntaxes/yolol-config.json"
       }
     ],
     "grammars": [
