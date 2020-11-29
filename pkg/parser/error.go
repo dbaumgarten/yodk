@@ -8,10 +8,25 @@ import (
 
 // Error represents an error encountered during parsing
 type Error struct {
-	Message       string
+	// The human-readable error-message
+	Message string
+	// Where the error started
 	StartPosition ast.Position
-	EndPosition   ast.Position
+	// Where the error ends
+	EndPosition ast.Position
+	// Machine-Readable error-code
+	Code string
+	// A token that was expected here (optional)
+	ExpectedToken *ast.Token
 }
+
+// Predefined constants for Error.Code
+const (
+	ErrExpectedExpression = "ErrExpectedExpression"
+	ErrExpectedStatement  = "ErrExpectedStatement"
+	ErrExpectedToken      = "ErrExpectedToken"
+	ErrExpectedAssignop   = "ErrExpectedAssignop"
+)
 
 func (e Error) Error() string {
 	if e.StartPosition != e.EndPosition {

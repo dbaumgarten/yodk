@@ -13,6 +13,14 @@ type Parser struct {
 	*parser.Parser
 }
 
+// Constant definitions for parser.Error.Code
+const (
+	ErrExpectedStringConstant = "ErrExpectedStringConstant"
+	ErrExpectedIdentifier     = "ErrExpectedIdentifier"
+	ErrExpectedExistingMacro  = "ErrExpectedExistingMacro"
+	ErrExpectedJumplabel      = "ErrExpectedJumplabel"
+)
+
 // NewParser creates and returns a nolol parser
 func NewParser() *Parser {
 	ep := &Parser{
@@ -122,7 +130,7 @@ func (p *Parser) ParseInclude() *nast.IncludeDirective {
 	}
 	p.Advance()
 	if !p.IsCurrentType(ast.TypeString) {
-		p.ErrorCurrent("Expected a string-constant after include")
+		p.ErrorString("Expected a string-constant after include", ErrExpectedStringConstant)
 		return incl
 	}
 	incl.File = p.CurrentToken.Value
@@ -145,7 +153,7 @@ func (p *Parser) ParseMacroDefinition() *nast.MacroDefinition {
 		Externals: []string{},
 	}
 	if !p.IsCurrentType(ast.TypeID) {
-		p.ErrorCurrent("Expected an idantifier after the macro keyword")
+		p.ErrorString("Expected an identifier after the macro keyword", ErrExpectedIdentifier)
 		return mdef
 	}
 	mdef.Name = p.CurrentToken.Value
@@ -154,7 +162,7 @@ func (p *Parser) ParseMacroDefinition() *nast.MacroDefinition {
 	p.Expect(ast.TypeSymbol, "(")
 	for !p.IsCurrent(ast.TypeSymbol, ")") {
 		if !p.IsCurrentType(ast.TypeID) {
-			p.ErrorCurrent("Only comma separated identifiers are allowed as arguments in a macro definition")
+			p.ErrorString("Only comma separated identifiers are allowed as arguments in a macro definition", ErrExpectedIdentifier)
 			break
 		}
 		mdef.Arguments = append(mdef.Arguments, p.CurrentToken.Value)
@@ -171,7 +179,7 @@ func (p *Parser) ParseMacroDefinition() *nast.MacroDefinition {
 		p.Advance()
 		for !p.IsCurrent(ast.TypeSymbol, ")") {
 			if !p.IsCurrentType(ast.TypeID) {
-				p.ErrorCurrent("Only comma separated identifiers are allowed as globals in a macro definition")
+				p.ErrorString("Only comma separated identifiers are allowed as globals in a macro definition", ErrExpectedIdentifier)
 				break
 			}
 			mdef.Externals = append(mdef.Externals, p.CurrentToken.Value)
@@ -209,7 +217,7 @@ func (p *Parser) ParseMacroInsertion() *nast.MacroInsetion {
 	mins.FuncCall = p.ParseFuncCall()
 
 	if mins.FuncCall == nil {
-		p.ErrorCurrent("Expected a macro instanziation after the insert keyword")
+		p.ErrorString("Expected a macro instanziation after the insert keyword", ErrExpectedExistingMacro)
 		return mins
 	}
 
@@ -264,7 +272,7 @@ func (p *Parser) ParseStatementLine() *nast.StatementLine {
 	if stmt != nil {
 		ret.Statements = append(ret.Statements, stmt)
 	} else {
-		p.ErrorCurrent("Expected a statement")
+		p.ErrorExpectedStatement("")
 		p.Advance()
 		return &ret
 	}
@@ -275,7 +283,7 @@ func (p *Parser) ParseStatementLine() *nast.StatementLine {
 		if stmt != nil {
 			ret.Statements = append(ret.Statements, stmt)
 		} else {
-			p.ErrorCurrent(("Expected a statement after ';'"))
+			p.ErrorExpectedStatement(("after ';'"))
 		}
 	}
 
@@ -310,7 +318,7 @@ func (p *Parser) ParseWaitDirective() *nast.WaitDirective {
 
 	st.Condition = p.This.ParseExpression()
 	if st.Condition == nil {
-		p.ErrorCurrent("Expected an expression after 'block'")
+		p.ErrorExpectedExpression("after 'wait'")
 	}
 
 	if p.IsCurrent(ast.TypeKeyword, "then") {
@@ -322,7 +330,7 @@ func (p *Parser) ParseWaitDirective() *nast.WaitDirective {
 		if stmt != nil {
 			st.Statements = append(st.Statements, stmt)
 		} else {
-			p.ErrorCurrent("Expected a statement")
+			p.ErrorExpectedStatement("")
 			p.Advance()
 			return st
 		}
@@ -333,7 +341,7 @@ func (p *Parser) ParseWaitDirective() *nast.WaitDirective {
 			if stmt != nil {
 				st.Statements = append(st.Statements, stmt)
 			} else {
-				p.ErrorCurrent(("Expected a statement after ';'"))
+				p.ErrorExpectedStatement(("after ';'"))
 			}
 		}
 
@@ -352,7 +360,7 @@ func (p *Parser) ParseDefinition() *nast.Definition {
 	startpos := p.CurrentToken.Position
 	p.Advance()
 	if !p.IsCurrentType(ast.TypeID) {
-		p.ErrorCurrent("const keyword must be followed by an identifier")
+		p.ErrorString("const keyword must be followed by an identifier", ErrExpectedIdentifier)
 	}
 	decl := &nast.Definition{
 		Name:         p.CurrentToken.Value,
@@ -365,7 +373,7 @@ func (p *Parser) ParseDefinition() *nast.Definition {
 		starttoken := p.Advance()
 		for !p.IsCurrent(ast.TypeSymbol, ")") {
 			if !p.IsCurrentType(ast.TypeID) {
-				p.ErrorCurrent("Only comma separated identifiers are allowed as arguments in a definition")
+				p.ErrorString("Only comma separated identifiers are allowed as arguments in a definition", ErrExpectedIdentifier)
 				break
 			}
 			decl.Placeholders = append(decl.Placeholders, p.CurrentToken.Value)
@@ -378,14 +386,18 @@ func (p *Parser) ParseDefinition() *nast.Definition {
 		}
 		endpos := p.Expect(ast.TypeSymbol, ")")
 		if len(decl.Placeholders) == 0 {
-			p.Error("Definitions with placeholder-parenthesis need at least one placeholder", starttoken.Position, endpos)
+			p.Error(&parser.Error{
+				Message:       "Definitions with placeholder-parenthesis need at least one placeholder",
+				StartPosition: starttoken.Position,
+				EndPosition:   endpos,
+			})
 		}
 	}
 
 	p.Expect(ast.TypeSymbol, "=")
 	value := p.ParseExpression()
 	if value == nil {
-		p.ErrorCurrent("The = of a const declaration must be followed by an expression")
+		p.ErrorExpectedExpression("after the '=' of a definition")
 	}
 	decl.Value = value
 	if !p.IsCurrentType(ast.TypeEOF) {
@@ -411,7 +423,7 @@ func (p *Parser) ParseMultilineIf() nast.NestableElement {
 	for {
 		condition := p.This.ParseExpression()
 		if condition == nil {
-			p.ErrorCurrent("No expression found as if-condition")
+			p.ErrorExpectedExpression("as if-condition")
 			p.Advance()
 		}
 
@@ -467,7 +479,7 @@ func (p *Parser) ParseWhile() nast.NestableElement {
 
 	loop.Condition = p.This.ParseExpression()
 	if loop.Condition == nil {
-		p.ErrorCurrent("No expression found as loop-condition")
+		p.ErrorExpectedExpression("as loop-condition")
 	}
 
 	p.Expect(ast.TypeKeyword, "do")
@@ -499,14 +511,14 @@ func (p *Parser) ParseIf() ast.Statement {
 
 	ret.Condition = p.This.ParseExpression()
 	if ret.Condition == nil {
-		p.ErrorCurrent("No expression found as inline-if-condition")
+		p.ErrorExpectedExpression("as inline-if-condition")
 	}
 
 	p.Expect(ast.TypeKeyword, "then")
 
 	stmt := p.This.ParseStatement()
 	if stmt == nil {
-		p.ErrorCurrent("If-block needs at least one statement")
+		p.ErrorExpectedStatement("inside if-block")
 	}
 	ret.IfBlock = make([]ast.Statement, 0, 1)
 	ret.IfBlock = append(ret.IfBlock, stmt)
@@ -523,7 +535,7 @@ func (p *Parser) ParseIf() ast.Statement {
 		p.Advance()
 		stmt := p.This.ParseStatement()
 		if stmt == nil {
-			p.ErrorCurrent("Else-block needs at least one statement")
+			p.ErrorExpectedStatement("inside else-block")
 		}
 		ret.ElseBlock = make([]ast.Statement, 0, 1)
 		ret.ElseBlock = append(ret.ElseBlock, stmt)
@@ -571,7 +583,7 @@ func (p *Parser) ParseGoto() ast.Statement {
 		}
 
 		if !p.IsCurrentType(ast.TypeID) {
-			p.ErrorCurrent("Goto must be followed by an identifier")
+			p.ErrorString("Goto must be followed by a jump-label", ErrExpectedJumplabel)
 		} else {
 			p.Advance()
 		}
@@ -587,10 +599,10 @@ func (p *Parser) ParseGoto() ast.Statement {
 		p.Advance()
 		stmt.Line = p.This.ParseExpression()
 		if stmt.Line == nil {
-			p.Error("Goto must be followed by an expression", stmt.Start(), stmt.Start())
+			p.ErrorExpectedExpression("Goto must be followed by an expression")
 		}
 		if _, is := stmt.Line.(*ast.StringConstant); is {
-			p.Error("Can not go to a string", stmt.Start(), stmt.Start())
+			p.ErrorString("Can not go to a string", "")
 		}
 		return &stmt
 	}
@@ -614,7 +626,7 @@ func (p *Parser) ParseFuncCall() *nast.FuncCall {
 	for !p.IsCurrent(ast.TypeSymbol, ")") {
 		exp := p.ParseExpression()
 		if exp == nil {
-			p.ErrorCurrent("Expected expression(s) as arguments(s)")
+			p.ErrorExpectedExpression("as arguments(s)")
 			break
 		}
 		fc.Arguments = append(fc.Arguments, exp)

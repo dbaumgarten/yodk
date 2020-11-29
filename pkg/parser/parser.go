@@ -128,29 +128,32 @@ func (p *Parser) IsCurrentValueIn(values []string) bool {
 
 // Error appends an error to the list of errors encountered during parsing
 // if p.AllErrors is false, only the first error per line is appended to the list of errors
-func (p *Parser) Error(msg string, start ast.Position, end ast.Position) {
+// Usually it is better to use one of the higher-level Error* methods
+func (p *Parser) Error(err *Error) {
 
 	// if not disabled, only log the first error for each line and discard the rest
 	if !p.AllErrors {
 		if len(p.Errors) > 0 {
 			prevError := p.Errors[len(p.Errors)-1]
-			if prevError.StartPosition.Line == start.Line {
+			if prevError.StartPosition.Line == err.StartPosition.Line {
 				return
 			}
 		}
 	}
 
-	err := &Error{
-		Message:       msg + ". Found Token: '" + p.CurrentToken.Value + "'(" + p.CurrentToken.Type + ")",
-		StartPosition: start,
-		EndPosition:   end,
-	}
+	err.Message += ". Found Token: '" + p.CurrentToken.Value + "'(" + p.CurrentToken.Type + ")"
+
 	p.Errors = append(p.Errors, err)
 }
 
-// ErrorCurrent calls Error() with the position of the current token
-func (p *Parser) ErrorCurrent(msg string) {
-	p.Error(msg, p.CurrentToken.Position, p.CurrentToken.Position)
+// ErrorString logs an error with the given message and type at the current location
+func (p *Parser) ErrorString(message string, code string) {
+	p.Error(&Error{
+		Message:       message,
+		Code:          code,
+		StartPosition: p.CurrentToken.Position,
+		EndPosition:   p.CurrentToken.Position,
+	})
 }
 
 // Expect checks if the current token has the given type and value
@@ -164,11 +167,31 @@ func (p *Parser) Expect(tokenType string, tokenValue string) ast.Position {
 		} else {
 			msg = fmt.Sprintf("Expected token '%s'(%s)", tokenValue, tokenType)
 		}
-		p.ErrorCurrent(msg)
+		p.Error(&Error{
+			Message: msg,
+			Code:    ErrExpectedToken,
+			ExpectedToken: &ast.Token{
+				Type:     tokenType,
+				Value:    tokenValue,
+				Position: p.CurrentToken.Position,
+			},
+			StartPosition: p.CurrentToken.Position,
+			EndPosition:   p.CurrentToken.Position,
+		})
 	}
 	pos := p.CurrentToken.Position
 	p.Advance()
 	return pos
+}
+
+// ErrorExpectedExpression is a shortcut to log an error about an expected expression at where
+func (p *Parser) ErrorExpectedExpression(where string) {
+	p.ErrorString("Expected expression "+where, ErrExpectedExpression)
+}
+
+// ErrorExpectedStatement is a shortcut to log an error about an expected statement at where
+func (p *Parser) ErrorExpectedStatement(where string) {
+	p.ErrorString("Expected statement "+where, ErrExpectedStatement)
 }
 
 // Reset prepares all internal fields for a new parsing run
@@ -239,7 +262,7 @@ func (p *Parser) ParseLine() *ast.Line {
 	for p.HasNext() {
 		stmt := p.This.ParseStatement()
 		if stmt == nil {
-			p.ErrorCurrent("Expected a statement")
+			p.ErrorExpectedStatement("")
 			p.Advance()
 		}
 		ret.Statements = append(ret.Statements, stmt)
@@ -257,7 +280,11 @@ func (p *Parser) ParseLine() *ast.Line {
 	}
 
 	if !p.IsCurrentType(ast.TypeEOF) {
-		p.Error("Missing newline", ret.Start(), ret.End())
+		p.Error(&Error{
+			Message:       "Missing newline",
+			StartPosition: ret.Start(),
+			EndPosition:   ret.End(),
+		})
 	}
 
 	return &ret
@@ -266,11 +293,6 @@ func (p *Parser) ParseLine() *ast.Line {
 // ParseStatement parses a statement-node
 func (p *Parser) ParseStatement() ast.Statement {
 	p.Log()
-
-	stmt := p.This.ParseAssignment()
-	if stmt != nil {
-		return stmt
-	}
 
 	stmt2 := p.This.ParseIf()
 	if stmt2 != nil {
@@ -285,6 +307,11 @@ func (p *Parser) ParseStatement() ast.Statement {
 	stmt4 := p.This.ParsePreOrPostOperation()
 	if stmt4 != nil {
 		return stmt4
+	}
+
+	stmt := p.This.ParseAssignment()
+	if stmt != nil {
+		return stmt
 	}
 
 	return nil
@@ -317,10 +344,10 @@ func (p *Parser) ParseGoto() ast.Statement {
 		p.Advance()
 		stmt.Line = p.This.ParseExpression()
 		if stmt.Line == nil {
-			p.Error("Goto must be followed by an expression", stmt.Start(), stmt.Start())
+			p.ErrorExpectedExpression("after goto")
 		}
 		if _, is := stmt.Line.(*ast.StringConstant); is {
-			p.Error("Can not go to a string", stmt.Start(), stmt.Start())
+			p.ErrorString("Can not goto a string", "")
 		}
 		return &stmt
 	}
@@ -334,16 +361,24 @@ func (p *Parser) ParseAssignment() ast.Statement {
 	ret := ast.Assignment{
 		Position: p.CurrentToken.Position,
 	}
-	if !p.IsCurrentType(ast.TypeID) || !contains(assignmentOperators, p.NextToken.Value) {
+	if !p.IsCurrentType(ast.TypeID) {
 		return nil
 	}
+
 	ret.Variable = p.CurrentToken.Value
 	p.Advance()
+
+	if !p.IsCurrentValueIn(assignmentOperators) {
+		p.ErrorString("Expected an assignment-operator", ErrExpectedAssignop)
+		return &ret
+	}
+
 	ret.Operator = p.CurrentToken.Value
 	p.Advance()
+
 	exp := p.This.ParseExpression()
 	if exp == nil {
-		p.ErrorCurrent("Expected expression on right side of assignment")
+		p.ErrorExpectedExpression("on right side of assignment")
 	}
 	ret.Value = exp
 	return &ret
@@ -362,14 +397,14 @@ func (p *Parser) ParseIf() ast.Statement {
 
 	ret.Condition = p.This.ParseExpression()
 	if ret.Condition == nil {
-		p.ErrorCurrent("No expression found as if-condition")
+		p.ErrorExpectedExpression("as if-condition")
 	}
 
 	p.Expect(ast.TypeKeyword, "then")
 
 	stmt := p.This.ParseStatement()
 	if stmt == nil {
-		p.ErrorCurrent("If-block needs at least one statement")
+		p.ErrorExpectedStatement("inside if-block")
 	}
 	ret.IfBlock = make([]ast.Statement, 0, 1)
 	ret.IfBlock = append(ret.IfBlock, stmt)
@@ -386,7 +421,7 @@ func (p *Parser) ParseIf() ast.Statement {
 		p.Advance()
 		stmt := p.This.ParseStatement()
 		if stmt == nil {
-			p.ErrorCurrent("Else-block needs at least one statement")
+			p.ErrorExpectedStatement("inside else-block")
 		}
 		ret.ElseBlock = make([]ast.Statement, 0, 1)
 		ret.ElseBlock = append(ret.ElseBlock, stmt)
@@ -465,7 +500,7 @@ func (p *Parser) ParseBinaryExpression(idx int) ast.Expression {
 		p.Advance()
 		rightExp := p.This.ParseBinaryExpression(idx)
 		if rightExp == nil {
-			p.ErrorCurrent(fmt.Sprintf("Expected expression on right side of %s", binexp.Operator))
+			p.ErrorExpectedExpression(fmt.Sprintf("on right side of %s", binexp.Operator))
 			return binexp
 		}
 
@@ -506,7 +541,7 @@ func (p *Parser) ParseUnaryExpression() ast.Expression {
 		p.Advance()
 		subexp := p.This.ParseUnaryExpression()
 		if subexp == nil {
-			p.ErrorCurrent(fmt.Sprintf("Expected expression on right side of %s", unaryExp.Operator))
+			p.ErrorExpectedExpression(fmt.Sprintf("on right side of %s", unaryExp.Operator))
 		}
 		unaryExp.Exp = subexp
 		return unaryExp
@@ -521,7 +556,7 @@ func (p *Parser) ParseBracketExpression() ast.Expression {
 		p.Advance()
 		innerExp := p.This.ParseExpression()
 		if innerExp == nil {
-			p.ErrorCurrent(fmt.Sprintf("Expected expression after '('"))
+			p.ErrorExpectedExpression("after '('")
 		}
 		p.Expect(ast.TypeSymbol, ")")
 		return innerExp
@@ -580,7 +615,11 @@ func (p *Parser) ParsePreOpExpression() ast.Expression {
 		}
 		p.Advance()
 		if !p.IsCurrentType(ast.TypeID) {
-			p.Error("Pre- Increment/Decrement must be followed by a variable", exp.Start(), exp.Start())
+			p.Error(&Error{
+				Message:       "Pre- Increment/Decrement must be followed by a variable",
+				StartPosition: exp.Start(),
+				EndPosition:   exp.Start(),
+			})
 		}
 		exp.Variable = p.CurrentToken.Value
 		p.Advance()
@@ -646,7 +685,7 @@ func (p *Parser) Log() {
 	}
 }
 
-// Log logs the visiting of a parsing function
+// LogI logs the visiting of a parsing function with a given argument
 func (p *Parser) LogI(arg int) {
 	if p.DebugLog {
 		// Print the name of the function
