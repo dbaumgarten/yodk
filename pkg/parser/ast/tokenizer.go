@@ -65,8 +65,9 @@ func (p Position) Before(other Position) bool {
 	return false
 }
 
-var symbols = []string{"++", "--", ">=", "<=", "!=", "==", "==", "+=", "-=", "*=", "/=", "%=",
-	"=", ">", "<", "+", "-", "*", "/", "^", "%", ",", "(", ")"}
+// !!= is a hack, meaning "factorial followed by equal"
+var symbols = []string{"!==", "++", "--", ">=", "<=", "!=", "==", "==", "+=", "-=", "*=", "/=", "%=",
+	"=", ">", "<", "+", "-", "*", "/", "^", "%", ",", "(", ")", "!"}
 
 var keywordRegex = regexp.MustCompile(`(?i)^(if|else\b|end\b|then|goto|and|or|not|abs|sqrt|sin|cos|tan|asin|acos|atan)`)
 
@@ -233,6 +234,11 @@ func (t *Tokenizer) getSymbol() *Token {
 	for i := range t.Symbols {
 		symbol := []byte(t.Symbols[i])
 		if bytes.HasPrefix(t.remaining, symbol) {
+			if t.Symbols[i] == "!==" {
+				// this special case is needed, as otherwise !== would be parsed as "!= =", but it shold be "! =="
+				defer t.advance(1)
+				return t.newToken(TypeSymbol, "!")
+			}
 			defer t.advance(len(symbol))
 			return t.newToken(TypeSymbol, string(symbol))
 		}

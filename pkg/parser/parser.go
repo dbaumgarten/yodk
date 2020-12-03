@@ -56,6 +56,8 @@ type YololParserFunctions interface {
 	ParseExpression() ast.Expression
 	ParseBinaryExpression(int) ast.Expression
 	ParseUnaryExpression() ast.Expression
+	ParseFactorioalExpression() ast.Expression
+	ParseNegationExpression() ast.Expression
 	ParseBracketExpression() ast.Expression
 	ParseSingleExpression() ast.Expression
 	ParsePreOpExpression() ast.Expression
@@ -533,13 +535,51 @@ func (p *Parser) ParseBinaryExpression(idx int) ast.Expression {
 func (p *Parser) ParseUnaryExpression() ast.Expression {
 	p.Log()
 	preUnaryOps := []string{"not", "abs", "sqrt", "sin", "cos", "tan", "asin", "acos", "atan"}
-	if (p.IsCurrentValueIn(preUnaryOps) && p.IsCurrentType(ast.TypeKeyword)) || p.IsCurrent(ast.TypeSymbol, "-") {
+	if p.IsCurrentValueIn(preUnaryOps) && p.IsCurrentType(ast.TypeKeyword) {
 		unaryExp := &ast.UnaryOperation{
 			Operator: p.CurrentToken.Value,
 			Position: p.CurrentToken.Position,
 		}
 		p.Advance()
 		subexp := p.This.ParseUnaryExpression()
+		if subexp == nil {
+			p.ErrorExpectedExpression(fmt.Sprintf("on right side of %s", unaryExp.Operator))
+		}
+		unaryExp.Exp = subexp
+		return unaryExp
+	}
+	return p.This.ParseFactorioalExpression()
+}
+
+// ParseFactorioalExpression parses a factorial
+func (p *Parser) ParseFactorioalExpression() ast.Expression {
+	p.Log()
+
+	subexp := p.This.ParseNegationExpression()
+	if subexp != nil {
+		for p.IsCurrent(ast.TypeSymbol, "!") {
+			subexp = &ast.UnaryOperation{
+				Operator: "!",
+				Position: p.CurrentToken.Position,
+				Exp:      subexp,
+			}
+			p.Advance()
+		}
+	}
+	return subexp
+}
+
+// ParseNegationExpression parses a negation
+func (p *Parser) ParseNegationExpression() ast.Expression {
+	p.Log()
+
+	if p.IsCurrent(ast.TypeSymbol, "-") {
+		unaryExp := &ast.UnaryOperation{
+			Operator: p.CurrentToken.Value,
+			Position: p.CurrentToken.Position,
+		}
+		p.Advance()
+		subexp := p.This.ParseNegationExpression()
 		if subexp == nil {
 			p.ErrorExpectedExpression(fmt.Sprintf("on right side of %s", unaryExp.Operator))
 		}

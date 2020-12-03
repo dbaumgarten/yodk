@@ -40,7 +40,7 @@ type Printer struct {
 	DebugPositions bool
 }
 
-var operatorPriority = map[string]int{
+var binaryOperatorPriority = map[string]int{
 	"and": 0,
 	"or":  1,
 	"==":  2,
@@ -55,7 +55,20 @@ var operatorPriority = map[string]int{
 	"/":   5,
 	"%":   5,
 	"^":   6,
-	"not": 7,
+}
+
+var unaryOperatorPriority = map[string]int{
+	"not":  7,
+	"abs":  7,
+	"sqrt": 7,
+	"sin":  7,
+	"cos":  7,
+	"tan":  7,
+	"asin": 7,
+	"acos": 7,
+	"atan": 7,
+	"!":    8,
+	"-":    9,
 }
 
 // end and else are missing here, because unlike other keywords they might require a space after them
@@ -212,25 +225,7 @@ func (p *Printer) Print(prog ast.Node) (string, error) {
 			p.printBinaryOperation(n, visitType)
 			break
 		case *ast.UnaryOperation:
-			_, childBinary := n.Exp.(*ast.BinaryOperation)
-			if visitType == ast.PreVisit {
-				op := n.Operator
-				if op == "-" {
-					p.Space()
-					p.Write(op)
-				} else {
-					p.Write(op)
-					p.Space()
-				}
-				if childBinary {
-					p.Write("(")
-				}
-			}
-			if visitType == ast.PostVisit {
-				if childBinary {
-					p.Write(")")
-				}
-			}
+			p.printUnaryOperation(n, visitType)
 			break
 		default:
 			return fmt.Errorf("Unknown ast-node: %T%v", node, node)
@@ -298,13 +293,41 @@ func (p *Printer) printBinaryOperation(o *ast.BinaryOperation, visitType int) {
 		}
 		break
 	}
+}
 
+func (p *Printer) printUnaryOperation(o *ast.UnaryOperation, visitType int) {
+	childPrio := priorityForExpression(o.Exp)
+	thisPrio := priorityForExpression(o)
+	if visitType == ast.PreVisit {
+		if o.Operator == "-" {
+			p.Space()
+			p.Write(o.Operator)
+		} else if o.Operator == "!" {
+			//do not write anything in PreVisit
+		} else {
+			p.Write(o.Operator)
+			p.Space()
+		}
+		if childPrio < thisPrio {
+			p.Write("(")
+		}
+	}
+	if visitType == ast.PostVisit {
+		if o.Operator == "!" {
+			p.Write(o.Operator)
+		}
+		if childPrio < thisPrio {
+			p.Write(")")
+		}
+	}
 }
 
 func priorityForExpression(e ast.Expression) int {
 	switch ex := e.(type) {
 	case *ast.BinaryOperation:
-		return operatorPriority[ex.Operator]
+		return binaryOperatorPriority[ex.Operator]
+	case *ast.UnaryOperation:
+		return unaryOperatorPriority[ex.Operator]
 	default:
 		return 10
 	}

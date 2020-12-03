@@ -14,5 +14,6 @@ cases:
       testlt: 1
       testlte: 1
       testra: 1
+      testfact: 1
 
       
