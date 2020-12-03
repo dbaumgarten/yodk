@@ -16,17 +16,17 @@ define :output = :out
 
 
 // your definitions can contain polaceholders (here a and b)
-define addByte(a,b) = (a+b)%(2^8)
+define addByte(a, b) = (a + b) % 2 ^ 8
 
 a = 123
 // definitions with placeholders can be used like functions. The aruments will replace the placeholders of the definition
-:sum = addByte(a,100)
+:sum = addByte(a, 100)
 
-define foo(a,b,c,d) = a+b+c+d
+define foo(a, b, c, d) = a + b + c + d
 
 // Any valid expression can be used as value for a placeholder
-:bar = foo(greeting,","," "+:name,addByte(a,60))
+:bar = foo(greeting, ",", " " + :name, addByte(a, 60))
 
-define pop(string) = string- --string
+define pop(string) = string - --string
 
 :done = 1

@@ -7,6 +7,6 @@ end
 insert SMBEGIN(STATE_PING)
 
 :OUTPUT += "ping "
-:counter++
+:counter++ 
 
 insert SMEND(STATE_PONG)

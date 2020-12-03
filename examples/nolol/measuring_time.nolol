@@ -15,4 +15,4 @@ wait time() < closewhen then :door = "closed" ; closedAfter = time() - start end
 
 //note: wait is effectively just syntactic sugar
 // the wait line above can also be written as
-_if time() < closewhen then _goto line() end ; :door = "closed" ; closedAfter = time() - start $
+_if time() < closewhen then _goto line() end; :door = "closed"; closedAfter = time() - start $

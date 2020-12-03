@@ -17,4 +17,4 @@ abc="abc"
 :testif=0
 pi=3.141
 if pi>3 then :testif=1 else :testif=0 end
-:done = 1
+:done=1
