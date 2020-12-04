@@ -313,11 +313,11 @@ func (p *Printer) printUnaryOperation(o *ast.UnaryOperation, visitType int) {
 		}
 	}
 	if visitType == ast.PostVisit {
-		if o.Operator == "!" {
-			p.Write(o.Operator)
-		}
 		if childPrio < thisPrio {
 			p.Write(")")
+		}
+		if o.Operator == "!" {
+			p.Write(o.Operator)
 		}
 	}
 }

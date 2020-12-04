@@ -1,8 +1,6 @@
 package optimizers
 
 import (
-	"fmt"
-
 	"github.com/dbaumgarten/yodk/pkg/number"
 	"github.com/dbaumgarten/yodk/pkg/parser/ast"
 	"github.com/dbaumgarten/yodk/pkg/vm"
@@ -52,9 +50,15 @@ func (o *StaticExpressionOptimizer) OptimizeExpressionNonRecursive(exp ast.Expre
 
 		res, err := vm.RunUnaryOperation(constToVar(n.Exp), n.Operator)
 		if err != nil {
-			fmt.Println(err)
 			break
 		}
+
+		// Most of the times the results of factorials are far longer then the original expression
+		// Only pre-evaluate if the result is relatively short
+		if n.Operator == "!" && res.IsNumber() && len(res.Number().String()) > 2 {
+			break
+		}
+
 		return varToConst(res, n.Position)
 	case *ast.BinaryOperation:
 		if !isConstant(n.Exp1) || !isConstant(n.Exp2) {
