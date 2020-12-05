@@ -37,7 +37,7 @@ func compileFile(fpath string) {
 
 	// compilation failed completely. Fail now!
 	if converted == nil {
-		exitOnError(compileerr, "converting to yolol")
+		exitOnError(compileerr, "converting '"+fpath+"' to yolol")
 	}
 
 	gen := parser.Printer{}

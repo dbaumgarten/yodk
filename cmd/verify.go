@@ -21,7 +21,7 @@ var verifyCmd = &cobra.Command{
 			p.DebugLog = debugLog
 			file := loadInputFile(filepath)
 			_, errs := p.Parse(file)
-			exitOnError(errs, "parsing file")
+			exitOnError(errs, "parsing file '"+filepath+"'")
 
 			err := validators.ValidateCodeLength(file)
 			exitOnError(err, "validating code")

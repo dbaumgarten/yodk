@@ -22,7 +22,7 @@ var testCmd = &cobra.Command{
 			exitOnError(err, "loading test case")
 			fmt.Println("Running file: " + arg)
 			fails := test.Run(func(c testing.Case) {
-				fmt.Println("  Running case: " + c.Name)
+				fmt.Println("- Running case: " + c.Name)
 			})
 			if len(fails) == 0 {
 				fmt.Println("Tests OK")
