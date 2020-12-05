@@ -45,15 +45,9 @@ type StatementLine struct {
 	// If true, do not append this line to any other line during conversion to yolol
 	HasBOL bool
 	// If true, no other lines may be appended to this line during conversion to yolol
-	HasEOL   bool
-	Label    string
-	Position ast.Position
-	Comment  string
-}
-
-// Start is needed to implement ast.Node
-func (n *StatementLine) Start() ast.Position {
-	return n.Position
+	HasEOL  bool
+	Label   string
+	Comment string
 }
 
 // El implements the type-marker method
@@ -205,7 +199,7 @@ func (n *WaitDirective) Start() ast.Position {
 
 // End is needed to implement ast.Node
 func (n *WaitDirective) End() ast.Position {
-	if n.Statements == nil || len(n.Statements) == 0 {
+	if len(n.Statements) == 0 {
 		if n.Condition == nil {
 			return n.Position
 		}

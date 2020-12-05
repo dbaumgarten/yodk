@@ -47,9 +47,9 @@ func (c *Converter) convertIf(mlif *nast.MultilineIf, visitType int) error {
 	}
 
 	repl = append(repl, &nast.StatementLine{
-		Position: mlif.End(),
-		Label:    endif,
+		Label: endif,
 		Line: ast.Line{
+			Position:   mlif.End(),
 			Statements: []ast.Statement{},
 		},
 	})
@@ -87,8 +87,8 @@ func (c *Converter) convertIfTrivial(mlif *nast.MultilineIf) (ast.Node, error) {
 	}
 
 	repl := &nast.StatementLine{
-		Position: mlif.Positions[0],
 		Line: ast.Line{
+			Position: mlif.Positions[0],
 			Statements: []ast.Statement{
 				&ast.IfStatement{
 					Position:  mlif.Positions[0],
@@ -133,8 +133,8 @@ func (c *Converter) convertConditionInline(mlif *nast.MultilineIf, index int, en
 	}
 
 	repl := &nast.StatementLine{
-		Position: mlif.Positions[index],
 		Line: ast.Line{
+			Position: mlif.Positions[index],
 			Statements: []ast.Statement{
 				&ast.IfStatement{
 					Position:  mlif.Positions[index],
@@ -165,8 +165,8 @@ func (c *Converter) convertConditionMultiline(mlif *nast.MultilineIf, index int,
 	})
 	repl := []ast.Node{
 		&nast.StatementLine{
-			Position: mlif.Positions[index],
 			Line: ast.Line{
+				Position: mlif.Positions[index],
 				Statements: []ast.Statement{
 					&ast.IfStatement{
 						Position:  mlif.Positions[index],
@@ -189,7 +189,6 @@ func (c *Converter) convertConditionMultiline(mlif *nast.MultilineIf, index int,
 
 	if endlabel != "" {
 		repl = append(repl, &nast.StatementLine{
-			Position: mlif.Blocks[index].End(),
 			Line: ast.Line{
 				Position: mlif.Blocks[index].End(),
 				Statements: []ast.Statement{
@@ -203,9 +202,9 @@ func (c *Converter) convertConditionMultiline(mlif *nast.MultilineIf, index int,
 	}
 
 	repl = append(repl, &nast.StatementLine{
-		Position: mlif.Blocks[index].End(),
-		Label:    skipIf,
+		Label: skipIf,
 		Line: ast.Line{
+			Position:   mlif.Blocks[index].End(),
 			Statements: []ast.Statement{},
 		},
 	})

@@ -7,11 +7,11 @@ define write = :m
 // store value at idx in array
 macro set(idx, value)
 	write = 1
-	data = value
+	data = value 
 	addr = idx
 	// this will block until addr is 0.
 	// the array will set addr to 0 once it stored the value
-	wait addr	
+	wait addr
 end
 
 // retrieve value from idx

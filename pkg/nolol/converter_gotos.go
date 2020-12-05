@@ -193,7 +193,6 @@ func (c *Converter) addFinalGoto(prog *nast.Program) error {
 	}
 
 	prog.Elements = append(prog.Elements, &nast.StatementLine{
-		Position: pos,
 		Line: ast.Line{
 			Position: pos,
 			Statements: []ast.Statement{

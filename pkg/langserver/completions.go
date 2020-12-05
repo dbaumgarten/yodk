@@ -1,74 +1,98 @@
 package langserver
 
 import (
+	"strconv"
 	"strings"
 
 	"github.com/dbaumgarten/yodk/pkg/lsp"
 	"github.com/dbaumgarten/yodk/pkg/parser/ast"
 )
 
-var completionItemGroups = map[string][]string{
-	"unaryOps":  {"abs", "sqrt", "sin", "cos", "tan", "asin", "acos", "atan", "not"},
-	"keywords":  {"if", "then", "else", "end", "goto"},
-	"binaryOps": {"and", "or"},
-}
-
-// see here: https://microsoft.github.io/language-server-protocol/specifications/specification-current/
-var completionItemTypes = map[string]float64{
-	"unaryOps":  24,
-	"keywords":  14,
-	"binaryOps": 24,
-}
-
-var completionItemDocs = map[string]string{
-	"abs":  "abs X: Returns the absolute value of X",
-	"sqrt": "sqrt X: Returns the square-root of X",
-	"sin":  "sin X: Return the sine (degree) of X",
-	"cos":  "cos X: Return the cosine (degree) of X",
-	"tan":  "sin X: Return the tangent (degree) of X",
-	"asin": "asin X: Return the inverse sine (degree) of X",
-	"acos": "asin X: Return the inverse cosine (degree) of X",
-	"atan": "asin X: Return the inverse tanget (degree) of X",
-	"not":  "not X: Returns 1 if X is 0, otherwise it returns 0",
-	"and":  "X and Y: Returns true if X and Y are true",
-	"or":   "X or Y: Returns true if X or Y are true",
-}
-
-func buildDefaultCompletionItems() []lsp.CompletionItem {
-	items := make([]lsp.CompletionItem, 0, 50)
-	for k, v := range completionItemGroups {
-		kind := completionItemTypes[k]
-		for _, str := range v {
-			docs, hasDocs := completionItemDocs[str]
-			item := lsp.CompletionItem{
-				Label: str,
-				Kind:  kind,
-			}
-			if hasDocs {
-				item.Detail = docs
-			}
-			items = append(items, item)
-		}
-	}
-	return items
-}
-
-var defaultCompletionItems []lsp.CompletionItem
-
-func init() {
-	defaultCompletionItems = buildDefaultCompletionItems()
-}
-
 func (s *LangServer) GetCompletions(params *lsp.CompletionParams) (*lsp.CompletionList, error) {
-	items := make([]lsp.CompletionItem, 0, len(defaultCompletionItems)+15)
+	var items []lsp.CompletionItem
 
-	items = append(items, defaultCompletionItems...)
-	items = append(items, s.getVariableCompletions(params)...)
+	if strings.HasSuffix(string(params.TextDocument.URI), ".yolol") {
+		items = make([]lsp.CompletionItem, 0, len(DefaultYololCompletions)+15)
+		items = append(items, DefaultYololCompletions...)
+		items = append(items, s.getVariableCompletions(params)...)
+	} else if strings.HasSuffix(string(params.TextDocument.URI), ".nolol") {
+		items = make([]lsp.CompletionItem, 0, len(DefaultNololCompletions)+30)
+		items = append(items, DefaultNololCompletions...)
+		items = append(items, s.getNololCompletions(params)...)
+	} else {
+		return nil, nil
+	}
 
 	return &lsp.CompletionList{
-		IsIncomplete: true,
+		IsIncomplete: false,
 		Items:        items,
 	}, nil
+}
+
+func (s *LangServer) getNololCompletions(params *lsp.CompletionParams) []lsp.CompletionItem {
+	diags, err := s.cache.GetDiagnostics(params.TextDocument.URI)
+	if err != nil {
+		return []lsp.CompletionItem{}
+	}
+
+	analysis := diags.AnalysisReport
+	if analysis == nil {
+		return []lsp.CompletionItem{}
+	}
+
+	items := make([]lsp.CompletionItem, len(analysis.Variables)+len(analysis.Definitions)+len(analysis.Macros))
+
+	for _, v := range analysis.GetVarsAtLine(int(params.Position.Line) + 1) {
+		items = append(items, lsp.CompletionItem{
+			Label: v,
+			Kind:  6,
+		})
+	}
+
+	for _, m := range analysis.Macros {
+		item := lsp.CompletionItem{
+			Detail:           m.Name + "(" + strings.Join(m.Arguments, ",") + ")",
+			Label:            m.Name,
+			Kind:             15,
+			InsertText:       m.Name + argsToSnippet(m.Arguments),
+			InsertTextFormat: 2,
+		}
+		if doc, exists := analysis.Docstrings[m.Name]; exists {
+			item.Documentation = doc
+		}
+		items = append(items, item)
+	}
+
+	for _, d := range analysis.Definitions {
+		kind := 21.0
+		insert := ""
+		detail := ""
+		if len(d.Placeholders) > 0 {
+			kind = 3.0
+			detail += d.Name + "(" + strings.Join(d.Placeholders, ",") + ")"
+			insert = d.Name + argsToSnippet(d.Placeholders)
+		}
+		item := lsp.CompletionItem{
+			Label:            d.Name,
+			Kind:             kind,
+			InsertText:       insert,
+			Detail:           detail,
+			InsertTextFormat: 2,
+		}
+		if doc, exists := analysis.Docstrings[d.Name]; exists {
+			item.Documentation = doc
+		}
+		items = append(items, item)
+	}
+
+	for _, l := range analysis.Labels {
+		items = append(items, lsp.CompletionItem{
+			Label: l,
+			Kind:  13,
+		})
+	}
+
+	return items
 }
 
 func (s *LangServer) getVariableCompletions(params *lsp.CompletionParams) []lsp.CompletionItem {
@@ -114,4 +138,16 @@ func findUsedVariables(prog *ast.Program) []string {
 	}
 
 	return vars
+}
+
+func argsToSnippet(args []string) string {
+	snip := "("
+	for i, arg := range args {
+		snip += "${" + strconv.Itoa(i+1) + ":" + arg + "}"
+		if i != len(args)-1 {
+			snip += ","
+		}
+	}
+	snip += ")$0"
+	return snip
 }

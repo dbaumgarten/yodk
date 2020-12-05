@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"github.com/dbaumgarten/yodk/pkg/lsp"
-	"github.com/dbaumgarten/yodk/pkg/nolol/nast"
+	"github.com/dbaumgarten/yodk/pkg/nolol"
 )
 
 var NotFoundError = fmt.Errorf("File not found in cache")
@@ -17,9 +17,8 @@ type Cache struct {
 }
 
 type DiagnosticResults struct {
-	Macros      map[string]*nast.MacroDefinition
-	Definitions map[string]*nast.Definition
-	Variables   []string
+	Variables      []string
+	AnalysisReport *nolol.AnalysisReport
 }
 
 func NewCache() *Cache {

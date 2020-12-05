@@ -38,9 +38,9 @@ func (c *Converter) convertWhileLoop(loop *nast.WhileLoop, visitType int) error 
 
 	repl := []ast.Node{
 		&nast.StatementLine{
-			Position: loop.Position,
-			Label:    startLabel,
+			Label: startLabel,
 			Line: ast.Line{
+				Position:   loop.Position,
 				Statements: []ast.Statement{},
 			},
 		},
@@ -83,8 +83,8 @@ func (c *Converter) convertWhileLoop(loop *nast.WhileLoop, visitType int) error 
 		repl = append(repl, blockline)
 	}
 	repl = append(repl, &nast.StatementLine{
-		Position: loop.Block.End(),
 		Line: ast.Line{
+			Position: loop.Block.End(),
 			Statements: []ast.Statement{
 				&nast.GoToLabelStatement{
 					Position: loop.Block.End(),
@@ -95,9 +95,9 @@ func (c *Converter) convertWhileLoop(loop *nast.WhileLoop, visitType int) error 
 	})
 
 	repl = append(repl, &nast.StatementLine{
-		Position: loop.Position,
-		Label:    endLabel,
+		Label: endLabel,
 		Line: ast.Line{
+			Position:   loop.Position,
 			Statements: []ast.Statement{},
 		},
 	})

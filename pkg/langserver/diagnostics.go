@@ -166,8 +166,11 @@ func (s *LangServer) Diagnose(ctx context.Context, uri lsp.DocumentURI) {
 			conv := nolol.NewConverter()
 			mainfile := string(uri)
 			_, errs = conv.ConvertFileEx(mainfile, newfs(s, uri))
-			diagRes.Definitions = conv.GetDefinitions()
-			diagRes.Macros = conv.GetMacros()
+
+			analysis, err := nolol.AnalyseFileEx(mainfile, newfs(s, uri))
+			if err == nil {
+				diagRes.AnalysisReport = analysis
+			}
 
 		} else {
 			return

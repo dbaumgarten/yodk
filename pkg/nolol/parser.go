@@ -233,9 +233,9 @@ func (p *Parser) ParseStatementLine() *nast.StatementLine {
 	p.Log()
 	ret := nast.StatementLine{
 		Line: ast.Line{
+			Position:   p.CurrentToken.Position,
 			Statements: make([]ast.Statement, 0, 1),
 		},
-		Position: p.CurrentToken.Position,
 	}
 
 	// get line-label if it exists

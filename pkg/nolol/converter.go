@@ -57,16 +57,6 @@ func (c *Converter) GetVariableTranslations() map[string]string {
 	return c.varnameOptimizer.GetReversalTable()
 }
 
-// GetDefinitions returns all definitions found during parsing
-func (c *Converter) GetDefinitions() map[string]*nast.Definition {
-	return c.definitions
-}
-
-// GetMacros returns all macros found during parsing
-func (c *Converter) GetMacros() map[string]*nast.MacroDefinition {
-	return c.macros
-}
-
 // ConvertFile is a shortcut that loads a file from the file-system, parses it and directly convertes it.
 // mainfile is the path to the file on the disk.
 // All included are loaded relative to the mainfile.
@@ -333,10 +323,10 @@ func (c *Converter) mergeStatementElements(lines []*nast.StatementLine) ([]*nast
 		current := &nast.StatementLine{
 			Line: ast.Line{
 				Statements: []ast.Statement{},
+				Position:   lines[i].Position,
 			},
-			Label:    lines[i].Label,
-			Position: lines[i].Position,
-			HasEOL:   lines[i].HasEOL,
+			Label:  lines[i].Label,
+			HasEOL: lines[i].HasEOL,
 		}
 		current.Statements = append(current.Statements, lines[i].Statements...)
 		newElements = append(newElements, current)
