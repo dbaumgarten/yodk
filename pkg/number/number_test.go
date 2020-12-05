@@ -49,6 +49,18 @@ func TestFromString(t *testing.T) {
 			teststr: "-5.5",
 			want:    FromFloat64(-5.5),
 		},
+		{
+			teststr: "649.94",
+			want:    FromFloat64(649.94),
+		},
+		{
+			teststr: "649.940",
+			want:    FromFloat64(649.94),
+		},
+		{
+			teststr: "649.094",
+			want:    FromFloat64(649.094),
+		},
 	}
 	for _, tt := range tests {
 		got, err := FromString(tt.teststr)
@@ -56,7 +68,7 @@ func TestFromString(t *testing.T) {
 			t.Errorf("FromString() error = %v", err)
 			continue
 		}
-		if !reflect.DeepEqual(got, tt.want) {
+		if got != tt.want {
 			t.Errorf("FromString() = %v, want %v", got, tt.want)
 		}
 	}
@@ -137,6 +149,20 @@ func TestFromFloat64(t *testing.T) {
 			},
 			MustFromString("-123.789"),
 		},
+		{
+			"test5",
+			args{
+				123.780,
+			},
+			MustFromString("123.78"),
+		},
+		{
+			"test5",
+			args{
+				123.078,
+			},
+			MustFromString("123.078"),
+		},
 	}
 	for _, tt := range tests {
 		if got := FromFloat64(tt.args.in); !reflect.DeepEqual(got, tt.want) {
@@ -198,7 +224,7 @@ func TestNumber_String(t *testing.T) {
 		{
 			"test3",
 			MustFromString("123.1"),
-			"123.100",
+			"123.1",
 		},
 		{
 			"test4",
@@ -209,6 +235,11 @@ func TestNumber_String(t *testing.T) {
 			"test5",
 			MustFromString("-123.789"),
 			"-123.789",
+		},
+		{
+			"test6",
+			MustFromString("-123.089"),
+			"-123.089",
 		},
 	}
 	for _, tt := range tests {

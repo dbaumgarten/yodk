@@ -81,7 +81,9 @@ func (n Number) String() string {
 	str := strconv.Itoa(int(n / scale))
 	remainder := n.Abs() % scale
 	if remainder != 0 {
-		str += "." + strconv.Itoa(int(remainder))
+		deci := strconv.Itoa(int(remainder))
+		str += "." + strings.Repeat("0", 3-len(deci)) + deci
+		str = strings.TrimRight(str, "0")
 	}
 	return str
 }
