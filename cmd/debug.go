@@ -76,8 +76,8 @@ func load(args []string) {
 	} else {
 		helper, err = debug.FromScripts("", args, prepareVM)
 	}
-	helper.IgnoreErrs = ignoreErrs
 	exitOnError(err, "starting debugger")
+	helper.IgnoreErrs = ignoreErrs
 
 	debugShell.Println("Loaded and paused programs. Enter 'c' to start execution.")
 }

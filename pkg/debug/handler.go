@@ -123,9 +123,12 @@ func (h *YODKHandler) helperFromArguments(arguments map[string]interface{}) (*He
 
 	} else if testfield, exists := arguments["test"]; exists {
 		tcase := 1
-		if casefield, exists := arguments["testcase"]; exists {
+		if casefield, exists := arguments["testCase"]; exists {
 			if casenr, is := casefield.(int); is {
 				tcase = casenr
+			}
+			if casenr, is := casefield.(float64); is {
+				tcase = int(casenr)
 			}
 		}
 		if test, is := testfield.(string); is {

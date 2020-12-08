@@ -157,6 +157,11 @@
                 "description": "Path to a yodk-test-file to debug",
                 "default": ""
               },
+              "testCase": {
+                "type": "number",
+                "desciption": "The number of the test-case drom the test.yaml to run",
+                "default": 1
+              },
               "workspace": {
                 "type": "string",
                 "description": "A folder to which file-paths are relative"

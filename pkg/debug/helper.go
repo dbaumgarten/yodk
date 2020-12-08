@@ -186,6 +186,10 @@ func FromTest(workspace string, testfile string, casenr int, prepareVM VMPrepare
 		}
 	}
 
+	if casenr < 1 || casenr > len(t.Cases) {
+		return nil, fmt.Errorf("The test-file does not contain a case number %d!", casenr)
+	}
+
 	runner, err := t.GetRunner(casenr - 1)
 	if err != nil {
 		return nil, err
