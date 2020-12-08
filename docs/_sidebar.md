@@ -2,5 +2,6 @@
 
 * [Introduction](/)
 * [CLI](/cli)
-* [vscode-yolol](/vscode-yolol)
+* [Vscode-yolol](/vscode-yolol)
+    - [Instructions](/vscode-instructions)
 * [NOLOL](/nolol)
