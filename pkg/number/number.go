@@ -78,12 +78,16 @@ func (n Number) Float64() float64 {
 
 // String returns the value of the number as string
 func (n Number) String() string {
-	str := strconv.Itoa(int(n / scale))
+	prefix := int(n / scale)
+	str := strconv.Itoa(prefix)
 	remainder := n.Abs() % scale
 	if remainder != 0 {
 		deci := strconv.Itoa(int(remainder))
 		str += "." + strings.Repeat("0", 3-len(deci)) + deci
 		str = strings.TrimRight(str, "0")
+		if n < 0 && prefix >= 0 {
+			str = "-" + str
+		}
 	}
 	return str
 }
