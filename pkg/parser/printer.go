@@ -34,7 +34,9 @@ type Printer struct {
 	text           string
 	lastWasSpace   bool
 	prevWasKeyword bool
-	requestedSpace bool
+	// identifiers that ent with a number must be treated specially
+	prevWasSpecialIdentifier bool
+	requestedSpace           bool
 	// If true, at position-information to every printed token.
 	// Does not produce valid yolol, but is usefull for debugging
 	DebugPositions bool
@@ -101,6 +103,7 @@ func (p *Printer) Write(content string) {
 	}
 	p.text += content
 	p.prevWasKeyword = keywordRegex.MatchString(content)
+	p.prevWasSpecialIdentifier = false
 	p.lastWasSpace = false
 	p.requestedSpace = false
 }
@@ -194,6 +197,11 @@ func (p *Printer) Print(prog ast.Node) (string, error) {
 			break
 		case *ast.Assignment:
 			if visitType == ast.PreVisit {
+				// if the previously printed string was a dereference ending in a number
+				// and this thing starts with a letter or number, we must enforce a space
+				if p.prevWasSpecialIdentifier && charType(n.Variable[0]) <= 1 {
+					p.forceSpace()
+				}
 				p.Write(n.Variable)
 				p.OptionalSpace()
 				p.Write(n.Operator)
@@ -211,6 +219,13 @@ func (p *Printer) Print(prog ast.Node) (string, error) {
 			break
 		case *ast.Dereference:
 			p.printDeref(n)
+			if n.PrePost != "Post" {
+				lastchar := n.Variable[len(n.Variable)-1:]
+				if charType(lastchar[0]) == 1 {
+					// if the identifier ended with a number, a space may be required after it
+					p.prevWasSpecialIdentifier = true
+				}
+			}
 			break
 		case *ast.StringConstant:
 			p.Write("\"" + insertEscapesIntoString(n.Value) + "\"")
