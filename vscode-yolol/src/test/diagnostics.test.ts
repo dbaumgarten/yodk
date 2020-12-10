@@ -8,7 +8,7 @@ describe('Should get diagnostics', () => {
     it('Diagnoses errors in yolol', async () => {
       const docUri = getDocUri('has_errors.yolol')
       await testDiagnostics(docUri, [
-        { message: 'Expected statement inside if-block. Found Token: \'then\'(Keyword)', range: toRange(1, 27, 1, 27), severity: vscode.DiagnosticSeverity.Error, source: 'parser' },
+        { message: 'Expected token \'end\'(Keyword). Found Token: \'then\'(Keyword)', range: toRange(1, 27, 1, 27), severity: vscode.DiagnosticSeverity.Error, source: 'parser' },
         { message: 'Expected an assignment-operator. Found Token: \':number\'(ID)', range: toRange(4, 4, 4, 4), severity: vscode.DiagnosticSeverity.Error, source: 'parser' }
       ])
     })

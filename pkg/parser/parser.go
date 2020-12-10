@@ -403,37 +403,27 @@ func (p *Parser) ParseIf() ast.Statement {
 	}
 
 	p.Expect(ast.TypeKeyword, "then")
-
-	stmt := p.This.ParseStatement()
-	if stmt == nil {
-		p.ErrorExpectedStatement("inside if-block")
-	}
 	ret.IfBlock = make([]ast.Statement, 0, 1)
-	ret.IfBlock = append(ret.IfBlock, stmt)
 
 	for {
-		stmt2 := p.This.ParseStatement()
-		if stmt2 == nil {
+		stmt := p.This.ParseStatement()
+		if stmt == nil {
 			break
 		}
-		ret.IfBlock = append(ret.IfBlock, stmt2)
+		ret.IfBlock = append(ret.IfBlock, stmt)
 	}
 
 	if p.IsCurrent(ast.TypeKeyword, "else") {
 		p.Advance()
-		stmt := p.This.ParseStatement()
-		if stmt == nil {
-			p.ErrorExpectedStatement("inside else-block")
-		}
+
 		ret.ElseBlock = make([]ast.Statement, 0, 1)
-		ret.ElseBlock = append(ret.ElseBlock, stmt)
 
 		for {
-			stmt2 := p.This.ParseStatement()
-			if stmt2 == nil {
+			stmt := p.This.ParseStatement()
+			if stmt == nil {
 				break
 			}
-			ret.ElseBlock = append(ret.IfBlock, stmt2)
+			ret.ElseBlock = append(ret.ElseBlock, stmt)
 		}
 	}
 
