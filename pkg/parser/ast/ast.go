@@ -231,6 +231,9 @@ func (n *IfStatement) Start() Position {
 // End is needed to implement Node
 func (n *IfStatement) End() Position {
 	if n.ElseBlock == nil {
+		if len(n.IfBlock) == 0 {
+			return n.Position.Add(len("then end"))
+		}
 		return n.IfBlock[len(n.IfBlock)-1].End().Add(3)
 	}
 	return n.ElseBlock[len(n.ElseBlock)-1].End().Add(3)
