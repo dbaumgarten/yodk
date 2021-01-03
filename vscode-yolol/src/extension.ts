@@ -65,21 +65,40 @@ export async function runYodkCommand(cmd,resultChannel=null): Promise<{}> {
 	})
 }
 
+// given a filename, return a full-path for a logfile
+function getLogfilePath(filename:string){
+	var ws = vscode.workspace.workspaceFolders
+	if (ws) {
+		return path.join(ws[0].uri.fsPath,filename)
+	}
+	var activeFile = vscode.window.activeTextEditor.document.uri.fsPath
+	return path.join(path.dirname(activeFile),filename)
+}
+
+function isDebuggingEnabled(){
+	return vscode.workspace.getConfiguration("yolol.debug")["enable"]
+}
+
 export function startLangServer(){
 	let serverModule = getExePath();
 
-	// If the extension is launched in debug mode then the debug server options are used
-	// Otherwise the run options are used
+	var debug = vscode.workspace.getConfiguration("yolol.debug")["enable"]
+	var args = ["langserv"]
+
+	if (isDebuggingEnabled()){
+		args = ["langserv", "--debug", "--logfile", getLogfilePath("language-server-log.txt")]
+	}
+
 	let serverOptions: ServerOptions = {
 		run: {
 			command: serverModule,
 			transport: TransportKind.stdio,
-			args: ["langserv"]
+			args: args,
 		},
 		debug: {
 			command: serverModule,
 			transport: TransportKind.stdio,
-			args: ["langserv", "--logfile", "lslog"]
+			args: args,
 		}
 	};
 
@@ -106,7 +125,7 @@ export function startLangServer(){
 	client.start();
 }
 
-export function restartLangServer() {
+export async function restartLangServer() {
 	client.stop()
 	startLangServer()
 }
@@ -171,17 +190,10 @@ export class DebugAdapterExecutableFactory implements vscode.DebugAdapterDescrip
 	createDebugAdapterDescriptor(_session: vscode.DebugSession, executable: vscode.DebugAdapterExecutable | undefined): ProviderResult<vscode.DebugAdapterDescriptor> {
 		
 		const command = getExePath()
-		var args = [
-			"debugadapter",
-		];
+		var args = ["debugadapter",];
 
-		if ("logfile" in _session.configuration) {
-			args.push("--logfile")
-			args.push(_session.configuration["logfile"])
-		}
-
-		if ("debug" in _session.configuration && _session.configuration["debug"] == true){
-			args.push("--debug")
+		if (isDebuggingEnabled()) {
+			args = ["debugadapter","--debug","--logfile",getLogfilePath("debug-adapter-log.txt")];
 		}
 
 		var options = {}

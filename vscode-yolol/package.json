@@ -59,6 +59,12 @@
             "Complain only when even optimization does not help",
             "Never complain"
           ]
+        },
+        "yolol.debug.enable": {
+          "scope": "window",
+          "type": "boolean",
+          "default": false,
+          "description": "Enable debug-mode for the extension."
         }
       }
     },
@@ -165,18 +171,10 @@
               "workspace": {
                 "type": "string",
                 "description": "A folder to which file-paths are relative"
-              },
-              "logfile": {
-                "type": "string",
-                "description": "Loaction of a file to write logs into"
-              },
-              "debug": {
-                "type": "boolean",
-                "desciption": "If true, enable verbose debug-logging"
               }
             }
           }
-          }
+        }
       }
     ]
   },
