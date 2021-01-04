@@ -79,14 +79,20 @@ function isDebuggingEnabled(){
 	return vscode.workspace.getConfiguration("yolol.debug")["enable"]
 }
 
+function areHotkeysEnabled(){
+	return vscode.workspace.getConfiguration("yolol.hotkeys")["enable"]
+}
+
 export function startLangServer(){
 	let serverModule = getExePath();
-
-	var debug = vscode.workspace.getConfiguration("yolol.debug")["enable"]
 	var args = ["langserv"]
 
 	if (isDebuggingEnabled()){
-		args = ["langserv", "--debug", "--logfile", getLogfilePath("language-server-log.txt")]
+		args = args.concat(["--debug", "--logfile", getLogfilePath("language-server-log.txt")])
+	}
+
+	if (!areHotkeysEnabled()){
+		args = args.concat(["--hotkeys=false"])
 	}
 
 	let serverOptions: ServerOptions = {
@@ -120,6 +126,17 @@ export function startLangServer(){
 		serverOptions,
 		clientOptions
 	);
+
+	// when the client is ready:
+	client.onReady().then(function(){
+		// whenever the currently active document changes, inform the language-server
+		vscode.window.onDidChangeActiveTextEditor(function(event) { 
+			client.sendRequest( "workspace/executeCommand", {
+				command: "activeDocument",
+				arguments: [vscode.window.activeTextEditor.document.uri.toString()]
+			})
+		})
+	})
 
 	// Start the client. This will also launch the server
 	client.start();
@@ -193,7 +210,7 @@ export class DebugAdapterExecutableFactory implements vscode.DebugAdapterDescrip
 		var args = ["debugadapter",];
 
 		if (isDebuggingEnabled()) {
-			args = ["debugadapter","--debug","--logfile",getLogfilePath("debug-adapter-log.txt")];
+			args = args.concat(["--debug","--logfile",getLogfilePath("debug-adapter-log.txt")])
 		}
 
 		var options = {}

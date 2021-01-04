@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"runtime"
+	"strings"
 
 	"github.com/dbaumgarten/yodk/pkg/jsonrpc2"
 	"github.com/dbaumgarten/yodk/pkg/lsp"
@@ -15,12 +16,18 @@ type LangServer struct {
 	settings *Settings
 }
 
-func Run(ctx context.Context, stream jsonrpc2.Stream, opts ...interface{}) error {
+func Run(ctx context.Context, stream jsonrpc2.Stream, enableHotkeys bool, opts ...interface{}) error {
 	s := &LangServer{}
 	conn, client := lsp.RunServer(ctx, stream, s, opts...)
 	s.client = client
 	s.cache = NewCache()
 	s.settings = DefaultSettings()
+
+	if enableHotkeys {
+		// Register the global hotkeys
+		s.ListenForHotkeys()
+	}
+
 	return conn.Wait(ctx)
 }
 
@@ -41,6 +48,14 @@ func callingFunctionName() string {
 		return ""
 	}
 	return caller.Name()
+}
+
+func (ls *LangServer) storeLastOpenedScript(uri string) {
+	if strings.HasSuffix(uri, ".yolol") {
+		ls.cache.Lock.Lock()
+		ls.cache.LastOpenedYololFile = lsp.DocumentURI(uri)
+		ls.cache.Lock.Unlock()
+	}
 }
 
 func (ls *LangServer) Initialize(ctx context.Context, params *lsp.InitializeParams) (*lsp.InitializeResult, error) {
@@ -80,10 +95,19 @@ func (ls *LangServer) Symbols(ctx context.Context, params *lsp.WorkspaceSymbolPa
 	return nil, unsupported()
 }
 func (ls *LangServer) ExecuteCommand(ctx context.Context, params *lsp.ExecuteCommandParams) (interface{}, error) {
+	if params.Command == "activeDocument" {
+		if len(params.Arguments) == 1 {
+			if argstr, is := params.Arguments[0].(string); is {
+				ls.storeLastOpenedScript(argstr)
+				return nil, nil
+			}
+		}
+	}
 	return nil, unsupported()
 }
 func (ls *LangServer) DidOpen(ctx context.Context, params *lsp.DidOpenTextDocumentParams) error {
 	ls.cache.Set(params.TextDocument.URI, params.TextDocument.Text)
+	ls.storeLastOpenedScript(string(params.TextDocument.URI))
 	ls.Diagnose(ctx, params.TextDocument.URI)
 	return nil
 }

@@ -34,6 +34,24 @@ There are several commands that can be executed from the command-palette (f1). Y
 - **Run all \*_test.yaml**: Will run the testcases in all *_test.yaml files in the current directory and report the results.
 - **Compile NOLOL**: If you have a [.nolol-file](/nolol) open, run this action to compile it to yolol. This will generate a file \<name\>.yolol in the same directory, containing the compiled code.
 
+# Auto-typing into Starbase
+One key-problem when writing yolol-code in an external editor always was how to get the code into your ship's yolol-chips. The easiest way was to copy/paste it line by line. Vscode-yolol can make this much faster, but offering the ability to auto-type your scripts directly into starbase.  
+
+***NOTE***: Please keep the Ctrl-Key pressed the whole time the auto-typer is doing work. Otherwise the key-up-event produced by you letting up the key can interfere with the auto-typing.  
+
+***NOTE2***: Make sure to you really have focussed the chip when using the hotkey, otherwise vscode-yolol will send random keystrokes to the game, making your character do all sorts of weird stuff.
+
+If you (for whatever reason) want to disable the global hotkeys, you can do so in the vscode-settings under File->Preferences->Settings->search for 'yolol'->Hotkeys: Enable). Vscode needs to be restarted for changes to this setting to take effect.  
+
+## Inseting code into a chip
+Open the .yolol-script you want to insert in vscode (it has to be the current active file). Go to Stabase's window and open the yolol-chip you want to fill. Unlock it, aim your cursor at it and click a line. Now press ```Ctrl+I```. Vscode will start to auto-type your code into the chip, starting at your current cursor-position. 
+
+
+## Erasing a chip
+The auto-typing only works properly when the lines of the chip are empty before inserting code. Vscode-yolol can also automate this for you. Click a line on your chip and press ```Ctrl+D```. This will end the key-strokes Ctrl+A, Entf, Down 20 times, resulting in an empty chip, starting at the line you clicked. (If you clicked line 1, the chip is now completely empty)
+
+## Overwriting code
+By pressing ```Ctrl+O``` vscode will overwrite the code on the chip, starting from the current, line with the yolol-code of the currently open script in vscode. (This is effectively a faster variant of ```Ctrl+D```+Select line+```Ctrl+I```)
 
 # Debugging
 This extension enables you to interactively run and debug yolol-code. To learn how to debug using vscode see here: https://code.visualstudio.com/Docs/editor/debugging .  

@@ -64,7 +64,13 @@
           "scope": "window",
           "type": "boolean",
           "default": false,
-          "description": "Enable debug-mode for the extension."
+          "description": "Enable debug-mode for the extension"
+        },
+        "yolol.hotkeys.enable": {
+          "scope": "window",
+          "type": "boolean",
+          "default": true,
+          "description": "Enable the system-wide hotkeys for auto-typing inside starbase"
         }
       }
     },

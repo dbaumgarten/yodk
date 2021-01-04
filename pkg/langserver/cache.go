@@ -11,9 +11,10 @@ import (
 var NotFoundError = fmt.Errorf("File not found in cache")
 
 type Cache struct {
-	Files       map[lsp.DocumentURI]string
-	Diagnostics map[lsp.DocumentURI]DiagnosticResults
-	Lock        *sync.Mutex
+	Files               map[lsp.DocumentURI]string
+	Diagnostics         map[lsp.DocumentURI]DiagnosticResults
+	Lock                *sync.Mutex
+	LastOpenedYololFile lsp.DocumentURI
 }
 
 type DiagnosticResults struct {
