@@ -3,9 +3,11 @@
 package langserver
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/dbaumgarten/yodk/pkg/langserver/win32"
@@ -37,11 +39,35 @@ const typeDelay = 40 * time.Millisecond
 // ListenForHotkeys listens for global hotkeys and dispatches the registered actions
 func (ls *LangServer) ListenForHotkeys() {
 	go func() {
-		err := win32.ListenForHotkeys(nil, ls.hotkeyHandler, AutotypeHotkey, AutodeleteHotkey, AutooverwriteHotkey)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error when registering hotkeys: %s", err)
+		currentWindow := win32.GetForegroundWindow()
+		wg := sync.WaitGroup{}
+		var cancelHotkeyListening context.CancelFunc
+		var hotkeysRegistered = false
+		for {
+			if isStarbaseWindow(currentWindow) && !hotkeysRegistered {
+				ctx := context.Background()
+				ctx, cancelHotkeyListening = context.WithCancel(ctx)
+				hotkeysRegistered = true
+				go func() {
+					wg.Add(1)
+					err := win32.ListenForHotkeys(ctx, ls.hotkeyHandler, AutotypeHotkey, AutodeleteHotkey, AutooverwriteHotkey)
+					if err != nil {
+						fmt.Fprintf(os.Stderr, "Error when registering hotkeys: %s", err)
+					}
+					wg.Done()
+				}()
+			} else if hotkeysRegistered {
+				cancelHotkeyListening()
+				wg.Wait()
+				hotkeysRegistered = false
+			}
+			currentWindow = win32.WaitForWindowChange(nil)
 		}
 	}()
+}
+
+func isStarbaseWindow(name string) bool {
+	return name == "Starbase"
 }
 
 func (ls *LangServer) hotkeyHandler(hk win32.Hotkey) {

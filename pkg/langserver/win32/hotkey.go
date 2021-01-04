@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"runtime"
+	"time"
 	"unsafe"
 )
 
@@ -21,8 +22,9 @@ const (
 )
 
 var (
-	reghotkey = user32.MustFindProc("RegisterHotKey")
-	getmsg    = user32.MustFindProc("GetMessageW")
+	reghotkey   = user32.MustFindProc("RegisterHotKey")
+	unreghotkey = user32.MustFindProc("UnregisterHotKey")
+	getmsg      = user32.MustFindProc("PeekMessageW")
 )
 
 // Hotkey represents a key-combination pressed by a user
@@ -66,6 +68,22 @@ type msg struct {
 	POINT  struct{ X, Y int64 }
 }
 
+func registerHotkey(hk *Hotkey) error {
+	r1, _, err := reghotkey.Call(0, uintptr(hk.ID), uintptr(hk.Modifiers), uintptr(hk.KeyCode))
+	if r1 == 0 {
+		return err
+	}
+	return nil
+}
+
+func unregisterHotkey(hk *Hotkey) error {
+	r1, _, err := unreghotkey.Call(0, uintptr(hk.ID))
+	if r1 == 0 {
+		return err
+	}
+	return nil
+}
+
 // ListenForHotkeys registers an listens for the given global Hotkeys. If a hotkey is pressed, the hendler function is executed
 // This function blocks, so it shoue have it's own goroutine
 func ListenForHotkeys(ctx context.Context, handler HotkeyHandler, hotkeys ...*Hotkey) error {
@@ -74,13 +92,21 @@ func ListenForHotkeys(ctx context.Context, handler HotkeyHandler, hotkeys ...*Ho
 	defer runtime.UnlockOSThread()
 
 	hotkeymap := make(map[int16]*Hotkey)
+
+	// unregister all hotkeys when exiting
+	defer func() {
+		for _, v := range hotkeymap {
+			unregisterHotkey(v)
+		}
+	}()
+
+	// register all requested hotkeys
 	for _, v := range hotkeys {
-		hotkeymap[int16(v.ID)] = v
-		r1, _, err := reghotkey.Call(
-			0, uintptr(v.ID), uintptr(v.Modifiers), uintptr(v.KeyCode))
-		if r1 != 1 {
+		err := registerHotkey(v)
+		if err != nil {
 			return err
 		}
+		hotkeymap[int16(v.ID)] = v
 	}
 
 	for {
@@ -88,7 +114,7 @@ func ListenForHotkeys(ctx context.Context, handler HotkeyHandler, hotkeys ...*Ho
 			return nil
 		}
 		var msg = &msg{}
-		getmsg.Call(uintptr(unsafe.Pointer(msg)), 0, 0, 0)
+		getmsg.Call(uintptr(unsafe.Pointer(msg)), 0, 0, 0, 1)
 
 		// Registered id is in the WPARAM field:
 		if id := msg.WPARAM; id != 0 {
@@ -97,5 +123,6 @@ func ListenForHotkeys(ctx context.Context, handler HotkeyHandler, hotkeys ...*Ho
 				handler(*hk)
 			}
 		}
+		time.Sleep(50 * time.Millisecond)
 	}
 }
