@@ -16,6 +16,7 @@ If you experience any issues or would like to request a feature, please [open an
 - Auto-completion
 - Commands for optimizing yolol
 - Interactively debug YOLOL-code in vscode
+- AUto-type your code into Starbase
 - Also supports nolol
 
 # Instructions

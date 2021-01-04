@@ -24,7 +24,7 @@ var (
 	AutodeleteHotkey = &win32.Hotkey{
 		ID:        2,
 		Modifiers: win32.ModCtrl,
-		KeyCode:   'D',
+		KeyCode:   'P',
 	}
 	// AutooverwriteHotkey is the hotkey to overwrite the current line with new ones
 	AutooverwriteHotkey = &win32.Hotkey{

@@ -48,11 +48,11 @@ If you (for whatever reason) want to disable the global hotkeys, you can do so i
 ## Inseting code into a chip
 Open the .yolol-script you want to insert in vscode (it has to be the current active file). Go to Stabase's window and open the yolol-chip you want to fill. Unlock it, aim your cursor at it and click a line. Now press ```Ctrl+I```. Vscode will start to auto-type your code into the chip, starting at your current cursor-position. 
 
-## Erasing a chip
-The auto-typing only works properly when the lines of the chip are empty before inserting code. Vscode-yolol can also automate this for you. Click a line on your chip and press ```Ctrl+D```. This will end the key-strokes Ctrl+A, Entf, Down 20 times, resulting in an empty chip, starting at the line you clicked. (If you clicked line 1, the chip is now completely empty)
+## Purge a chip
+The auto-typing only works properly when the lines of the chip are empty before inserting code. Vscode-yolol can also automate this for you. Click a line on your chip and press ```Ctrl+P```. This will send the key-strokes Ctrl+A, Entf, Down 20 times, resulting in an empty chip, starting at the line you clicked. (If you clicked line 1, the chip is now completely empty)
 
 ## Overwriting code
-By pressing ```Ctrl+O``` vscode will overwrite the code on the chip, starting from the current, line with the yolol-code of the currently open script in vscode. (This is effectively a faster variant of ```Ctrl+D```+Select line+```Ctrl+I```)
+By pressing ```Ctrl+O``` vscode will overwrite the code on the chip, starting from the current, line with the yolol-code of the currently open script in vscode. (This is effectively a faster variant of ```Ctrl+P```+Select line+```Ctrl+I```)
 
 # Debugging
 This extension enables you to interactively run and debug yolol-code. To learn how to debug using vscode see here: https://code.visualstudio.com/Docs/editor/debugging .  
