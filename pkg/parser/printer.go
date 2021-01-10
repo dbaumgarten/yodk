@@ -320,7 +320,12 @@ func (p *Printer) printUnaryOperation(o *ast.UnaryOperation, visitType int) {
 	thisPrio := priorityForExpression(o)
 	if visitType == ast.PreVisit {
 		if o.Operator == "-" {
-			p.Space()
+			if charType(p.text[len(p.text)-1]) == 2 {
+				p.forceSpace()
+			} else {
+				p.OptionalSpace()
+			}
+
 			p.Write(o.Operator)
 		} else if o.Operator == "!" {
 			//do not write anything in PreVisit

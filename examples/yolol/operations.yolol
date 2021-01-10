@@ -13,7 +13,7 @@ goto counter-8 :testgotovar=0
 :testexp=10^2==100
 :testeq=42==42 and not (41==24)
 :testneq=1!=42 and not (1!=1)
-:testgt=2>1 and not (1>2) and 5> -5
+:testgt=2>1 and not (1>2) and 5>-5
 :testgte=2>=1 and not (1>=2) and 2>=2
 :testlt=1<2 and not (2<1) and -5<5
 :testlte=1<=2 and not (2<=1) and 2>=2
