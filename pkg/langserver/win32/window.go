@@ -33,7 +33,7 @@ func GetForegroundWindow() string {
 func WaitForWindowChange(ctx context.Context) string {
 	oldWindow := GetForegroundWindow()
 	for {
-		time.Sleep(500 * time.Millisecond)
+		time.Sleep(200 * time.Millisecond)
 		newWindow := GetForegroundWindow()
 		if newWindow != oldWindow {
 			return newWindow
