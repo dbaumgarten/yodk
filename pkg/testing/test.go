@@ -229,6 +229,7 @@ func (cr CaseRunner) Run() []error {
 			defer flock.Unlock()
 			fails = append(fails, err)
 			go cr.Coordinator.Terminate()
+			return false
 		}
 		return true
 	}
