@@ -218,6 +218,11 @@ func (p *Printer) Print(prog ast.Node) (string, error) {
 			}
 			break
 		case *ast.Dereference:
+			if n.PrePost != "Pre" && p.prevWasSpecialIdentifier {
+				if n.Variable[0] != ':' {
+					p.forceSpace()
+				}
+			}
 			p.printDeref(n)
 			if n.PrePost != "Post" {
 				lastchar := n.Variable[len(n.Variable)-1:]
