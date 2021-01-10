@@ -40,8 +40,8 @@
           "description": "Controls how yolol is formatted",
           "enumDescriptions": [
             "Add spaces to improve readability",
-            "Only add spaces when reasonable",
-            "Only add spaces when ABSOLUTELY necessary"
+            "Only add spaces when reasonable (works good for ingame)",
+            "Only add spaces when ABSOLUTELY necessary (may produce errors ingame, but good for Referee"
           ]
         },
         "yolol.lengthChecking.mode": {

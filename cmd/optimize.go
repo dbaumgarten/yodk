@@ -40,7 +40,9 @@ func optimize(filepath string) {
 	err := opt.Optimize(parsed)
 	exitOnError(err, "performing optimisation")
 	gen := parser.Printer{}
-	gen.Mode = parser.PrintermodeSpaceless
+	if spaceless {
+		gen.Mode = parser.PrintermodeSpaceless
+	}
 	generated, err := gen.Print(parsed)
 	exitOnError(err, "generating code")
 	ioutil.WriteFile(outfile, []byte(generated), 0700)
@@ -49,4 +51,5 @@ func optimize(filepath string) {
 func init() {
 	rootCmd.AddCommand(optimizeCmd)
 	optimizeCmd.Flags().StringVarP(&outputFile, "out", "o", "<inputfile>.out", "The output file")
+	optimizeCmd.Flags().BoolVar(&spaceless, "spaceless", false, "If true, output code with minimal spaces (might break script)")
 }

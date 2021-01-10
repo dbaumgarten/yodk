@@ -1,29 +1,29 @@
 // this program checks if the language is really case-insensitive
 // despit the really excentric naming (of even the keywords) all global variables should have the value 1 at the end
-Var = 123; var = 456
-:assignok = Var == 456
+Var=123;var=456
+:assignok=Var==456
 
-FoO = "test"
-:derefok = Foo == FoO
+FoO="test"
+:derefok=Foo==FoO
 
-:funcOK = sin(3) == SIN(3)
+:funcOK=sin(3)==SIN(3)
 
-if foo == FOO then
-	:ifok = 1
+if foo==FOO then
+	:ifok=1
 end
 
-define TEST = "FOO"
-:defineOK = test == "FOO"
+define TEST="FOO"
+:defineOK=test=="FOO"
 
-NUM = 1
-while num++ < 4 do
-	:loopok = num == NUM
+NUM=1
+while num++ <4 do
+	:loopok=num==NUM
 end
 
 macro fooBar(bar)
-	:macroOK = bar == BAR and bar == "FOO"
+	:macroOK=bar==BAR and bar=="FOO"
 end
 
 insert FOOBAR(TEST)
 
-:done = 1
+:done=1

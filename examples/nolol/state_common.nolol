@@ -2,21 +2,21 @@
 // This file defines constants and macros for the other scripts
 
 // define possible states
-define STATE_PING = 0
-define STATE_PONG = 1
+define STATE_PING=0
+define STATE_PONG=1
 
 // the shared state-var
-define :STATEVAR = :state
+define :STATEVAR=:state
 
 // the output-var we act on
-define :OUTPUT = :out
+define :OUTPUT=:out
 
 // define some macros
 macro SMBEGIN(waitfor)
-	wait :STATEVAR != waitfor	
+	wait :STATEVAR!=waitfor	
 end
 
 macro SMEND(newstate)
-	:STATEVAR = newstate
+	:STATEVAR=newstate
 end
 

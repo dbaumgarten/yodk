@@ -33,8 +33,8 @@ type Converter struct {
 	macroLevel          []string
 	macroInsertionCount int
 	debug               bool
-	// UseSpaces disables the default spaceless-mode
-	UseSpaces bool
+	// Spaceless uses spaceless printer-style for yolol
+	Spaceless bool
 }
 
 // NewConverter creates a new converter
@@ -379,17 +379,18 @@ func (c *Converter) mergeStatementElements(lines []*nast.StatementLine) ([]*nast
 //getLengthOfLine returns the amount of characters needed to represent the given line as yolol-code
 func (c *Converter) getLengthOfLine(line ast.Node) int {
 	ygen := parser.Printer{}
-	ygen.Mode = parser.PrintermodeSpaceless
-	if c.UseSpaces {
+	if c.Spaceless {
+		ygen.Mode = parser.PrintermodeSpaceless
+	} else {
 		ygen.Mode = parser.PrintermodeCompact
 	}
 
 	ygen.PrinterExtensionFunc = func(node ast.Node, visitType int, p *parser.Printer) (bool, error) {
 		if _, is := node.(*nast.GoToLabelStatement); is {
-			if c.UseSpaces {
-				p.Write("goto XX")
-			} else {
+			if c.Spaceless {
 				p.Write("gotoXX")
+			} else {
+				p.Write("goto XX")
 			}
 			return true, nil
 		}

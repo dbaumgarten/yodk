@@ -5,10 +5,10 @@
 :testmod=11%10==1
 counter=0
 counter++ 
-if counter<20 then goto 7 end
+if counter<20 then goto7 end
 :testgoto=counter==20
 :testgotovar=1
-goto counter-8 :testgotovar=0
+gotocounter-8 :testgotovar=0
 // comment1
 :testexp=10^2==100
 :testeq=42==42 and not (41==24)

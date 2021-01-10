@@ -30,7 +30,7 @@ func (s *LangServer) Format(params *lsp.DocumentFormattingParams) ([]lsp.TextEdi
 		}
 		gen := parser.Printer{}
 		if strings.HasSuffix(file, ".opt.yolol") {
-			gen.Mode = parser.PrintermodeSpaceless
+			gen.Mode = parser.PrintermodeReadable
 		} else {
 			switch s.settings.Yolol.Formatting.Mode {
 			case FormatModeReadale:

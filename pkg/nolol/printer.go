@@ -18,10 +18,8 @@ type Printer struct {
 // NewPrinter creates a new Printer
 func NewPrinter() *Printer {
 	p := &Printer{
-		yololPrinter: parser.Printer{
-			Mode: parser.PrintermodeReadable,
-		},
-		Indentation: "\t",
+		yololPrinter: parser.Printer{},
+		Indentation:  "\t",
 	}
 	p.yololPrinter.PrinterExtensionFunc = p.handleNololNodes
 	return p

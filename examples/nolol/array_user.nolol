@@ -1,14 +1,14 @@
 // This script uses array.nolol to store some values and retrieve themm again
 
-define data = :d
-define addr = :a
-define write = :m
+define data=:d
+define addr=:a
+define write=:m
 
 // store value at idx in array
 macro set(idx, value)
-	write = 1
-	data = value
-	addr = idx
+	write=1
+	data=value
+	addr=idx
 	// this will block until addr is 0.
 	// the array will set addr to 0 once it stored the value
 	wait addr	
@@ -16,22 +16,22 @@ end
 
 // retrieve value from idx
 macro get(idx, value)
-	write = 0
-	addr = idx
+	write=0
+	addr=idx
 	// this will block until addr is 0.
 	// the array will set addr to 0 once it retrieved the value
 	wait addr	
-	value = data
+	value=data
 end
 
-while ++i < 5 do
-	insert set(i, i * 2)
+while ++i<5 do
+	insert set(i,i*2)
 end
 
-:sum = ""
-while ++j < 5 do
-	insert get(j, retrieved)
-	:sum += retrieved + ","
+:sum=""
+while ++j<5 do
+	insert get(j,retrieved)
+	:sum+=retrieved+","
 end
 
-:done = 1
+:done=1

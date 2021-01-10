@@ -109,9 +109,7 @@ func (s *LangServer) validateCodeLength(uri lsp.DocumentURI, text string, parsed
 			opt := optimizers.NewCompoundOptimizer()
 			err := opt.Optimize(parsed)
 			if err == nil {
-				printer := parser.Printer{
-					Mode: parser.PrintermodeSpaceless,
-				}
+				printer := parser.Printer{}
 				optimized, err := printer.Print(parsed)
 				if err == nil {
 					lengtherror = validators.ValidateCodeLength(optimized)

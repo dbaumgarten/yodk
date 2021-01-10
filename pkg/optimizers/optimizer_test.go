@@ -36,7 +36,6 @@ func TestOptimizers(t *testing.T) {
 func optimizationTesting(t *testing.T, o Optimizer, cases map[string]string) {
 	p := parser.NewParser()
 	prin := parser.Printer{}
-	prin.Mode = parser.PrintermodeCompact
 	for in, expected := range cases {
 		parsed, err := p.Parse(in)
 		if err != nil {
@@ -60,7 +59,6 @@ func optimizationTesting(t *testing.T, o Optimizer, cases map[string]string) {
 func expressionOptimizationTesting(t *testing.T, o ExpressionOptimizer, cases map[string]string) {
 	p := parser.NewParser()
 	prin := parser.Printer{}
-	prin.Mode = parser.PrintermodeCompact
 	for in, expected := range cases {
 		parsed, err := p.Parse(in)
 		if err != nil {

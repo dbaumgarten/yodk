@@ -14,11 +14,11 @@ import (
 type Printermode int
 
 const (
-	// PrintermodeReadable inserts spaces the improve readability
-	PrintermodeReadable Printermode = 0
 	// PrintermodeCompact inserts only spaces that are reasonably necessary
-	PrintermodeCompact Printermode = 1
-	// PrintermodeSpaceless inserts only spaces that are strictly necessary
+	PrintermodeCompact Printermode = 0
+	// PrintermodeReadable inserts spaces the improve readability
+	PrintermodeReadable Printermode = 1
+	// PrintermodeSpaceless inserts only spaces that are strictly necessary. This may break ingame-scripts but works fine for Referee
 	PrintermodeSpaceless Printermode = 2
 )
 
@@ -214,7 +214,7 @@ func (p *Printer) Print(prog ast.Node) (string, error) {
 		case *ast.GoToStatement:
 			if visitType == ast.PreVisit {
 				p.Write("goto")
-				p.Space()
+				p.OptionalSpace()
 			}
 			break
 		case *ast.Dereference:

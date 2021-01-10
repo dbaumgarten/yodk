@@ -1,20 +1,20 @@
-define fizz = "fizz"
-define buzz = "buzz"
-define sep = " "
-define upto = 100
+define fizz="fizz"
+define buzz="buzz"
+define sep=" "
+define upto=100
 
-if :out == 0 then
-	:out = ""
+if :out==0 then
+	:out=""
 end
 // main loop
-while :number <= upto do
-	if :number % 3 == 0 and :number % 5 == 0 then
-		:out += fizz + buzz + sep
+while :number<=upto do
+	if :number%3==0 and :number%5==0 then
+		:out+=fizz+buzz+sep
 	else
-		if :number % 3 == 0 then
-			:out += fizz + sep
-		else if :number % 5 == 0 then
-			:out += buzz + sep
+		if :number%3==0 then
+			:out+=fizz+sep
+		else if :number%5==0 then
+			:out+=buzz+sep
 		end
 	end
 	:number++ 

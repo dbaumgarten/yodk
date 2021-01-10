@@ -1,32 +1,32 @@
 // define greeting to be hello
-define greeting = "Hello"
+define greeting="Hello"
 
-:name = "Peter"
+:name="Peter"
 
 // definitions can be any expression you like and even contain other definitions, variables or functions
-define message = greeting + " " + "world and " + :name
+define message=greeting+" "+"world and "+:name
 
 // you can define a new name for a variable
 // if the defined value is a variable name (and nothing else), you can assign to it
 // this is practically aliasing :out to :output
-define :output = :out
+define :output=:out
 
 // :output is replaced by ":out" and message is replaced by the expression declared in it's definition
-:output = message
+:output=message
 
 
 // your definitions can contain polaceholders (here a and b)
-define addByte(a, b) = (a + b) % 2 ^ 8
+define addByte(a, b)=(a+b)%2^8
 
-a = 123
+a=123
 // definitions with placeholders can be used like functions. The aruments will replace the placeholders of the definition
-:sum = addByte(a, 100)
+:sum=addByte(a,100)
 
-define foo(a, b, c, d) = a + b + c + d
+define foo(a, b, c, d)=a+b+c+d
 
 // Any valid expression can be used as value for a placeholder
-:bar = foo(greeting, ",", " " + :name, addByte(a, 60))
+:bar=foo(greeting,","," "+:name,addByte(a,60))
 
-define pop(string) = string - --string
+define pop(string)=string- --string
 
-:done = 1
+:done=1

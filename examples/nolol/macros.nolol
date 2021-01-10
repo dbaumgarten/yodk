@@ -1,44 +1,44 @@
-define separator = "."
+define separator="."
 
 //macros are defined using the macro-keyword, followed by a list of arguments and a block of line
 //macros must be defined at the top-level of the program (can not be nested)
 //arguments work, by replacing every instance of the name, by the value that is provided when using the insert-keyword
 macro greet(output, name)
 	// "output" is replaced by the first argument provided when inserting the macro
-	output = "Hello"
+	output="Hello"
 	// i is a macro-local variable. Changes to i are local to macro-insertions
 	// if you insert greet() multipe time, all insertions will have their own version of i
-	while i++ < 5 do
-		output += separator
+	while i++ <5 do
+		output+=separator
 	end
 	// "name" is replaced by the second argument provided when inserting the macro
-	output += name
+	output+=name
 end
 
 // macros are used with the insert-keyword, followed by the macro-name and the arguments to use
-insert greet(:out1, "world")
+insert greet(:out1,"world")
 
 // definitions are resolved when inserting a macro (and not when defining it) 
 // Also, new definitions override old ones
 // Therefore definitions can be used to configure the behavior of macros
-define separator = "_"
+define separator="_"
 
-insert greet(:out2, "you")
+insert greet(:out2,"you")
 
-avar = "foo"
+avar="foo"
 
 // because all non-global vars are private to an insertion of a macro, this does not work
 // the code inside the macro does not have access to the variable avar defined above
 macro doesntwork()
-	:out3 = avar
+	:out3=avar
 end
 insert doesntwork()
 
 // to give the code inside the macro access to an outside var, you either need to pass the var as an argument, or
 // mark the variable as an external variable. You can do this as follows:
 macro works()(avar)
-	:out4 = avar
+	:out4=avar
 end
 insert works()
 
-:done = 1
+:done=1

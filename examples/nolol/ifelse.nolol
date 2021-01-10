@@ -2,31 +2,31 @@
 // nolol ifs are multi-line
 // when compiling thei are converted to yolol inline ifs if possible
 // if the body of the if is too large for an inline if, the if will be implemented using a goto
-if :day == "monday" then
-	:msg = "fuck"
-else if :day == "tuesday" then
-	:msg = "still stupid"
-else if :day == "wednesday" then
+if :day=="monday" then
+	:msg="fuck"
+else if :day=="tuesday" then
+	:msg="still stupid"
+else if :day=="wednesday" then
 	// especially long string to force a multiline if
-	:msg = "half time!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-else if :day == "thursday" then
-	:msg = "almost..."
-else if :day == "friday" then
-	:msg = "yay"
+	:msg="half time!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+else if :day=="thursday" then
+	:msg="almost..."
+else if :day=="friday" then
+	:msg="yay"
 else
-	:msg = "Weekend!!!"
+	:msg="Weekend!!!"
 	// ifs can be nested
-	if :day == "saturday" then
-		:msg += " PARTY!"
+	if :day=="saturday" then
+		:msg+=" PARTY!"
 	else
-		:msg += " is over :("
+		:msg+=" is over :("
 	end
 end
 
 // The old yolol-inline ifs can still be useful. For example if you absolutely need to make sure everything happens in one line.
 // In this example, the two assignments and the if are guaranteed to happen on the same tick.
 // To avoid confusion, when you need an inline-if, you need to use the "_if" keyword
-a = 1; _if 1 == 1 then :foo = 1 else :foo = 2 end; b = 2
+a=1;_if 1==1 then :foo=1 else :foo=2 end;b=2
 
-:other = "done"
-:done = 1
+:other="done"
+:done=1
