@@ -18,6 +18,7 @@ script:
   - go build -ldflags "-X github.com/dbaumgarten/yodk/cmd.YodkVersion=${TRAVIS_BRANCH}"
   - ./yodk version
   - GOOS=windows go build -ldflags "-X github.com/dbaumgarten/yodk/cmd.YodkVersion=${TRAVIS_BRANCH}"
+  - GOOS=darwin go build -o yodk-darwin -ldflags "-X github.com/dbaumgarten/yodk/cmd.YodkVersion=${TRAVIS_BRANCH}"
   - cd vscode-yolol
   - npm run vscode:prepublish
   - npm test --silent
@@ -32,6 +33,7 @@ before_deploy:
   - cd ..
   - zip yodk-win.zip yodk.exe
   - zip yodk-linux.zip yodk
+  - zip yodk-darwin.zip yodk-darwin
   - ./build-docs.sh
 deploy:
   - provider: releases
@@ -39,6 +41,7 @@ deploy:
     file: 
       - yodk-win.zip
       - yodk-linux.zip
+      - yodk-darwin.zip
       - vscode-yolol.vsix
     skip_cleanup: true
     edge: true

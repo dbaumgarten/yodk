@@ -14,6 +14,11 @@ describe('Interact with binary', async () => {
     assert.equal(path,getContext().asAbsolutePath("./bin/yodk"))
   })
 
+  it('Find on mac', async () => {
+    let path = getExePath("darwin")
+    assert.equal(path,getContext().asAbsolutePath("./bin/yodk-darwin"))
+  })
+
   it('Find on Windows', async () => {
     let path = getExePath("win32")
     assert.equal(path,getContext().asAbsolutePath("./bin/yodk.exe"))

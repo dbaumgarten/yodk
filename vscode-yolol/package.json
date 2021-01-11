@@ -201,7 +201,7 @@
     "vscode-debugprotocol": "^1.41.0-pre.0"
   },
   "scripts": {
-    "vscode:prepublish": "npm run update-vscode && npm run compile && cd .. && go build && GOOS=windows go build && cp yodk* vscode-yolol/bin/",
+    "vscode:prepublish": "npm run update-vscode && npm run compile && cd .. && go build && GOOS=darwin go build -o yodk-darwin && GOOS=windows go build && cp yodk* vscode-yolol/bin/",
     "compile": "tsc -b",
     "watch": "tsc -b -w",
     "bin": "cd .. && go build && cp yodk* vscode-yolol/bin/ && cd vscode-yolol",

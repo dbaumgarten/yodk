@@ -64,6 +64,12 @@ If you want to use this projects code in your own project, you best use go-modul
 
 Also, as starbase has not been released, there is a lot of guesswork involved in the code. The goal is to be 100% compatible to starbase's implementation.
 
+# Supported Operating Systems
+Yodk (and therefore also vscode-yolol) supports the following Systems:  
+- Windows x86/64
+- Linux x86/64
+- MacOS x86/64 (experimental and barely tested)
+
 # Contributing
 Found bugs, suggestions, want to add features? Just [open an issue](https://github.com/dbaumgarten/yodk/issues/new).  
 

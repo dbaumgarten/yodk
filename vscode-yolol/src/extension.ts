@@ -33,6 +33,9 @@ export function getExePath(platform?){
 	if (platform == "win32") {
 		executable += ".exe"
 	}
+	if (platform == "darwin"){
+		executable = path.join(".","bin","yodk-darwin")
+	}
 	return context.asAbsolutePath(executable);
 }
 
