@@ -188,9 +188,7 @@ func (c *Converter) replaceGotoLabels(p ast.Node) error {
 
 // addFinalGoto adds a goto 1 to the end of the programm to speed up execution
 func (c *Converter) addFinalGoto(prog *nast.Program) error {
-	pos := ast.Position{
-		Line: len(prog.Elements) + 1,
-	}
+	pos := ast.UnknownPosition
 
 	prog.Elements = append(prog.Elements, &nast.StatementLine{
 		Line: ast.Line{

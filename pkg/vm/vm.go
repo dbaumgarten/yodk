@@ -513,7 +513,7 @@ func (v *VM) sourceLineChanged() {
 
 // check if the statement that is to be executed is on a different line then the previous one
 func (v *VM) checkSourceLineChanged(stmt ast.Statement) {
-	if stmt.Start().File == "" && (stmt.Start().Line != v.currentSourceLine || v.jumped) {
+	if stmt.Start().File == "" && (stmt.Start().Line != v.currentSourceLine || v.jumped) && stmt.Start() != ast.UnknownPosition {
 		v.jumped = false
 		v.currentSourceLine = stmt.Start().Line
 		v.sourceLineChanged()

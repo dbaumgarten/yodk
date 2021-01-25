@@ -84,10 +84,10 @@ func (c *Converter) convertWhileLoop(loop *nast.WhileLoop, visitType int) error 
 	}
 	repl = append(repl, &nast.StatementLine{
 		Line: ast.Line{
-			Position: loop.Block.End(),
+			Position: ast.UnknownPosition,
 			Statements: []ast.Statement{
 				&nast.GoToLabelStatement{
-					Position: loop.Block.End(),
+					Position: ast.UnknownPosition,
 					Label:    startLabel,
 				},
 			},
