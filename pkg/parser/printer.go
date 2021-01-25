@@ -194,6 +194,9 @@ func (p *Printer) Print(prog ast.Node) (string, error) {
 			if visitType > 0 {
 				p.StatementSeparator()
 			}
+			if visitType == ast.PostVisit {
+				p.prevWasSpecialIdentifier = false
+			}
 			break
 		case *ast.Assignment:
 			if visitType == ast.PreVisit {
