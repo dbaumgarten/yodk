@@ -10,6 +10,9 @@ import (
 	"github.com/dbaumgarten/yodk/pkg/parser/ast"
 )
 
+// MaxExpandedMacros is the maximum number of macros to expand, before aborting due to a loop
+const MaxExpandedMacros = 50
+
 // getMacro is a case-insensitive getter for c.macros
 func (c *Converter) getMacro(name string) (*nast.MacroDefinition, bool) {
 	name = strings.ToLower(name)
@@ -45,7 +48,7 @@ func (c *Converter) convertMacroInsertion(ins *nast.MacroInsetion, visitType int
 
 	c.macroInsertionCount++
 
-	if c.macroInsertionCount > 20 {
+	if c.macroInsertionCount > MaxExpandedMacros {
 		return &parser.Error{
 			Message:       "Error when processing macros: Macro-loop detected",
 			StartPosition: ast.NewPosition("", 1, 1),
