@@ -186,7 +186,7 @@ func (np *Printer) handleNololNodes(node ast.Node, visitType int, p *parser.Prin
 			break
 		default:
 			if visitType > 0 {
-				p.Write(";")
+				p.Write("; ")
 				p.OptionalSpace()
 			}
 		}

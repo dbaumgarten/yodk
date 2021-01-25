@@ -1,6 +1,6 @@
 // this program checks if the language is really case-insensitive
 // despit the really excentric naming (of even the keywords) all global variables should have the value 1 at the end
-Var=123;var=456
+Var=123; var=456
 :assignok=Var==456
 
 FoO="test"

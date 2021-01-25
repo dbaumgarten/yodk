@@ -4,7 +4,7 @@
 // open door and set close-time to now (1) plus 10 cycles
 // also take note of the start time so we can check the result later
 // as all statements are on the same line (separated by ;) they are executed at the same time
-:door="open";closewhen=time()+10;start=time()
+:door="open"; closewhen=time()+10; start=time()
 // the wait directive blocks while the given condition (time()<closewhen) is true 
 // the statements in the (optional) then-part are executed immediately when the condition becomes false
 wait time()<closewhen then :door="closed";closedAfter=time()-start end
@@ -15,4 +15,4 @@ wait time()<closewhen then :door="closed";closedAfter=time()-start end
 
 //note: wait is effectively just syntactic sugar
 // the wait line above can also be written as
-_if time()<closewhen then _goto line() end;:door="closed";closedAfter=time()-start $
+_if time()<closewhen then _goto line() end; :door="closed"; closedAfter=time()-start $

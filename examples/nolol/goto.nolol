@@ -10,7 +10,7 @@ goto c
 d> // or on an own line. code automatically falls through empty lines
 
 
-:out+="d";goto e
+:out+="d"; goto e
 
 if 1==0 then
 	// you can even jump into ifs
@@ -19,7 +19,7 @@ if 1==0 then
 	goto f
 end
 
-f> :out+="f";goto eof
+f> :out+="f"; goto eof
 
 :out="skip this"
 eof> 

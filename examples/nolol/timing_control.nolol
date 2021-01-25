@@ -13,7 +13,7 @@ jumplbl> :f=123 // lines that have jump labels (that are in-use) can not be merg
 
 // Statements seperate by ; are ALWAYS placed in a single yolol line
 // if this is not possible, an error is thrown
-:x=0;:y=1;:z=2
+:x=0; :y=1; :z=2
 // preceding and following lines of a ;-line can be merged with the ;-line (if there is enough space)
 :q=666
 
@@ -32,7 +32,7 @@ $ :bar="b"
 // all this features can be combined
 :foo="a"
 // the following three statements and ONLY the three will be on one yolol line
-$ :a=0;b=1;c=2 $
+$ :a=0; b=1; c=2 $
 :bar="b"
 
 // a line only containing a $ and nothing else will be translated to an empty line on yolol

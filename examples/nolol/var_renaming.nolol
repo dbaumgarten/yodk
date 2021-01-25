@@ -1,5 +1,5 @@
 // non-global variable names will be shortened automatically
-peter="hallo";dieter="welt";foo=123
+peter="hallo"; dieter="welt"; foo=123
 bar=foo
 when=time()
 later=when+time()
