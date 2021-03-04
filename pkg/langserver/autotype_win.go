@@ -20,6 +20,12 @@ var (
 		Modifiers: win32.ModCtrl,
 		KeyCode:   'I',
 	}
+	// AutotypeSSCHotkey is the hotkey to trigger auto-typing when in the SSC
+	AutotypeSSCHotkey = &win32.Hotkey{
+		ID:        1,
+		Modifiers: win32.ModCtrl,
+		KeyCode:   'U',
+	}
 	// AutodeleteHotkey is the hotkey to trigger auto-deletion
 	AutodeleteHotkey = &win32.Hotkey{
 		ID:        2,
@@ -78,6 +84,10 @@ func (ls *LangServer) hotkeyHandler(hk win32.Hotkey) {
 		if code := ls.getLastOpenedCode(); code == code {
 			typeYololCode(code)
 		}
+	case AutotypeSSCHotkey.ID:
+		if code := ls.getLastOpenedCode(); code == code {
+			typeYololSSCCode(code)
+		}
 	case AutodeleteHotkey.ID:
 		deleteAllLines()
 	case AutooverwriteHotkey.ID:
@@ -106,6 +116,16 @@ func typeYololCode(code string) {
 	for _, line := range lines {
 		win32.SendString(line)
 		time.Sleep(typeDelay)
+		win32.SendInput(win32.KeyDownInput(win32.KeycodeDown), win32.KeyUpInput(win32.KeycodeDown))
+	}
+}
+
+func typeYololSSCCode(code string) {
+	lines := strings.Split(code, "\n")
+	for _, line := range lines {
+		win32.SendString(line)
+		time.Sleep(typeDelay)
+		win32.SendInput(win32.KeyDownInput(win32.KeycodeDown), win32.KeyUpInput(win32.KeycodeDown))
 		win32.SendInput(win32.KeyDownInput(win32.KeycodeDown), win32.KeyUpInput(win32.KeycodeDown))
 	}
 }
