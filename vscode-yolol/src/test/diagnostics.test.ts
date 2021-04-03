@@ -17,7 +17,6 @@ describe('Should get diagnostics', () => {
       const docUri = getDocUri('has_errors.nolol')
       await testDiagnostics(docUri, [
         { message: 'Expected newline. Found Token: \'do\'(Keyword)', range: toRange(9, 23, 9, 23), severity: vscode.DiagnosticSeverity.Error, source: 'parser' },
-        { message: 'Goto must be followed by a jump-label. Found Token: \'1\'(Number)', range: toRange(19, 7, 19, 7), severity: vscode.DiagnosticSeverity.Error, source: 'parser' }
       ])
     })
   })

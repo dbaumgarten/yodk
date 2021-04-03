@@ -14,7 +14,7 @@ import (
 // Converter can convert a nolol-ast to a yolol-ast
 type Converter struct {
 	files      FileSystem
-	jumpLabels map[string]int
+	lineLabels map[string]int
 	// the names of definitions are case-insensitive. Keys are converted to lowercase before using them
 	// all lookups MUST also use lowercased keys
 	definitions      map[string]*nast.Definition
@@ -40,7 +40,7 @@ type Converter struct {
 // NewConverter creates a new converter
 func NewConverter() *Converter {
 	return &Converter{
-		jumpLabels:       make(map[string]int),
+		lineLabels:       make(map[string]int),
 		definitions:      make(map[string]*nast.Definition),
 		macros:           make(map[string]*nast.MacroDefinition),
 		macroLevel:       make([]string, 0),
@@ -97,7 +97,13 @@ func (c *Converter) Convert(prog *nast.Program, files FileSystem) (*ast.Program,
 	// reserve a name for use in time-tracking
 	c.varnameOptimizer.OptimizeVarName(reservedTimeVariable)
 
-	err := c.convertNodes(prog)
+	// find all user-defined line-labels
+	err := c.findLineLabels(prog, false)
+	if err != nil {
+		return nil, err
+	}
+
+	err = c.convertNodes(prog)
 	if err != nil {
 		return nil, err
 	}
@@ -129,20 +135,14 @@ func (c *Converter) Convert(prog *nast.Program, files FileSystem) (*ast.Program,
 		return nil, err
 	}
 
-	// find all line-labels
-	err = c.findJumpLabels(prog)
+	// find all line-labels (again). This time they have the correct lines.
+	err = c.findLineLabels(prog, true)
 	if err != nil {
 		return nil, err
 	}
 
-	// resolve jump-labels
-	err = c.replaceGotoLabels(prog)
-	if err != nil {
-		return nil, err
-	}
-
-	// now that all line-positions are fixed, the line() calls can be replaced by their line-number
-	err = c.convertLineFuncCalls(prog)
+	// resolve line-labels
+	err = c.replaceLineLabels(prog)
 	if err != nil {
 		return nil, err
 	}
@@ -332,7 +332,7 @@ func (c *Converter) mergeStatementElements(lines []*nast.StatementLine) ([]*nast
 		newElements = append(newElements, current)
 
 		if current.HasEOL {
-			// no lines may MUST be appended to a line having EOL
+			// no lines MUST be appended to a line having EOL
 			i++
 			continue
 		}
@@ -385,18 +385,26 @@ func (c *Converter) getLengthOfLine(line ast.Node) int {
 		ygen.Mode = parser.PrintermodeCompact
 	}
 
+	silenceGotoExpression := false
 	ygen.PrinterExtensionFunc = func(node ast.Node, visitType int, p *parser.Printer) (bool, error) {
-		if _, is := node.(*nast.GoToLabelStatement); is {
-			if c.Spaceless {
-				p.Write("gotoXX")
-			} else {
-				p.Write("goto XX")
+		if gotostmt, is := node.(*ast.GoToStatement); is {
+			if c.getGotoDestinationLabel(gotostmt) != "" {
+				if visitType == ast.PreVisit {
+					silenceGotoExpression = true
+					p.Write("gotoXX")
+				}
+				if visitType == ast.PostVisit {
+					silenceGotoExpression = false
+				}
+				return true, nil
 			}
-			return true, nil
 		}
-		if fc, is := node.(*nast.FuncCall); is && fc.Function == "line" {
-			p.Write("00")
-			return true, nil
+		if silenceGotoExpression {
+			if _, is := node.(ast.Expression); is {
+				// The current expression is inside a goto.
+				// DO NOT PRINT IT
+				return true, nil
+			}
 		}
 		return false, nil
 	}

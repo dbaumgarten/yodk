@@ -74,8 +74,8 @@ The feature to re-define variable names is usefull if you want to be able to eas
 
 You may wonder why there are definitions with placeholders AND macros. While they are very similar, they have a key difference. All definitions (even those with placeholders) are expressions (=values, that you could for example assign to a variable). You can't for example do ```define foo=a+=b``` (because f+=b is a statement and not an expression). Macros however can contain arbitary statements and even multiple lines. But macros can not be used as values in an expression. 
 
-## Labeled Gotos
-As NOLOL moves statements around during compilation to generate as compact code as possible, using goto with line numbers would not work. Instead goto no jump to labeled lines.
+## Line-labels
+As NOLOL moves statements around during compilation to generate as compact code as possible, using goto with plain line numbers would often not work. This is why there are line-labels. You can label any line using ```identifier>``` at the start and then jump to that line using the label.
 
 [goto.nolol](generated/code/nolol/goto.nolol ':include')
 
@@ -83,8 +83,7 @@ YOLOL Output:
 
 [goto.yolol](generated/code/nolol/goto.yolol ':include')
 
-In some rare cases you need to jump to a line, given by a variable (or some calculation). As you can't really know on which yolol-line your nolol-code will end up, this is really dangerous and should only be used when you know what you are doing. If you really need to, you can use the ```_goto <expression>``` keyword (the underscore is telling the compiler that you want to jump to the result of an expression and not to a label).  
-The ```line()``` function return the current yolol-line. You can use it to store the current line in a variable, so that you can later _goto to that variable. Also, if you make carefull use of the timing-control-features, you can perform calculated jumps, as seen in the following example.
+Goto can (still) jump to any expression, not only to labels. Jumping to an expression (instead if just a label) is dangerous, because you can easily mess it up. Also, it prevents the compiler from doing a lot of optimizations. However, if used correctly, calculated jumps can be a powerfull tool, like shown in the following example:
 
 [array.nolol](generated/code/nolol/array.nolol ':include')
 
@@ -177,7 +176,9 @@ As arguments work by straigh replacing the mentionings of the argument with the 
 
 In the end, arguments behave like [definitions](/nolol?id=cimpile-time-definitions) that are scoped to the specific macro usage. 
 
-All non-global variables inside a macro, that are no arguments, are "scoped" to the use of a macro. This means, if the macro works with such a variable named "bar", it will NOT modify the variable outside of the macro that is also called "bar". This way, accidental collisions between macro internal variables and your variables are prevented. Also, subsequent insertions of the same macro will work on different variables and will not interfere with each other. If you want to share a variable (that is not a :global) between insertions and the rest of the script, you need to mark it as external, by appending a second set of parenthesis to the macro-definition, containing the comma-separated names of variables that are to be shared.
+All non-global variables inside a macro, that are no arguments, are "scoped" to the use of a macro. This means, if the macro works with such a variable named "bar", it will NOT modify the variable outside of the macro that is also called "bar". This way, accidental collisions between macro internal variables and your variables are prevented. Also, subsequent insertions of the same macro will work on different variables and will not interfere with each other. If you want to share a variable (that is not a :global) between insertions and the rest of the script, you need to mark it as external, by appending a second set of parenthesis to the macro-definition, containing the comma-separated names of variables that are to be shared.  
+
+The same applies to line-labels. All line-labels inside macro-definitions are scoped to a specific macro-insertion, EXCPET if the line-label is listed in the second set of parenthesis of the macro-definition. If you want to jump to a label outside of the macro from inside of the macro, or want to make a label inside the macro available to the rest of the script, you need to do:  ```macro mymacro()(mylabel)```.  
 
 [macros.nolol](generated/code/nolol/macros.nolol ':include')
 

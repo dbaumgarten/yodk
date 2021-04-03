@@ -10,31 +10,118 @@ import (
 	"github.com/dbaumgarten/yodk/pkg/parser/ast"
 )
 
-// getJumpLabel is a case-insensitive getter for c.jumpLabels
-func (c *Converter) getJumpLabel(name string) (int, bool) {
+// getLineLabel is a case-insensitive getter for c.lineLabels
+func (c *Converter) getLineLabel(name string) (int, bool) {
 	name = strings.ToLower(name)
-	val, exists := c.jumpLabels[name]
+	val, exists := c.lineLabels[name]
 	return val, exists
 }
 
-// setJumpLabel is a case-insensitive setter for c.jumpLabels
-func (c *Converter) setJumpLabel(name string, val int) {
+// storeLineLabel is a case-insensitive setter for c.lineLabels
+func (c *Converter) storeLineLabel(name string, val int) {
 	name = strings.ToLower(name)
-	c.jumpLabels[name] = val
+	c.lineLabels[name] = val
 }
 
-// removeDuplicateGotos removes gotos that are unreachable, because they are directly behin another goto
+func (c *Converter) gotoForLabel(label string) *ast.GoToStatement {
+	c.storeLineLabel(label, -1)
+	return &ast.GoToStatement{
+		Position: ast.UnknownPosition,
+		Line: &ast.Dereference{
+			Variable: label,
+		},
+	}
+}
+
+func (c *Converter) gotoForLabelPos(label string, pos ast.Position) *ast.GoToStatement {
+	c.storeLineLabel(label, -1)
+	return &ast.GoToStatement{
+		Position: pos,
+		Line: &ast.Dereference{
+			Variable: label,
+		},
+	}
+}
+
+func (c *Converter) getGotoDestinationLabel(g *ast.GoToStatement) string {
+	if deref, is := g.Line.(*ast.Dereference); is {
+		if _, isLabel := c.getLineLabel(deref.Variable); isLabel {
+			return deref.Variable
+		}
+	}
+	return ""
+}
+
+func (c *Converter) isLineLabelDereference(deref *ast.Dereference) bool {
+	if _, isLabel := c.getLineLabel(deref.Variable); isLabel {
+		return true
+	}
+	return false
+}
+
+// findLineLabels finds all line-labels in the program
+func (c *Converter) findLineLabels(p ast.Node, removeEmptyLines bool) error {
+	c.lineLabels = make(map[string]int)
+	linecounter := 0
+	f := func(node ast.Node, visitType int) error {
+		// skip all macro-definitions
+		// lables inside macros are resolved upon macro-insertion
+		if _, isMacro := node.(*nast.MacroDefinition); isMacro {
+			return ast.NewNodeReplacementSkip(node)
+		}
+		if line, isLine := node.(*nast.StatementLine); isLine {
+			if visitType == ast.PreVisit {
+				linecounter++
+				if line.Label != "" {
+					_, exists := c.getLineLabel(line.Label)
+					if exists {
+						return &parser.Error{
+							Message:       fmt.Sprintf("Duplicate declaration of line-label: %s", line.Label),
+							StartPosition: line.Start(),
+							EndPosition:   line.Start(),
+						}
+					}
+					c.storeLineLabel(line.Label, linecounter)
+				}
+				// remove all empty lines
+				if removeEmptyLines && len(line.Statements) == 0 && !line.HasEOL {
+					linecounter--
+					return ast.NewNodeReplacement()
+				}
+			}
+		}
+		return nil
+	}
+	return p.Accept(ast.VisitorFunc(f))
+}
+
+// replaceLineLabels replaces all line labels with the appropriate line-number
+func (c *Converter) replaceLineLabels(p ast.Node) error {
+	f := func(node ast.Node, visitType int) error {
+		if deref, is := node.(*ast.Dereference); is {
+			line, exists := c.getLineLabel(deref.Variable)
+			if deref.Variable == "_start" {
+				line = 1
+				exists = true
+			}
+			if exists {
+				return ast.NewNodeReplacement(&ast.NumberConstant{
+					Position: deref.Position,
+					Value:    strconv.Itoa(line),
+				})
+			}
+		}
+		return nil
+	}
+	return p.Accept(ast.VisitorFunc(f))
+}
+
+// removeDuplicateGotos removes gotos that are unreachable, because they are directly behind another goto
 func (c *Converter) removeDuplicateGotos(p ast.Node) error {
 	lastWasGoto := false
 	f := func(node ast.Node, visitType int) error {
 		switch n := node.(type) {
 		case *ast.GoToStatement:
-			if lastWasGoto {
-				return ast.NewNodeReplacement()
-			}
-			lastWasGoto = true
-			break
-		case *nast.GoToLabelStatement:
 			if lastWasGoto {
 				return ast.NewNodeReplacement()
 			}
@@ -54,19 +141,15 @@ func (c *Converter) removeDuplicateGotos(p ast.Node) error {
 	return p.Accept(ast.VisitorFunc(f))
 }
 
-// removeUnusedLabels removes all labels that are not used by at least one goto
+// removeUnusedLabels removes all labels that are not used at least once
 // this helpes in reducing the number of lines
 func (c *Converter) removeUnusedLabels(p *nast.Program) error {
 	used := make(map[string]bool)
 	f := func(node ast.Node, visitType int) error {
-		if gotostmt, isGoto := node.(*nast.GoToLabelStatement); isGoto {
-			used[gotostmt.Label] = true
-		}
-		if linefunc, isFunc := node.(*nast.FuncCall); isFunc {
-			if linefunc.Function == "line" && len(linefunc.Arguments) == 1 {
-				if arg, is := linefunc.Arguments[0].(*ast.Dereference); is {
-					used[arg.Variable] = true
-				}
+		if deref, is := node.(*ast.Dereference); is {
+			_, exists := c.getLineLabel(deref.Variable)
+			if exists {
+				used[deref.Variable] = true
 			}
 		}
 		return nil
@@ -89,16 +172,16 @@ func (c *Converter) removeUnusedLabels(p *nast.Program) error {
 func (c *Converter) resolveGotoChains(p *nast.Program) error {
 
 	// this function finds the goto another goto jumps to (if it exists)
-	getTargetGoto := func(label string) *nast.GoToLabelStatement {
-		foundlabel := false
+	getTargetGoto := func(label string) *ast.GoToStatement {
+		found := false
 		for _, element := range p.Elements {
 			if line, isLine := element.(*nast.StatementLine); isLine {
 				if line.Label == label {
-					foundlabel = true
+					found = true
 				}
-				if foundlabel {
+				if found {
 					if len(line.Statements) > 0 {
-						if gotostmt, is := line.Statements[0].(*nast.GoToLabelStatement); is {
+						if gotostmt, is := line.Statements[0].(*ast.GoToStatement); is {
 							return gotostmt
 						}
 						break
@@ -113,73 +196,14 @@ func (c *Converter) resolveGotoChains(p *nast.Program) error {
 	}
 
 	f := func(node ast.Node, visitType int) error {
-		if gotostmt, isGoto := node.(*nast.GoToLabelStatement); isGoto {
-			targetgoto := getTargetGoto(gotostmt.Label)
-			if targetgoto != nil {
-				gotostmt.Label = targetgoto.Label
-			}
-		}
-		return nil
-	}
-	return p.Accept(ast.VisitorFunc(f))
-}
-
-// findJumpLabels finds all line-labels in the program
-func (c *Converter) findJumpLabels(p ast.Node) error {
-	c.jumpLabels = make(map[string]int)
-	linecounter := 0
-	f := func(node ast.Node, visitType int) error {
-		if line, isLine := node.(*nast.StatementLine); isLine {
-			if visitType == ast.PreVisit {
-				linecounter++
-				if line.Label != "" {
-					_, exists := c.getJumpLabel(line.Label)
-					if exists {
-						return &parser.Error{
-							Message:       fmt.Sprintf("Duplicate declaration of jump-label: %s", line.Label),
-							StartPosition: line.Start(),
-							EndPosition:   line.Start(),
-						}
-					}
-					c.setJumpLabel(line.Label, linecounter)
-				}
-				// remove all empty lines
-				if len(line.Statements) == 0 && !line.HasEOL {
-					linecounter--
-					return ast.NewNodeReplacement()
+		if gotostmt, isGoto := node.(*ast.GoToStatement); isGoto {
+			targetLabel := c.getGotoDestinationLabel(gotostmt)
+			if targetLabel != "" {
+				targetgoto := getTargetGoto(targetLabel)
+				if targetgoto != nil {
+					gotostmt.Line = targetgoto.Line
 				}
 			}
-		}
-		return nil
-	}
-	return p.Accept(ast.VisitorFunc(f))
-}
-
-// replaceGotoLabels replaces all goto labels with the appropriate line-number
-func (c *Converter) replaceGotoLabels(p ast.Node) error {
-	f := func(node ast.Node, visitType int) error {
-		if gotostmt, is := node.(*nast.GoToLabelStatement); is {
-			line, exists := c.getJumpLabel(gotostmt.Label)
-			// __start is a special label pointing to line 1
-			if gotostmt.Label == "__start" {
-				line = 1
-				exists = true
-			}
-			if !exists {
-				return &parser.Error{
-					Message:       "Unknown jump-label: " + gotostmt.Label,
-					StartPosition: gotostmt.Start(),
-					EndPosition:   gotostmt.End(),
-				}
-			}
-			repl := &ast.GoToStatement{
-				Position: gotostmt.Position,
-				Line: &ast.NumberConstant{
-					Position: gotostmt.Start(),
-					Value:    strconv.Itoa(line),
-				},
-			}
-			return ast.NewNodeReplacement(repl)
 		}
 		return nil
 	}
@@ -194,10 +218,7 @@ func (c *Converter) addFinalGoto(prog *nast.Program) error {
 		Line: ast.Line{
 			Position: pos,
 			Statements: []ast.Statement{
-				&nast.GoToLabelStatement{
-					Position: pos,
-					Label:    "__start",
-				},
+				c.gotoForLabelPos("_start", pos),
 			},
 		},
 	})

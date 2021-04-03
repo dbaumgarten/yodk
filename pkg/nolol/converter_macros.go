@@ -156,6 +156,16 @@ func (c *Converter) replacePlaceholders(m ast.Node, replacements map[string]ast.
 				}
 			}
 		}
+
+		if stmtline, is := node.(*nast.StatementLine); is && visitType == ast.PreVisit {
+			if stmtline.Label != "" {
+				if !contains(ignore, stmtline.Label) {
+					stmtline.Label = strings.Join(c.macroLevel, "_") + "_" + stmtline.Label
+				}
+				c.storeLineLabel(stmtline.Label, -1)
+			}
+		}
+
 		return nil
 	}
 

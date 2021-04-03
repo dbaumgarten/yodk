@@ -5,11 +5,6 @@ import (
 )
 
 // Accept is used to implement Acceptor
-func (g *GoToLabelStatement) Accept(v ast.Visitor) error {
-	return v.Visit(g, ast.SingleVisit)
-}
-
-// Accept is used to implement Acceptor
 func (p *Program) Accept(v ast.Visitor) error {
 	err := v.Visit(p, ast.PreVisit)
 	if err != nil {

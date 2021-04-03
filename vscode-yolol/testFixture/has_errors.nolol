@@ -17,7 +17,7 @@ while :number<=upto do do
 	end
 	if :number%5==0 then
 		:out+=buzz+sep
-		goto 1
+		goto next
 	end
 	next> 
 	:number++ 

@@ -2,7 +2,6 @@ package nolol
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/dbaumgarten/yodk/pkg/nolol/nast"
@@ -28,9 +27,7 @@ func (c *Converter) convertWait(wait *nast.WaitDirective, visitType int) error {
 						Position:  wait.Start(),
 						Condition: wait.Condition,
 						IfBlock: []ast.Statement{
-							&nast.GoToLabelStatement{
-								Label: label,
-							},
+							c.gotoForLabel(label),
 						},
 					},
 				},
@@ -80,26 +77,6 @@ func (c *Converter) convertFuncCall(function *nast.FuncCall, visitType int) erro
 		return ast.NewNodeReplacementSkip(&ast.Dereference{
 			Variable: c.varnameOptimizer.OptimizeVarName(reservedTimeVariable),
 		})
-	case "line":
-		if len(function.Arguments) > 1 {
-			return &parser.Error{
-				Message:       "The line() function takes zero or one arguments",
-				StartPosition: function.Start(),
-				EndPosition:   function.End(),
-			}
-		}
-		if len(function.Arguments) == 1 {
-			arg, is := function.Arguments[0].(*ast.Dereference)
-			if !is || arg.Operator != "" {
-				return &parser.Error{
-					Message:       "The line() function takes a jump-label name (or nothing) as an argument",
-					StartPosition: function.Arguments[0].Start(),
-					EndPosition:   function.Arguments[0].End(),
-				}
-			}
-		}
-		// Replace the function with itself. This way we keep it for later processing, but skip processing the arguments
-		return ast.NewNodeReplacementSkip(function)
 	}
 	unaryops := []string{"abs", "sqrt", "sin", "cos", "tan", "asin", "acos", "atan"}
 	for _, unaryop := range unaryops {
@@ -123,49 +100,6 @@ func (c *Converter) convertFuncCall(function *nast.FuncCall, visitType int) erro
 		StartPosition: function.Start(),
 		EndPosition:   function.End(),
 	}
-}
-
-// convertLineFuncCalls converts ALL remaining line() calls in the programm to the acual line-number at the position
-func (c *Converter) convertLineFuncCalls(prog *nast.Program) error {
-	linecounter := 0
-	f := func(node ast.Node, visitType int) error {
-		if _, is := node.(*nast.StatementLine); is && visitType == ast.PreVisit {
-			linecounter++
-		}
-		if function, is := node.(*nast.FuncCall); is {
-			nfunc := strings.ToLower(function.Function)
-			if nfunc != "line" {
-				return &parser.Error{
-					Message:       "This function can only convert the line() function",
-					StartPosition: function.Start(),
-					EndPosition:   function.End(),
-				}
-			}
-			result := linecounter
-			// when the line() function has an argument, that argument is a label-name
-			// line(label) should then return the position of label
-			if len(function.Arguments) == 1 {
-				// at this point we are already sure, that it is a Dereference
-				deref := function.Arguments[0].(*ast.Dereference)
-				label := deref.Variable
-				line, exists := c.jumpLabels[label]
-				if !exists {
-					return &parser.Error{
-						Message:       "Unknown jump-label: " + label,
-						StartPosition: deref.Start(),
-						EndPosition:   deref.End(),
-					}
-				}
-				result = line
-			}
-			return ast.NewNodeReplacementSkip(&ast.NumberConstant{
-				Position: function.Position,
-				Value:    strconv.Itoa(result),
-			})
-		}
-		return nil
-	}
-	return prog.Accept(ast.VisitorFunc(f))
 }
 
 // checkes, if the program uses nolols time-tracking feature

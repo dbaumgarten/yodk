@@ -35,13 +35,6 @@ func (np *Printer) indentation() string {
 
 func (np *Printer) handleNololNodes(node ast.Node, visitType int, p *parser.Printer) (bool, error) {
 	switch n := node.(type) {
-	case *nast.GoToLabelStatement:
-		if visitType == ast.SingleVisit {
-			p.Write("goto")
-			p.Space()
-			p.Write(n.Label)
-		}
-		break
 
 	case *nast.Block:
 		switch visitType {
@@ -253,12 +246,6 @@ func (np *Printer) handleNololNodes(node ast.Node, visitType int, p *parser.Prin
 		p.Write("continue")
 		p.Space()
 		break
-	case *ast.GoToStatement:
-		if visitType == ast.PreVisit {
-			p.Write("_goto")
-			p.Space()
-		}
-		break
 	case *ast.IfStatement:
 		switch visitType {
 		case ast.PreVisit:
@@ -284,6 +271,12 @@ func (np *Printer) handleNololNodes(node ast.Node, visitType int, p *parser.Prin
 				p.StatementSeparator()
 			}
 		}
+	case *ast.GoToStatement:
+		if visitType == ast.PreVisit {
+			p.Write("goto")
+			p.Space()
+		}
+		break
 	default:
 		// This is not a type this function can print.
 		// Return false, so the yolol-printer handles that node

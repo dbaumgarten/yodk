@@ -70,10 +70,7 @@ func (c *Converter) convertWhileLoop(loop *nast.WhileLoop, visitType int) error 
 				Position:  loop.Condition.Start(),
 				Condition: condition,
 				IfBlock: []ast.Statement{
-					&nast.GoToLabelStatement{
-						Position: loop.Position,
-						Label:    endLabel,
-					},
+					c.gotoForLabel(endLabel),
 				},
 			},
 		}
@@ -86,10 +83,7 @@ func (c *Converter) convertWhileLoop(loop *nast.WhileLoop, visitType int) error 
 		Line: ast.Line{
 			Position: ast.UnknownPosition,
 			Statements: []ast.Statement{
-				&nast.GoToLabelStatement{
-					Position: ast.UnknownPosition,
-					Label:    startLabel,
-				},
+				c.gotoForLabel(startLabel),
 			},
 		},
 	})
@@ -116,10 +110,7 @@ func (c *Converter) convertBreakStatement(brk *nast.BreakStatement) error {
 		}
 	}
 	endLabel := fmt.Sprintf("endwhile%d", c.getCurrentLoopNumber())
-	return ast.NewNodeReplacementSkip(&nast.GoToLabelStatement{
-		Position: brk.Position,
-		Label:    endLabel,
-	})
+	return ast.NewNodeReplacementSkip(c.gotoForLabelPos(endLabel, brk.Position))
 }
 
 // convertContinueStatement converts the continue keyword
@@ -132,8 +123,5 @@ func (c *Converter) convertContinueStatement(cnt *nast.ContinueStatement) error 
 		}
 	}
 	startLabel := fmt.Sprintf("while%d", c.getCurrentLoopNumber())
-	return ast.NewNodeReplacementSkip(&nast.GoToLabelStatement{
-		Position: cnt.Position,
-		Label:    startLabel,
-	})
+	return ast.NewNodeReplacementSkip(c.gotoForLabelPos(startLabel, cnt.Position))
 }

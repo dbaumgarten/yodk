@@ -140,25 +140,6 @@ func (n *MultilineIf) El() {}
 // NestEl implements the type-marker method
 func (n *MultilineIf) NestEl() {}
 
-// GoToLabelStatement represents a goto to a line-label
-type GoToLabelStatement struct {
-	Position ast.Position
-	Label    string
-}
-
-// Start is needed to implement ast.Node
-func (n *GoToLabelStatement) Start() ast.Position {
-	return n.Position
-}
-
-// End is needed to implement ast.Node
-func (n *GoToLabelStatement) End() ast.Position {
-	return n.Position.Add(len(n.Label) + 1)
-}
-
-// Stmt implements type-checking dummy-func
-func (n *GoToLabelStatement) Stmt() {}
-
 // WhileLoop represents a nolol-style while loop
 type WhileLoop struct {
 	Position  ast.Position

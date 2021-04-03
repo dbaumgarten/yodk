@@ -42,6 +42,12 @@ func (c *Converter) convertInclude(include *nast.IncludeDirective) error {
 		}
 	}
 
+	// find all line-lables in the included code
+	err = c.findLineLabels(parsed, false)
+	if err != nil {
+		return err
+	}
+
 	if usesTimeTracking(parsed) {
 		c.usesTimeTracking = true
 	}

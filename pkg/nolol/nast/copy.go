@@ -70,10 +70,6 @@ func CopyAst(inp ast.Node) ast.Node {
 				copier.Copy(m, n)
 				newnode = m
 			// begin nolol nodes
-			case *GoToLabelStatement:
-				m := &GoToLabelStatement{}
-				copier.Copy(m, n)
-				newnode = m
 			case *Block:
 				m := &Block{}
 				copier.Copy(m, n)

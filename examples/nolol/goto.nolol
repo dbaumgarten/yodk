@@ -1,6 +1,7 @@
-// this example shows the use of labeled gotos
+// this example shows the use of line-labels for gotos
 // but be cautious when using goto. It is bad style, error prone and hinders optimization
 :out="a"
+// go to the line that is labeled with b>
 goto b
 // labels can be on the same line as a statement
 c> :out+="c"
@@ -9,7 +10,8 @@ b> :out+="b"
 goto c
 d> // or on an own line. code automatically falls through empty lines
 
-
+// you can use line-labels as (read-only) variables in calculations. They will have the line they end up in in the compiled yolol as value
+:text="d is at line: "+d
 :out+="d"; goto e
 
 if 1==0 then
@@ -19,9 +21,10 @@ if 1==0 then
 	goto f
 end
 
-f> :out+="f"; goto eof
-
-:out="skip this"
-eof> 
+// You can still use any expression for goto and calculate jumps.
+// BUT BE CAREFUL! Using calculated jumps prevents the compiler from performing many optimizations
+// and if you mess up, your jumps end up going whereever
+f> :out+="f"; goto g+1
+g> :out="skip this" $
 
 :done=1

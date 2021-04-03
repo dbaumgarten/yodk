@@ -4,3 +4,4 @@ cases:
   - name: TestOutputstring
     outputs:
       out: "abcdef"
+      text: "d is at line: 4"

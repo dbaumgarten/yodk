@@ -1,6 +1,7 @@
 package nolol_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/dbaumgarten/yodk/pkg/nolol"
@@ -96,6 +97,9 @@ func TestInclude(t *testing.T) {
 	printed, _ := printer.Print(prog)
 	printed2, _ := printer.Print(prog2)
 	if printed != printed2 {
+		fmt.Println(printed)
+		fmt.Println("------------")
+		fmt.Println(printed2)
 		t.Fatal("Include does not match original")
 	}
 }
