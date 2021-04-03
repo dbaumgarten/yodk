@@ -161,9 +161,8 @@ func (s *LangServer) Diagnose(ctx context.Context, uri lsp.DocumentURI) {
 			}
 
 		} else if strings.HasSuffix(string(uri), ".nolol") {
-			conv := nolol.NewConverter()
 			mainfile := string(uri)
-			_, errs = conv.ConvertFileEx(mainfile, newfs(s, uri))
+			_, errs = nolol.NewConverter().LoadFileEx(mainfile, newfs(s, uri)).Convert()
 
 			analysis, err := nolol.AnalyseFileEx(mainfile, newfs(s, uri))
 			if err == nil {

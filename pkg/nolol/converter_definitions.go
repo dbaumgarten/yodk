@@ -30,8 +30,8 @@ func (c *Converter) convertDefinition(decl *nast.Definition, visitType int) erro
 	return nil
 }
 
-// convertDefinedFunction converts a definition that contains placeholders (=behaves like a function)
-func (c *Converter) convertDefinedFunction(fc *nast.FuncCall) error {
+// convertDefinitionFunction converts a definition that contains placeholders (=behaves like a function)
+func (c *Converter) convertDefinitionFunction(fc *nast.FuncCall) error {
 	def, exists := c.getDefinition(fc.Function)
 	if !exists {
 		return nil
@@ -60,17 +60,8 @@ func (c *Converter) convertDefinedFunction(fc *nast.FuncCall) error {
 	return ast.NewNodeReplacement(copy)
 }
 
-// convertAssignment optimizes the variable name and the expression of an assignment
-func (c *Converter) convertAssignment(ass *ast.Assignment, visitType int) error {
-	if visitType == ast.PreVisit {
-		if _, isLineLabel := c.getLineLabel(ass.Variable); isLineLabel {
-			return &parser.Error{
-				Message:       "Can not assign to a line-label",
-				StartPosition: ass.Start(),
-				EndPosition:   ass.End(),
-			}
-		}
-	}
+// convertDefinitionAssignment replaces assignments with definitions
+func (c *Converter) convertDefinitionAssignment(ass *ast.Assignment, visitType int) error {
 	if visitType == ast.PostVisit {
 		if replacement, exists := c.getDefinition(ass.Variable); exists {
 			if replacementVariable, isvar := replacement.Value.(*ast.Dereference); isvar && replacementVariable.Operator == "" {
@@ -82,28 +73,13 @@ func (c *Converter) convertAssignment(ass *ast.Assignment, visitType int) error 
 					EndPosition:   ass.End(),
 				}
 			}
-		} else {
-			ass.Variable = c.varnameOptimizer.OptimizeVarName(ass.Variable)
 		}
 	}
 	return nil
 }
 
-// convertDereference replaces mentionings of constants with the value of the constant
-func (c *Converter) convertDereference(deref *ast.Dereference) error {
-
-	if _, isLineLabel := c.getLineLabel(deref.Variable); isLineLabel {
-		// dereference of line-label
-		if deref.Operator != "" {
-			return &parser.Error{
-				Message:       "Can not Pre/Post-Operate on line-label",
-				StartPosition: deref.Start(),
-				EndPosition:   deref.End(),
-			}
-		}
-		return nil
-	}
-
+// convertDereference replaces mentionings of definitions with the value of the definition
+func (c *Converter) convertDefinitionDereference(deref *ast.Dereference) error {
 	if definition, exists := c.getDefinition(deref.Variable); exists {
 		// dereference of definition
 		replacement := nast.CopyAst(definition.Value)
@@ -128,8 +104,5 @@ func (c *Converter) convertDereference(deref *ast.Dereference) error {
 		}
 		return ast.NewNodeReplacement(replacement)
 	}
-
-	// we are dereferencing a variable
-	deref.Variable = c.varnameOptimizer.OptimizeVarName(deref.Variable)
 	return nil
 }

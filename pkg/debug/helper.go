@@ -126,8 +126,8 @@ func FromScripts(workspace string, scripts []string, prepareVM VMPrepareFunc) (*
 				return nil, err
 			}
 		} else if strings.HasSuffix(inputFileName, ".nolol") {
-			converter := nolol.NewConverter()
-			yololcode, err := converter.ConvertFile(inputFileName)
+			converter := nolol.NewConverter().LoadFile(inputFileName).RunConversion()
+			yololcode, err := converter.Get()
 			if err != nil {
 				return nil, err
 			}

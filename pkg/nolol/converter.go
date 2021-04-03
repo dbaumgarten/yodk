@@ -1,9 +1,7 @@
 package nolol
 
 import (
-	"fmt"
 	"path/filepath"
-	"strings"
 
 	"github.com/dbaumgarten/yodk/pkg/nolol/nast"
 	"github.com/dbaumgarten/yodk/pkg/optimizers"
@@ -13,8 +11,11 @@ import (
 
 // Converter can convert a nolol-ast to a yolol-ast
 type Converter struct {
-	files      FileSystem
-	lineLabels map[string]int
+	prog          *nast.Program
+	convertedProg *ast.Program
+	files         FileSystem
+	err           error
+	lineLabels    map[string]int
 	// the names of definitions are case-insensitive. Keys are converted to lowercase before using them
 	// all lookups MUST also use lowercased keys
 	definitions      map[string]*nast.Definition
@@ -34,11 +35,11 @@ type Converter struct {
 	macroInsertionCount int
 	debug               bool
 	// Spaceless uses spaceless printer-style for yolol
-	Spaceless bool
+	spaceless bool
 }
 
 // NewConverter creates a new converter
-func NewConverter() *Converter {
+func NewConverter() ConverterEmpty {
 	return &Converter{
 		lineLabels:       make(map[string]int),
 		definitions:      make(map[string]*nast.Definition),
@@ -51,178 +52,158 @@ func NewConverter() *Converter {
 	}
 }
 
-// GetVariableTranslations returns a table that can be used to find the original names
-// of the variables whos names where shortened during conversion
-func (c *Converter) GetVariableTranslations() map[string]string {
-	return c.varnameOptimizer.GetReversalTable()
+func (c *Converter) Error() error {
+	return c.err
 }
 
-// ConvertFile is a shortcut that loads a file from the file-system, parses it and directly convertes it.
+// Convert converts the nolol-program to a yolol-program
+// This is a shortcut to calling the ProcessXY-Methods in order
+func (c *Converter) Convert() (*ast.Program, error) {
+	return c.ProcessIncludes().
+		ProcessCodeExpansion().
+		ProcessNodes().
+		ProcessLineNumbers().
+		ProcessFinalize().
+		Get()
+}
+
+// RunConversion jumps to the final phase of conversion
+func (c *Converter) RunConversion() ConverterDone {
+	return c.ProcessIncludes().
+		ProcessCodeExpansion().
+		ProcessNodes().
+		ProcessLineNumbers().
+		ProcessFinalize()
+}
+
+// SetDebug enables/disables debug logging
+func (c *Converter) SetDebug(b bool) ConverterEmpty {
+	c.debug = b
+	return c
+}
+
+// SetSpaceless enables/disables spaceless-mode
+func (c *Converter) SetSpaceless(b bool) ConverterEmpty {
+	c.spaceless = b
+	return c
+}
+
+// LoadFile is a shortcut that loads a file to convert from the file-system
 // mainfile is the path to the file on the disk.
-// All included are loaded relative to the mainfile.
-func (c *Converter) ConvertFile(mainfile string) (*ast.Program, error) {
+// All included files are loaded relative to the mainfile.
+func (c *Converter) LoadFile(mainfile string) ConverterIncludes {
 	files := DiskFileSystem{
 		Dir: filepath.Dir(mainfile),
 	}
-	return c.ConvertFileEx(filepath.Base(mainfile), files)
+	return c.LoadFileEx(filepath.Base(mainfile), files)
 }
 
-// ConvertFileEx acts like ConvertFile, but allows the passing of a custom filesystem from which the source files
+// LoadFileEx acts like LoadFile, but allows the passing of a custom filesystem from which the source files
 // are retrieved. This way, files that are not stored on disk can be converted
-func (c *Converter) ConvertFileEx(mainfile string, files FileSystem) (*ast.Program, error) {
+func (c *Converter) LoadFileEx(mainfile string, files FileSystem) ConverterIncludes {
 	file, err := files.Get(mainfile)
 	if err != nil {
-		return nil, err
+		c.err = err
+		return c
 	}
 	p := NewParser()
 	p.Debug(c.debug)
 	parsed, err := p.Parse(file)
 	if err != nil {
-		return nil, err
+		c.err = err
+		return c
 	}
-	return c.Convert(parsed, files)
+	return c.Load(parsed, files)
 }
 
-// Debug enables/disables debug logging
-func (c *Converter) Debug(b bool) {
-	c.debug = b
-}
-
-// Convert converts a nolol-program to a yolol-program
-// files is an object to access files that are referenced in prog's include directives
-func (c *Converter) Convert(prog *nast.Program, files FileSystem) (*ast.Program, error) {
+// Load loades a nolol-ast to convert. Included files are retrieved using the given filesystem
+func (c *Converter) Load(prog *nast.Program, files FileSystem) ConverterIncludes {
+	c.prog = prog
 	c.files = files
-
-	c.usesTimeTracking = usesTimeTracking(prog)
-	// reserve a name for use in time-tracking
-	c.varnameOptimizer.OptimizeVarName(reservedTimeVariable)
-
-	// find all user-defined line-labels
-	err := c.findLineLabels(prog, false)
-	if err != nil {
-		return nil, err
-	}
-
-	err = c.convertNodes(prog)
-	if err != nil {
-		return nil, err
-	}
-
-	err = c.addFinalGoto(prog)
-	if err != nil {
-		return nil, err
-	}
-
-	err = c.resolveGotoChains(prog)
-	if err != nil {
-		return nil, err
-	}
-
-	err = c.removeUnusedLabels(prog)
-	if err != nil {
-		return nil, err
-	}
-
-	// merge the statemens of the program as good as possible
-	merged, err := c.mergeNololElements(prog.Elements)
-	if err != nil {
-		return nil, err
-	}
-	prog.Elements = merged
-
-	err = c.removeDuplicateGotos(prog)
-	if err != nil {
-		return nil, err
-	}
-
-	// find all line-labels (again). This time they have the correct lines.
-	err = c.findLineLabels(prog, true)
-	if err != nil {
-		return nil, err
-	}
-
-	// resolve line-labels
-	err = c.replaceLineLabels(prog)
-	if err != nil {
-		return nil, err
-	}
-
-	// convertLineFuncCalls might have introduced un-optimized expression
-	// re-run the static-expression optimizer
-	err = c.sexpOptimizer.Optimize(prog)
-	if err != nil {
-		return nil, err
-	}
-
-	if c.usesTimeTracking {
-		c.insertLineCounter(prog)
-	}
-
-	// at this point the program consists entirely of statement-lines which contain pure yolol-code
-	out := &ast.Program{
-		Lines: make([]*ast.Line, len(prog.Elements)),
-	}
-
-	for i, element := range prog.Elements {
-		line := element.(*nast.StatementLine)
-		out.Lines[i] = &ast.Line{
-			Position:   line.Position,
-			Statements: line.Statements,
-		}
-	}
-
-	c.removeFinalGotoIfNeeded(out)
-
-	if len(out.Lines) > 20 {
-		return out, &parser.Error{
-			Message: "Program is too large to be compiled into 20 lines of yolol.",
-			StartPosition: ast.Position{
-				Line:    1,
-				Coloumn: 1,
-			},
-			EndPosition: ast.Position{
-				Line:    30,
-				Coloumn: 70,
-			},
-		}
-	}
-
-	return out, nil
+	return c
 }
 
-func (c *Converter) maxLineLength() int {
-	if !c.usesTimeTracking {
-		return 70
-	}
-	return 70 - 4
+// GetIntermediateProgram returns the current intermediate nolol-ast.
+// The state of it depends on what steps of the conversion have already been performed
+func (c *Converter) GetIntermediateProgram() *nast.Program {
+	return c.prog
 }
 
-func (c *Converter) convertNodes(node ast.Node) error {
+// ProcessIncludes resolves all Include-Directives in the given nolol-code
+func (c *Converter) ProcessIncludes() ConverterExpansions {
+	if c.err != nil {
+		return c
+	}
+
 	f := func(node ast.Node, visitType int) error {
 		switch n := node.(type) {
-		case *ast.Assignment:
-			return c.convertAssignment(n, visitType)
+		case *nast.IncludeDirective:
+			return c.convertInclude(n)
+		}
+		return nil
+	}
+	c.err = c.prog.Accept(ast.VisitorFunc(f))
+	return c
+}
 
-		case *nast.Definition:
-			return c.convertDefinition(n, visitType)
+// ProcessCodeExpansion resolves all macro-definitions, macro-insertions and defines
+func (c *Converter) ProcessCodeExpansion() ConverterNodes {
+	if c.err != nil {
+		return c
+	}
 
+	f := func(node ast.Node, visitType int) error {
+		switch n := node.(type) {
 		case *nast.MacroDefinition:
 			return c.convertMacroDef(n, visitType)
 
 		case *nast.MacroInsetion:
 			return c.convertMacroInsertion(n, visitType)
 
-		case *nast.IncludeDirective:
-			return c.convertInclude(n)
+		case *ast.Assignment:
+			return c.convertDefinitionAssignment(n, visitType)
+
+		case *nast.Definition:
+			return c.convertDefinition(n, visitType)
+
+		case *ast.Dereference:
+			return c.convertDefinitionDereference(n)
+
+		case *nast.FuncCall:
+			return c.convertDefinitionFunction(n)
+		}
+		return nil
+	}
+	c.err = c.prog.Accept(ast.VisitorFunc(f))
+	return c
+}
+
+// ProcessNodes converts most nolol ast-nodes to yolol ast.nodes
+func (c *Converter) ProcessNodes() ConverterLines {
+	if c.err != nil {
+		return c
+	}
+
+	c.usesTimeTracking = usesTimeTracking(c.prog)
+	// reserve a name for use in time-tracking
+	c.varnameOptimizer.OptimizeVarName(reservedTimeVariable)
+
+	// find all user-defined line-labels
+	err := c.findLineLabels(c.prog, false)
+	if err != nil {
+		c.err = err
+		return c
+	}
+
+	// convert the remaining nodes to yolol
+	f := func(node ast.Node, visitType int) error {
+		switch n := node.(type) {
 
 		case *nast.WaitDirective:
 			return c.convertWait(n, visitType)
 
 		case *nast.FuncCall:
 			return c.convertFuncCall(n, visitType)
-
-		case *ast.Dereference:
-			return c.convertDereference(n)
 
 		case *nast.MultilineIf:
 			return c.convertIf(n, visitType)
@@ -235,6 +216,12 @@ func (c *Converter) convertNodes(node ast.Node) error {
 
 		case *nast.ContinueStatement:
 			return c.convertContinueStatement(n)
+
+		case *ast.Assignment:
+			return c.convertAssignment(n, visitType)
+
+		case *ast.Dereference:
+			return c.convertDereference(n)
 
 		case *ast.UnaryOperation:
 			if visitType == ast.PostVisit {
@@ -253,170 +240,111 @@ func (c *Converter) convertNodes(node ast.Node) error {
 
 		return nil
 	}
-	return node.Accept(ast.VisitorFunc(f))
+	c.err = c.prog.Accept(ast.VisitorFunc(f))
+	return c
 }
 
-func (c *Converter) optimizeExpression(exp ast.Expression) ast.Node {
-	repl := c.boolexpOptimizer.OptimizeExpression(exp)
-	if repl != nil {
-		exp = repl
+// ProcessLineNumbers handles gotos and line-labels
+func (c *Converter) ProcessLineNumbers() ConverterFinal {
+	if c.err != nil {
+		return c
 	}
-	repl = c.sexpOptimizer.OptimizeExpressionNonRecursive(exp)
-	if repl != nil {
-		exp = repl
-	}
-	return exp
-}
 
-// mergeNololNestableElements is a type-wrapper for mergeStatementElements
-func (c *Converter) mergeNololNestableElements(lines []nast.NestableElement) ([]nast.NestableElement, error) {
-	inp := make([]*nast.StatementLine, len(lines))
-	for i, elem := range lines {
-		line, isline := elem.(*nast.StatementLine)
-		if !isline {
-			return nil, parser.Error{
-				Message: fmt.Sprintf("Err: Found unconverted nolol-element: %T", elem),
-			}
-		}
-		inp[i] = line
+	c.err = c.addFinalGoto(c.prog)
+	if c.err != nil {
+		return c
 	}
-	interm, err := c.mergeStatementElements(inp)
+
+	c.err = c.resolveGotoChains(c.prog)
+	if c.err != nil {
+		return c
+	}
+
+	c.err = c.removeUnusedLabels(c.prog)
+	if c.err != nil {
+		return c
+	}
+
+	// merge the statemens of the program as good as possible
+	merged, err := c.mergeNololElements(c.prog.Elements)
 	if err != nil {
-		return nil, err
+		c.err = err
+		return c
 	}
-	outp := make([]nast.NestableElement, len(interm))
-	for i, elem := range interm {
-		outp[i] = elem
+	c.prog.Elements = merged
+
+	c.err = c.removeDuplicateGotos(c.prog)
+	if c.err != nil {
+		return c
 	}
-	return outp, nil
+
+	// find all line-labels (again). This time they have the correct lines.
+	c.err = c.findLineLabels(c.prog, true)
+	if c.err != nil {
+		return c
+	}
+
+	// resolve line-labels
+	c.err = c.replaceLineLabels(c.prog)
+	if c.err != nil {
+		return c
+	}
+
+	// replacing line-labels with actual line-numbers might have introduced un-optimized expression
+	// re-run the static-expression optimizer
+	c.err = c.sexpOptimizer.Optimize(c.prog)
+	return c
 }
 
-// mergeNololElements is a type-wrapper for mergeStatementElements
-func (c *Converter) mergeNololElements(lines []nast.Element) ([]nast.Element, error) {
-	inp := make([]*nast.StatementLine, len(lines))
-	for i, elem := range lines {
-		line, isline := elem.(*nast.StatementLine)
-		if !isline {
-			return nil, parser.Error{
-				Message: fmt.Sprintf("Err: Found unconverted nolol-element: %T", elem),
-			}
+// ProcessFinalize takes the final steps in converting the program
+func (c *Converter) ProcessFinalize() ConverterDone {
+	if c.err != nil {
+		return c
+	}
+
+	if c.usesTimeTracking {
+		c.insertLineCounter(c.prog)
+	}
+
+	// at this point the program consists entirely of statement-lines which contain pure yolol-code
+	c.convertedProg = &ast.Program{
+		Lines: make([]*ast.Line, len(c.prog.Elements)),
+	}
+
+	for i, element := range c.prog.Elements {
+		line := element.(*nast.StatementLine)
+		c.convertedProg.Lines[i] = &ast.Line{
+			Position:   line.Position,
+			Statements: line.Statements,
 		}
-		inp[i] = line
 	}
-	interm, err := c.mergeStatementElements(inp)
-	if err != nil {
-		return nil, err
-	}
-	outp := make([]nast.Element, len(interm))
-	for i, elem := range interm {
-		outp[i] = elem
-	}
-	return outp, nil
-}
 
-// mergeStatementElements merges consectuive statementlines into as few lines as possible
-func (c *Converter) mergeStatementElements(lines []*nast.StatementLine) ([]*nast.StatementLine, error) {
-	maxlen := c.maxLineLength()
-	newElements := make([]*nast.StatementLine, 0, len(lines))
-	i := 0
-	for i < len(lines) {
-		current := &nast.StatementLine{
-			Line: ast.Line{
-				Statements: []ast.Statement{},
-				Position:   lines[i].Position,
+	c.removeFinalGotoIfNeeded(c.convertedProg)
+
+	if len(c.convertedProg.Lines) > 20 {
+		c.err = &parser.Error{
+			Message: "Program is too large to be compiled into 20 lines of yolol.",
+			StartPosition: ast.Position{
+				Line:    1,
+				Coloumn: 1,
 			},
-			Label:  lines[i].Label,
-			HasEOL: lines[i].HasEOL,
+			EndPosition: ast.Position{
+				Line:    30,
+				Coloumn: 70,
+			},
 		}
-		current.Statements = append(current.Statements, lines[i].Statements...)
-		newElements = append(newElements, current)
-
-		if current.HasEOL {
-			// no lines MUST be appended to a line having EOL
-			i++
-			continue
-		}
-
-		for i+1 < len(lines) {
-			currlen := c.getLengthOfLine(&current.Line)
-
-			if currlen > maxlen {
-				return newElements, &parser.Error{
-					Message:       "The line is too long (>70 characters) to be converted to yolol, even after optimization.",
-					StartPosition: current.Start(),
-					EndPosition:   current.End(),
-				}
-			}
-
-			nextline := lines[i+1]
-
-			if nextline.Label == "" && !nextline.HasBOL {
-				prev := current.Statements
-				current.Statements = make([]ast.Statement, 0, len(current.Statements)+len(nextline.Statements))
-				current.Statements = append(current.Statements, prev...)
-				current.Statements = append(current.Statements, nextline.Statements...)
-
-				newlen := c.getLengthOfLine(&current.Line)
-				if newlen > maxlen {
-					// the newly created line is longer then allowed. roll back.
-					current.Statements = prev
-					break
-				}
-
-				i++
-				if nextline.HasEOL {
-					break
-				}
-			} else {
-				break
-			}
-		}
-		i++
 	}
-	return newElements, nil
+
+	return c
 }
 
-//getLengthOfLine returns the amount of characters needed to represent the given line as yolol-code
-func (c *Converter) getLengthOfLine(line ast.Node) int {
-	ygen := parser.Printer{}
-	if c.Spaceless {
-		ygen.Mode = parser.PrintermodeSpaceless
-	} else {
-		ygen.Mode = parser.PrintermodeCompact
-	}
+// Get returns the converted program and/or an error
+func (c *Converter) Get() (*ast.Program, error) {
+	return c.convertedProg, c.err
+}
 
-	silenceGotoExpression := false
-	ygen.PrinterExtensionFunc = func(node ast.Node, visitType int, p *parser.Printer) (bool, error) {
-		if gotostmt, is := node.(*ast.GoToStatement); is {
-			if c.getGotoDestinationLabel(gotostmt) != "" {
-				if visitType == ast.PreVisit {
-					silenceGotoExpression = true
-					p.Write("gotoXX")
-				}
-				if visitType == ast.PostVisit {
-					silenceGotoExpression = false
-				}
-				return true, nil
-			}
-		}
-		if silenceGotoExpression {
-			if _, is := node.(ast.Expression); is {
-				// The current expression is inside a goto.
-				// DO NOT PRINT IT
-				return true, nil
-			}
-		}
-		return false, nil
-	}
-	generated, err := ygen.Print(line)
-	if err != nil {
-		panic(err)
-	}
-
-	linelen := len(generated)
-	if strings.HasSuffix(generated, "\n") {
-		linelen--
-	}
-
-	return linelen
+// GetVariableTranslations returns a table that can be used to find the original names
+// of the variables whos names where shortened during conversion
+func (c *Converter) GetVariableTranslations() map[string]string {
+	return c.varnameOptimizer.GetReversalTable()
 }

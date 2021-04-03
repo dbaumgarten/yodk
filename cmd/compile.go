@@ -31,9 +31,9 @@ var compileCmd = &cobra.Command{
 func compileFile(fpath string) {
 	outfile := strings.Replace(fpath, path.Ext(fpath), ".yolol", -1)
 	converter := nolol.NewConverter()
-	converter.Spaceless = spaceless
-	converter.Debug(debugLog)
-	converted, compileerr := converter.ConvertFile(fpath)
+	converter.SetSpaceless(spaceless)
+	converter.SetDebug(debugLog)
+	converted, compileerr := converter.LoadFile(fpath).Convert()
 
 	// compilation failed completely. Fail now!
 	if converted == nil {

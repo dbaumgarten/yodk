@@ -55,13 +55,6 @@ func (c *Converter) convertFuncCall(function *nast.FuncCall, visitType int) erro
 		return nil
 	}
 
-	// first try if the funccall refers to a definition with replacements
-	// if it returns nil, it doesnt
-	err := c.convertDefinedFunction(function)
-	if err != nil {
-		return err
-	}
-
 	nfunc := strings.ToLower(function.Function)
 	switch nfunc {
 	case "time":

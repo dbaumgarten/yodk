@@ -177,10 +177,10 @@ func (t Test) createVMs(coord *vm.Coordinator) ([]*vm.VM, []map[string]string, e
 		var v *vm.VM
 
 		if strings.HasSuffix(script, ".nolol") {
-			conv := nolol.NewConverter()
 			file := filepath.Join(filepath.Dir(t.Path), script)
-			prog, err := conv.ConvertFile(file)
+			conv := nolol.NewConverter().LoadFile(file).RunConversion()
 			translationTables[i] = conv.GetVariableTranslations()
+			prog, err := conv.Get()
 			if err != nil {
 				return nil, nil, err
 			}
