@@ -45,6 +45,8 @@ One key-problem when writing yolol-code in an external editor always was how to 
 
 If you (for whatever reason) want to disable the global hotkeys, you can do so in the vscode-settings under File->Preferences->Settings->search for 'yolol'->Hotkeys: Enable). Vscode needs to be restarted for changes to this setting to take effect.  
 
+**ATTENTION**: When editing code inside the Ship.Editor slightly different keystrokes are required to autotype code. Thats why there are separate hotkeys for inside the SSC. When inside the SSC, you will need to use ```Ctrl+ALT+<key>``` instead of ```Ctrl+<key>```!
+
 ## Inseting code into a chip
 Open the .yolol-script you want to insert in vscode (it has to be the current active file). Go to Stabase's window and open the yolol-chip you want to fill. Unlock it, aim your cursor at it and click a line. Now press ```Ctrl+I```. Vscode will start to auto-type your code into the chip, starting at your current cursor-position. 
 
