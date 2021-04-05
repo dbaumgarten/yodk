@@ -10,7 +10,7 @@ import (
 
 // resolveIncludes searches for include-directives and inserts the lines of the included files
 func (c *Converter) convertInclude(include *nast.IncludeDirective) error {
-	p := NewParser()
+	p := NewParser().(*Parser)
 
 	c.includecount++
 	if c.includecount > 20 {

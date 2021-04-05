@@ -18,7 +18,7 @@ var verifyCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		for _, filepath := range args {
 			p := parser.NewParser()
-			p.DebugLog = debugLog
+			p.SetDebugLog(debugLog)
 			file := loadInputFile(filepath)
 			_, errs := p.Parse(file)
 			exitOnError(errs, "parsing file '"+filepath+"'")

@@ -13,6 +13,12 @@ type Parser struct {
 	*parser.Parser
 }
 
+// NololParser is an interface that hides all overridable-methods from normal users
+type NololParser interface {
+	Parse(prog string) (*nast.Program, error)
+	Debug(b bool)
+}
+
 // Constant definitions for parser.Error.Code
 const (
 	ErrExpectedStringConstant = "ErrExpectedStringConstant"
@@ -22,9 +28,9 @@ const (
 )
 
 // NewParser creates and returns a nolol parser
-func NewParser() *Parser {
+func NewParser() NololParser {
 	ep := &Parser{
-		Parser: parser.NewParser(),
+		Parser: parser.NewParser().(*parser.Parser),
 	}
 	ep.This = ep
 	ep.Tokenizer = nast.NewNololTokenizer()
@@ -46,8 +52,7 @@ func (p *Parser) SetFilename(name string) {
 func (p *Parser) Parse(prog string) (*nast.Program, error) {
 	p.Reset()
 	p.Tokenizer.Load(prog)
-	// Advance twice to fill CurrentToken and NextToken
-	p.Advance()
+	// Advance to fill CurrentToken
 	p.Advance()
 	parsed := p.ParseProgram()
 	if len(p.Errors) == 0 {
@@ -239,7 +244,8 @@ func (p *Parser) ParseStatementLine() *nast.StatementLine {
 	}
 
 	// get line-label if it exists
-	if p.IsCurrentType(ast.TypeID) && (p.NextToken.Type == ast.TypeSymbol && p.NextToken.Value == ">") {
+	nextToken := p.Tokenizer.Peek()
+	if p.IsCurrentType(ast.TypeID) && (nextToken.Type == ast.TypeSymbol && nextToken.Value == ">") {
 		ret.Label = strings.ToLower(p.CurrentToken.Value)
 		p.Advance()
 		p.Advance()
@@ -563,7 +569,8 @@ func (p *Parser) ParseBlock(stop func() bool) *nast.Block {
 // ParseFuncCall parse a function call
 func (p *Parser) ParseFuncCall() *nast.FuncCall {
 	p.Log()
-	if !p.IsCurrentType(ast.TypeID) || p.NextToken.Type != ast.TypeSymbol || p.NextToken.Value != "(" {
+	nextToken := p.Tokenizer.Peek()
+	if !p.IsCurrentType(ast.TypeID) || nextToken.Type != ast.TypeSymbol || nextToken.Value != "(" {
 		return nil
 	}
 	fc := &nast.FuncCall{

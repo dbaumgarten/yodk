@@ -10,14 +10,9 @@ import (
 
 // Parser parses a yolol programm into an AST
 type Parser struct {
+	// The tokenizer used to tokenize the input
 	Tokenizer    *ast.Tokenizer
 	CurrentToken *ast.Token
-	NextToken    *ast.Token
-	PrevToken    *ast.Token
-	// if true, there was whitespace between CurrentToken and NextToken
-	NextWouldBeWhitespace bool
-	// if true, current token was preceeded by whitespace
-	SkippedWhitespace bool
 	// using an interface of ourself to call the parsing-methods allows them to be overridden by 'subclasses'
 	This YololParserFunctions
 	// Contains all errors encountered during parsing
@@ -64,13 +59,30 @@ type YololParserFunctions interface {
 	ParsePostOpExpression() ast.Expression
 }
 
+// YololParser is an interface that hides all overridable-methods from normal users
+type YololParser interface {
+	Parse(prog string) (*ast.Program, error)
+	SetDebugLog(b bool)
+	SetAllErrors(b bool)
+}
+
 // NewParser creates a new parser
-func NewParser() *Parser {
+func NewParser() YololParser {
 	p := &Parser{
 		Tokenizer: ast.NewTokenizer(),
 	}
 	p.This = p
 	return p
+}
+
+// SetDebugLog enables/disables debug-logging
+func (p *Parser) SetDebugLog(b bool) {
+	p.DebugLog = b
+}
+
+// SetAllErrors enables/disables the logging of more then one error per line
+func (p *Parser) SetAllErrors(b bool) {
+	p.AllErrors = b
 }
 
 // ---------------------------------------------
@@ -82,19 +94,9 @@ func (p *Parser) HasNext() bool {
 
 // Advance advances the current token to the next (non whitespace) token in the list
 func (p *Parser) Advance() *ast.Token {
-	if p.CurrentToken == nil || p.HasNext() {
-		p.PrevToken = p.CurrentToken
-		p.CurrentToken = p.NextToken
-		p.NextToken = p.Tokenizer.Next()
-		p.SkippedWhitespace = p.NextWouldBeWhitespace
-		p.NextWouldBeWhitespace = false
-		for p.NextToken.Type == ast.TypeWhitespace {
-			if p.NextToken.Type == ast.TypeWhitespace {
-				p.NextWouldBeWhitespace = true
-			}
-			p.NextToken = p.Tokenizer.Next()
-		}
-
+	p.CurrentToken = p.Tokenizer.Next()
+	for p.CurrentToken.Type == ast.TypeWhitespace {
+		p.CurrentToken = p.Tokenizer.Next()
 	}
 	return p.CurrentToken
 }
@@ -201,10 +203,6 @@ func (p *Parser) ErrorExpectedStatement(where string) {
 func (p *Parser) Reset() {
 	p.Errors = make(Errors, 0)
 	p.CurrentToken = nil
-	p.PrevToken = nil
-	p.NextToken = nil
-	p.NextWouldBeWhitespace = false
-	p.SkippedWhitespace = false
 }
 
 // ---------------------------------------------
@@ -213,8 +211,7 @@ func (p *Parser) Reset() {
 func (p *Parser) Parse(prog string) (*ast.Program, error) {
 	p.Reset()
 	p.Tokenizer.Load(prog)
-	// Advance twice to fill CurrentToken and NextToken
-	p.Advance()
+	// Advance twice to fill CurrentToken
 	p.Advance()
 	parsed := p.ParseProgram()
 	if len(p.Errors) == 0 {
@@ -661,10 +658,11 @@ func (p *Parser) ParsePreOpExpression() ast.Expression {
 // ParsePostOpExpression parse post-expression
 func (p *Parser) ParsePostOpExpression() ast.Expression {
 	p.Log()
-	if p.NextToken.Type == ast.TypeSymbol && (p.NextToken.Value == "++" || p.NextToken.Value == "--") && p.IsCurrentType(ast.TypeID) {
+	nextToken := p.Tokenizer.Peek()
+	if nextToken.Type == ast.TypeSymbol && (nextToken.Value == "++" || nextToken.Value == "--") && p.IsCurrentType(ast.TypeID) {
 		exp := ast.Dereference{
 			Variable: p.CurrentToken.Value,
-			Operator: p.NextToken.Value,
+			Operator: nextToken.Value,
 			PrePost:  "Post",
 			Position: p.CurrentToken.Position,
 		}

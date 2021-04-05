@@ -150,3 +150,30 @@ func TestTokenizer(t *testing.T) {
 		}
 	}
 }
+
+func TestTokenizerCheckpoints(t *testing.T) {
+	input := `
+	test = 123 def=245
+	abc = test + 1
+	`
+	tk := ast.NewTokenizer()
+	tk.Load(input)
+
+	tk.Next()
+	tk.Next()
+	cp := tk.Checkpoint()
+	tok := tk.Next()
+	if tok.Value != "test" {
+		t.Fatal("Wrong token")
+	}
+	tok = tk.Next()
+	if tok.Value == "test" {
+		t.Fatal("Token not advanced")
+	}
+	tk.Restore(cp)
+	tok = tk.Next()
+	if tok.Value != "test" {
+		t.Fatal("Wrong token")
+	}
+
+}
