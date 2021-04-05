@@ -152,14 +152,6 @@ var DefaultNololCompletions = []lsp.CompletionItem{
 		Kind:  14,
 	},
 	{
-		Label: "_if",
-		Kind:  14,
-	},
-	{
-		Label: "_goto",
-		Kind:  14,
-	},
-	{
 		Label:         "not",
 		Detail:        "not X",
 		Kind:          24,

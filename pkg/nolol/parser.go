@@ -13,8 +13,8 @@ type Parser struct {
 	*parser.Parser
 }
 
-// NololParser is an interface that hides all overridable-methods from normal users
-type NololParser interface {
+// PublicParser is an interface that hides all overridable-methods from normal users
+type PublicParser interface {
 	Parse(prog string) (*nast.Program, error)
 	Debug(b bool)
 }
@@ -28,7 +28,7 @@ const (
 )
 
 // NewParser creates and returns a nolol parser
-func NewParser() NololParser {
+func NewParser() PublicParser {
 	ep := &Parser{
 		Parser: parser.NewParser().(*parser.Parser),
 	}
@@ -415,6 +415,12 @@ func (p *Parser) ParseDefinition() *nast.Definition {
 // ParseMultilineIf parses a nolol-style multiline if
 func (p *Parser) ParseMultilineIf() nast.NestableElement {
 	p.Log()
+
+	// We can not be absolutely sure that this is really a multiline if
+	// Backup the parser-state, just in case
+	savedToken := p.CurrentToken
+	tokenizerCheckpoint := p.Tokenizer.Checkpoint()
+
 	mlif := nast.MultilineIf{
 		Positions:  make([]ast.Position, 1),
 		Conditions: make([]ast.Expression, 0),
@@ -434,7 +440,15 @@ func (p *Parser) ParseMultilineIf() nast.NestableElement {
 		}
 
 		p.Expect(ast.TypeKeyword, "then")
-		p.Expect(ast.TypeNewline, "")
+
+		if p.IsCurrentType(ast.TypeNewline) {
+			p.Advance()
+		} else {
+			// We fucked up, this is not a multiline if. Restore saved state and return
+			p.CurrentToken = savedToken
+			p.Tokenizer.Restore(tokenizerCheckpoint)
+			return nil
+		}
 
 		block := p.ParseBlock(func() bool {
 			return p.IsCurrentType(ast.TypeKeyword) && (p.IsCurrentValue("end") || p.IsCurrentValue("else"))
@@ -502,52 +516,6 @@ func (p *Parser) ParseWhile() nast.NestableElement {
 	}
 
 	return &loop
-}
-
-// ParseIf is copied nearly exactly from the yolol-parser, but the start token changed from "if" to "_if"
-func (p *Parser) ParseIf() ast.Statement {
-	p.Log()
-	ret := ast.IfStatement{
-		Position: p.CurrentToken.Position,
-	}
-	if !p.IsCurrent(ast.TypeKeyword, "_if") {
-		return nil
-	}
-	p.Advance()
-
-	ret.Condition = p.This.ParseExpression()
-	if ret.Condition == nil {
-		p.ErrorExpectedExpression("as if-condition")
-	}
-
-	p.Expect(ast.TypeKeyword, "then")
-	ret.IfBlock = make([]ast.Statement, 0, 1)
-
-	for {
-		stmt := p.This.ParseStatement()
-		if stmt == nil {
-			break
-		}
-		ret.IfBlock = append(ret.IfBlock, stmt)
-	}
-
-	if p.IsCurrent(ast.TypeKeyword, "else") {
-		p.Advance()
-
-		ret.ElseBlock = make([]ast.Statement, 0, 1)
-
-		for {
-			stmt := p.This.ParseStatement()
-			if stmt == nil {
-				break
-			}
-			ret.ElseBlock = append(ret.ElseBlock, stmt)
-		}
-	}
-
-	p.Expect(ast.TypeKeyword, "end")
-
-	return &ret
 }
 
 // ParseBlock parse lines until stop() returns true

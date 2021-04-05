@@ -246,31 +246,6 @@ func (np *Printer) handleNololNodes(node ast.Node, visitType int, p *parser.Prin
 		p.Write("continue")
 		p.Space()
 		break
-	case *ast.IfStatement:
-		switch visitType {
-		case ast.PreVisit:
-			p.Write("_if")
-			p.Space()
-			break
-		case ast.InterVisit1:
-			p.Space()
-			p.Write("then")
-			p.Space()
-			break
-		case ast.InterVisit2:
-			p.Space()
-			p.Write("else")
-			p.Space()
-			break
-		case ast.PostVisit:
-			p.Space()
-			p.Write("end")
-			break
-		default:
-			if visitType > 0 {
-				p.StatementSeparator()
-			}
-		}
 	case *ast.GoToStatement:
 		if visitType == ast.PreVisit {
 			p.Write("goto")

@@ -23,10 +23,9 @@ else
 	end
 end
 
-// The old yolol-inline ifs can still be useful. For example if you absolutely need to make sure everything happens in one line.
-// In this example, the two assignments and the if are guaranteed to happen on the same tick.
-// To avoid confusion, when you need an inline-if, you need to use the "_if" keyword
-a=1; _if 1==1 then :foo=1 else :foo=2 end; b=2
+// You can still use the plain old yolol-inline-ifs. You usually dont need them, as the compiler will figure out if he can use an inline-ip on its own.
+// However, if you ABSOLUTELY need an inline if (or an error if thats not possible), it can still be usefull.
+a=1; if 1==1 then :foo=1 else :foo=2 end; b=2
 
 :other="done"
 :done=1
