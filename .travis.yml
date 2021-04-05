@@ -37,7 +37,7 @@ before_deploy:
   - ./build-docs.sh
 deploy:
   - provider: releases
-    api-key: $GITHUB_TOKEN
+    api-key: $GH_TOKEN
     file: 
       - yodk-win.zip
       - yodk-linux.zip
@@ -56,6 +56,6 @@ deploy:
   - provider: pages
     local_dir: docs
     skip_cleanup: true
-    github_token: $GITHUB_TOKEN
+    github_token: $GH_TOKEN
     on:
       branch: master
