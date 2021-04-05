@@ -1,7 +1,6 @@
 package nolol
 
 import (
-	"path/filepath"
 	"strings"
 
 	"github.com/dbaumgarten/yodk/pkg/nolol/nast"
@@ -17,30 +16,10 @@ type AnalysisReport struct {
 	Docstrings  map[string]string
 }
 
-// AnalyseFile returns an AnalysisReport for the given file
-func AnalyseFile(mainfile string) (*AnalysisReport, error) {
-	files := DiskFileSystem{
-		Dir: filepath.Dir(mainfile),
-	}
-	return AnalyseFileEx(filepath.Base(mainfile), files)
-}
-
-// AnalyseFileEx returns an AnalysisReport for the given file
-func AnalyseFileEx(mainfile string, files FileSystem) (*AnalysisReport, error) {
-	file, err := files.Get(mainfile)
-	if err != nil {
-		return nil, err
-	}
-	p := NewParser()
-	parsed, err := p.Parse(file)
-	if err != nil {
-		return nil, err
-	}
-	return Analyse(parsed, files)
-}
-
 // Analyse returns an AnalysisReport for the given program
-func Analyse(prog *nast.Program, files FileSystem) (*AnalysisReport, error) {
+// All includes in the input-program must have been already resolved (use the converter for this)
+// The input-programm is mutated. Do NOT use it after analysis
+func Analyse(prog *nast.Program) (*AnalysisReport, error) {
 	res := &AnalysisReport{
 		Definitions: make(map[string]*nast.Definition),
 		Macros:      make(map[string]*nast.MacroDefinition),
@@ -48,7 +27,6 @@ func Analyse(prog *nast.Program, files FileSystem) (*AnalysisReport, error) {
 		Labels:      make([]string, 0),
 	}
 
-	includecount := 0
 	prevDocstrings := ""
 
 	vars := make(map[string]bool)
@@ -77,8 +55,6 @@ func Analyse(prog *nast.Program, files FileSystem) (*AnalysisReport, error) {
 				vars[n.Variable] = true
 			}
 			return nil
-		case *nast.IncludeDirective:
-			return convertInclude(n, files, &includecount)
 		case *nast.StatementLine:
 			if visitType == ast.PostVisit {
 				if isDocsLine(n) {
@@ -177,30 +153,4 @@ func isDocsLine(thisStmtLine *nast.StatementLine) bool {
 		return true
 	}
 	return false
-}
-
-// TODO: reduce code-duplication between here and the converter
-func convertInclude(include *nast.IncludeDirective, files FileSystem, count *int) error {
-	p := NewParser()
-
-	*count++
-	if *count > 20 {
-		return nil
-	}
-
-	file, err := files.Get(include.File)
-	if err != nil {
-		return nil
-	}
-	p.SetFilename(include.File)
-	parsed, err := p.Parse(file)
-	if err != nil {
-		return nil
-	}
-
-	replacements := make([]ast.Node, len(parsed.Elements))
-	for i := range parsed.Elements {
-		replacements[i] = parsed.Elements[i]
-	}
-	return ast.NewNodeReplacement(replacements...)
 }

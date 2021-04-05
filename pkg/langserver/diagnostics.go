@@ -10,6 +10,7 @@ import (
 
 	"github.com/dbaumgarten/yodk/pkg/lsp"
 	"github.com/dbaumgarten/yodk/pkg/nolol"
+	"github.com/dbaumgarten/yodk/pkg/nolol/nast"
 	"github.com/dbaumgarten/yodk/pkg/optimizers"
 	"github.com/dbaumgarten/yodk/pkg/parser"
 	"github.com/dbaumgarten/yodk/pkg/parser/ast"
@@ -162,13 +163,19 @@ func (s *LangServer) Diagnose(ctx context.Context, uri lsp.DocumentURI) {
 
 		} else if strings.HasSuffix(string(uri), ".nolol") {
 			mainfile := string(uri)
-			_, errs = nolol.NewConverter().LoadFileEx(mainfile, newfs(s, uri)).Convert()
+			converter := nolol.NewConverter().LoadFileEx(mainfile, newfs(s, uri)).ProcessIncludes()
+			errs = converter.Error()
 
-			analysis, err := nolol.AnalyseFileEx(mainfile, newfs(s, uri))
-			if err == nil {
-				diagRes.AnalysisReport = analysis
+			if errs == nil {
+				intermediate := converter.GetIntermediateProgram()
+				// Analyze() will mutate the ast, so we create a copy of it
+				intermediate = nast.CopyAst(intermediate).(*nast.Program)
+				analysis, err := nolol.Analyse(intermediate)
+				if err == nil {
+					diagRes.AnalysisReport = analysis
+				}
+				errs = converter.ProcessCodeExpansion().ProcessNodes().ProcessLineNumbers().ProcessFinalize().Error()
 			}
-
 		} else {
 			return
 		}
