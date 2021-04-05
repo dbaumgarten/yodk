@@ -40,6 +40,7 @@ const (
 // Constants for special keycodes
 const (
 	KeycodeCtrl      = 0x11
+	KeycodeAlt       = 0x12
 	KeycodeReturn    = 0x0D
 	KeycodeShift     = 0x10
 	KeycodeBackspace = 0x08

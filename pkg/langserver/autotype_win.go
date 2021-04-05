@@ -32,6 +32,24 @@ var (
 		Modifiers: win32.ModCtrl,
 		KeyCode:   'O',
 	}
+	// SSCAutotypeHotkey is the hotkey to trigger auto-typing (in SSC-Mode)
+	SSCAutotypeHotkey = &win32.Hotkey{
+		ID:        4,
+		Modifiers: win32.ModCtrl | win32.ModAlt,
+		KeyCode:   'I',
+	}
+	// SSCAutodeleteHotkey is the hotkey to trigger auto-deletion (in SSC-Mode)
+	SSCAutodeleteHotkey = &win32.Hotkey{
+		ID:        5,
+		Modifiers: win32.ModCtrl | win32.ModAlt,
+		KeyCode:   'P',
+	}
+	// SSCAutooverwriteHotkey is the hotkey to overwrite the current line with new ones (in SSC-Mode)
+	SSCAutooverwriteHotkey = &win32.Hotkey{
+		ID:        6,
+		Modifiers: win32.ModCtrl | win32.ModAlt,
+		KeyCode:   'O',
+	}
 )
 
 const typeDelay = 40 * time.Millisecond
@@ -50,7 +68,8 @@ func (ls *LangServer) ListenForHotkeys() {
 				hotkeysRegistered = true
 				go func() {
 					wg.Add(1)
-					err := win32.ListenForHotkeys(ctx, ls.hotkeyHandler, AutotypeHotkey, AutodeleteHotkey, AutooverwriteHotkey)
+					err := win32.ListenForHotkeys(ctx, ls.hotkeyHandler, AutotypeHotkey, AutodeleteHotkey, AutooverwriteHotkey,
+						SSCAutotypeHotkey, SSCAutodeleteHotkey, SSCAutooverwriteHotkey)
 					if err != nil {
 						fmt.Fprintf(os.Stderr, "Error when registering hotkeys: %s", err)
 					}
@@ -84,6 +103,21 @@ func (ls *LangServer) hotkeyHandler(hk win32.Hotkey) {
 		if code := ls.getLastOpenedCode(); code == code {
 			overwriteYololCode(code)
 		}
+
+	// same as above, but now for the SSC
+	case SSCAutotypeHotkey.ID:
+		win32.SendInput(win32.KeyUpInput(win32.KeycodeAlt))
+		if code := ls.getLastOpenedCode(); code == code {
+			typeYololCodeSSC(code)
+		}
+	case SSCAutodeleteHotkey.ID:
+		win32.SendInput(win32.KeyUpInput(win32.KeycodeAlt))
+		deleteAllLinesSSC()
+	case SSCAutooverwriteHotkey.ID:
+		win32.SendInput(win32.KeyUpInput(win32.KeycodeAlt))
+		if code := ls.getLastOpenedCode(); code == code {
+			overwriteYololCodeSSC(code)
+		}
 	}
 }
 
@@ -110,6 +144,16 @@ func typeYololCode(code string) {
 	}
 }
 
+func typeYololCodeSSC(code string) {
+	lines := strings.Split(code, "\n")
+	for _, line := range lines {
+		win32.SendString(line)
+		time.Sleep(typeDelay)
+		win32.SendInput(win32.KeyDownInput(win32.KeycodeDown), win32.KeyUpInput(win32.KeycodeDown))
+		win32.SendInput(win32.KeyDownInput(win32.KeycodeDown), win32.KeyUpInput(win32.KeycodeDown))
+	}
+}
+
 func overwriteYololCode(code string) {
 	lines := strings.Split(code, "\n")
 	for _, line := range lines {
@@ -120,10 +164,29 @@ func overwriteYololCode(code string) {
 	}
 }
 
+func overwriteYololCodeSSC(code string) {
+	lines := strings.Split(code, "\n")
+	for _, line := range lines {
+		deleteLine()
+		win32.SendString(line)
+		time.Sleep(typeDelay)
+		win32.SendInput(win32.KeyDownInput(win32.KeycodeDown), win32.KeyUpInput(win32.KeycodeDown))
+		win32.SendInput(win32.KeyDownInput(win32.KeycodeDown), win32.KeyUpInput(win32.KeycodeDown))
+	}
+}
+
 func deleteAllLines() {
 	for i := 0; i < 20; i++ {
 		deleteLine()
 		win32.SendInput(win32.KeyDownInput(win32.KeycodeDown), win32.KeyUpInput(win32.KeycodeDown))
+	}
+}
+
+func deleteAllLinesSSC() {
+	for i := 0; i < 20; i++ {
+		deleteLine()
+		win32.SendInput(win32.KeyDownInput(win32.KeycodeDown), win32.KeyUpInput(win32.KeycodeDown))
+
 	}
 }
 
