@@ -4,9 +4,9 @@ if :OUTPUT==0 then
 	:OUTPUT=""
 end
 
-insert SMBEGIN(STATE_PING)
+SMBEGIN(STATE_PING)
 
 :OUTPUT+="ping "
 :counter++ 
 
-insert SMEND(STATE_PONG)
+SMEND(STATE_PONG)

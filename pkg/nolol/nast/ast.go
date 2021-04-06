@@ -58,10 +58,9 @@ func (n *StatementLine) NestEl() {}
 
 // Definition declares a constant
 type Definition struct {
-	Position     ast.Position
-	Name         string
-	Placeholders []string
-	Value        ast.Expression
+	Position ast.Position
+	Name     string
+	Value    ast.Expression
 }
 
 // Start is needed to implement ast.Node
@@ -214,13 +213,26 @@ func (n *IncludeDirective) End() ast.Position {
 // El implements the type-marker method
 func (n *IncludeDirective) El() {}
 
+// The different types of macros
+const (
+	MacroTypeExpr  = "expr"
+	MacroTypeLine  = "line"
+	MacroTypeBlock = "block"
+)
+
 // MacroDefinition represents the definition of a macro
 type MacroDefinition struct {
 	Position  ast.Position
 	Name      string
 	Arguments []string
 	Externals []string
-	Block     *Block
+	Type      string
+	// Depending on Type, Code can either be ast.Expression, *nast.StatementLine or *nast.Block
+	Code ast.Node
+	// Macros of type expr and line do not have StatementLines that would hold comments
+	// So we need to store the comments before and after the real content of the macro manually
+	PreComments  []string
+	PostComments []string
 }
 
 // Start is needed to implement ast.Node
@@ -230,69 +242,22 @@ func (n *MacroDefinition) Start() ast.Position {
 
 // End is needed to implement ast.Node
 func (n *MacroDefinition) End() ast.Position {
-	if n.Block == nil {
+	if n.Code == nil {
 		return n.Position
 	}
-	return n.Block.End()
+	return n.Code.End()
 }
 
 // El implements the type-marker method
 func (n *MacroDefinition) El() {}
-
-// MacroInsetion represents the use of a macro
-// To reduce code-duplication it re-uses the FuncCall-type
-type MacroInsetion struct {
-	Position ast.Position
-	*FuncCall
-}
-
-// Start is needed to implement ast.Node
-func (n *MacroInsetion) Start() ast.Position {
-	return n.Position
-}
-
-// End is needed to implement ast.Node
-func (n *MacroInsetion) End() ast.Position {
-	if n.FuncCall == nil {
-		return n.Position
-	}
-	return n.FuncCall.End()
-}
-
-// El implements the type-marker method
-func (n *MacroInsetion) El() {}
-
-// NestEl implements the type-marker method
-func (n *MacroInsetion) NestEl() {}
-
-// Trigger is a special kind of node, that is sometimes inserted during code-generation
-// It is used to tigger certain events when reached by a visitor and is created typically by nodes that
-// replace themselves, but want to perform a certain action when a specific point in the ast is visited again.
-type Trigger struct {
-	Kind string
-}
-
-// Start is needed to implement ast.Node
-func (n *Trigger) Start() ast.Position {
-	return ast.Position{}
-}
-
-// End is needed to implement ast.Node
-func (n *Trigger) End() ast.Position {
-	return ast.Position{}
-}
-
-// El implements the type-marker method
-func (n *Trigger) El() {}
-
-// NestEl implements the type-marker method
-func (n *Trigger) NestEl() {}
 
 // FuncCall represents a func-call
 type FuncCall struct {
 	Position  ast.Position
 	Function  string
 	Arguments []ast.Expression
+	// A funccall can be of type block, line or statement
+	Type string
 }
 
 // Start is needed to implement Node
@@ -308,8 +273,17 @@ func (n *FuncCall) End() ast.Position {
 	return n.Position.Add(len(n.Function) + 2)
 }
 
+// El implements type-checking dummy-func
+func (n *FuncCall) El() {}
+
+// NestEl implements type-checking dummy-func
+func (n *FuncCall) NestEl() {}
+
 // Expr implements type-checking dummy-func
 func (n *FuncCall) Expr() {}
+
+// Stmt implements type-checking dummy-func
+func (n *FuncCall) Stmt() {}
 
 // BreakStatement represents the break-keyword inside a loop
 type BreakStatement struct {

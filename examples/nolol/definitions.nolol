@@ -14,19 +14,4 @@ define :output=:out
 // :output is replaced by ":out" and message is replaced by the expression declared in it's definition
 :output=message
 
-
-// your definitions can contain polaceholders (here a and b)
-define addByte(a, b)=(a+b)%2^8
-
-a=123
-// definitions with placeholders can be used like functions. The aruments will replace the placeholders of the definition
-:sum=addByte(a,100)
-
-define foo(a, b, c, d)=a+b+c+d
-
-// Any valid expression can be used as value for a placeholder
-:bar=foo(greeting,","," "+:name,addByte(a,60))
-
-define pop(string)=string- --string
-
 :done=1

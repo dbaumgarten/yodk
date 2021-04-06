@@ -72,8 +72,6 @@ will result in:
 
 The feature to re-define variable names is usefull if you want to be able to easily change what global variables a script works on. Just use define to create an alias for the global variable and then use the alias in your code. If you want to exchange the undelaying global var, just change to definition.  
 
-You may wonder why there are definitions with placeholders AND macros. While they are very similar, they have a key difference. All definitions (even those with placeholders) are expressions (=values, that you could for example assign to a variable). You can't for example do ```define foo=a+=b``` (because f+=b is a statement and not an expression). Macros however can contain arbitary statements and even multiple lines. But macros can not be used as values in an expression. 
-
 ## Line-labels
 As NOLOL moves statements around during compilation to generate as compact code as possible, using goto with plain line numbers would often not work. This is why there are line-labels. You can label any line using ```identifier>``` at the start and then jump to that line using the label.
 
@@ -166,7 +164,7 @@ Constants and variables in the included file are not scoped. They remain defined
 Includes can NOT be placed in the middle of block like ```ìf``` and ```while```. Includes MUST always be on the top-level of the program.
 
 ## Macros
-Reusability is a key-indicator of good programing style. Usually functions are really helpful here, but as yolol has no concept of a stack, real functions can just not be implemented. The next-best thing are macros. A macro is a defined block of code, that is inserted directly into the code, where ever it is mentioned (c programmers are familiar with the concept).  
+Reusability is a key-indicator of good programing style. Usually functions are really helpful here, but as yolol has no concept of a stack, real functions can just not be implemented. The next-best thing are macros. A macro is a defined snipped of code, that is inserted directly into the code, where ever it is mentioned (c programmers are familiar with the concept).  
 
 This way you have to write code that you need multiple times only once (as a macro) and can then use this macro as often as you want.  
 
@@ -176,9 +174,9 @@ As arguments work by straigh replacing the mentionings of the argument with the 
 
 In the end, arguments behave like [definitions](/nolol?id=cimpile-time-definitions) that are scoped to the specific macro usage. 
 
-All non-global variables inside a macro, that are no arguments, are "scoped" to the use of a macro. This means, if the macro works with such a variable named "bar", it will NOT modify the variable outside of the macro that is also called "bar". This way, accidental collisions between macro internal variables and your variables are prevented. Also, subsequent insertions of the same macro will work on different variables and will not interfere with each other. If you want to share a variable (that is not a :global) between insertions and the rest of the script, you need to mark it as external, by appending a second set of parenthesis to the macro-definition, containing the comma-separated names of variables that are to be shared.  
+All non-global variables inside a macro, that are no arguments, are "scoped" to the use of a macro. This means, if the macro works with such a variable named "bar", it will NOT modify the variable outside of the macro that is also called "bar". This way, accidental collisions between macro internal variables and your variables are prevented. Also, subsequent insertions of the same macro will work on different variables and will not interfere with each other. If you want to share a variable (that is not a :global) between insertions and the rest of the script, you need to mark it as external in to the macro-definition (see example below). 
 
-The same applies to line-labels. All line-labels inside macro-definitions are scoped to a specific macro-insertion, EXCPET if the line-label is listed in the second set of parenthesis of the macro-definition. If you want to jump to a label outside of the macro from inside of the macro, or want to make a label inside the macro available to the rest of the script, you need to do:  ```macro mymacro()(mylabel)```.  
+The same applies to line-labels. All line-labels inside macro-definitions are scoped to a specific macro-insertion, EXCPET if the line-label is listed in the second set of parenthesis of the macro-definition. If you want to jump to a label outside of the macro from inside of the macro, or want to make a label inside the macro available to the rest of the script, you need to do:  ```macro mymacro()<mylabel> block```.  
 
 [macros.nolol](generated/code/nolol/macros.nolol ':include')
 
@@ -193,11 +191,15 @@ out1="Hello.....world"
 out2="Hello_____you"
 out3=0
 out4="foo"
+sum=378
+sum=278
 ```
 
 Macros are especially useful when combined with [includes](/nolol?id=including-files). You can create a file full of macro-definitions, include it and then use the macros you need for the specific program.  
 
-Macro-definitions can contain insertions for macros (a macro can itself use another macro). However, macros can not be used to implement recursion (a macro can not include itself) as this would result in an infinite insertion-loop.
+Macro-definitions can contain insertions for macros (a macro can itself use another macro). However, macros can not be used to implement recursion (a macro can not include itself) as this would result in an infinite insertion-loop.  
+
+You may wonder why there are different types and macros and why you have to clearly state what type of macro you are writing. Can't the compiler figure it out on it's own? Why cant there be macros that contain statements AND return a value? I tried that, really. It was complicated, error-prone, generated horrible code AND gave surprising results. You never really knew what code the compiler would generate if you used a macro. If we just compiled to machine-code that would not be an issue, but with yolol, you WANT control over the generated code and every single character counts! The way it works now, you can, just by looking at the macro-signature, tell exactly how the compiler will insert the code. No surprises.
 
 # Multi-chip example
 

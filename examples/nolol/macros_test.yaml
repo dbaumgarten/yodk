@@ -7,3 +7,7 @@ cases:
       out2: "Hello_____you"
       out3: 0
       out4: "foo"
+      sum: 378
+      sum2: 278
+      timer: 11
+      go: 1

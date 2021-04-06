@@ -164,34 +164,12 @@ func (s *MacroDefinition) Accept(v ast.Visitor) error {
 		return err
 	}
 
-	rv, err := ast.AcceptChild(v, s.Block)
+	s.Code, err = ast.AcceptChild(v, s.Code)
 	if err != nil {
 		return err
 	}
-	s.Block = rv.(*Block)
 
 	return v.Visit(s, ast.PostVisit)
-}
-
-// Accept is used to implement Acceptor
-func (s *MacroInsetion) Accept(v ast.Visitor) error {
-	err := v.Visit(s, ast.PreVisit)
-	if err != nil {
-		return err
-	}
-
-	call, err := ast.AcceptChild(v, s.FuncCall)
-	if err != nil {
-		return err
-	}
-	s.FuncCall = call.(*FuncCall)
-
-	return v.Visit(s, ast.PostVisit)
-}
-
-// Accept is used to implement Acceptor
-func (s *Trigger) Accept(v ast.Visitor) error {
-	return v.Visit(s, ast.SingleVisit)
 }
 
 // Accept is used to implement Acceptor

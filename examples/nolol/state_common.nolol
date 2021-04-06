@@ -12,11 +12,11 @@ define :STATEVAR=:state
 define :OUTPUT=:out
 
 // define some macros
-macro SMBEGIN(waitfor)
+macro SMBEGIN(waitfor) block
 	wait :STATEVAR!=waitfor	
 end
 
-macro SMEND(newstate)
+macro SMEND(newstate) block
 	:STATEVAR=newstate
 end
 

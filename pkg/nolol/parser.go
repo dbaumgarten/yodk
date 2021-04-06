@@ -25,6 +25,7 @@ const (
 	ErrExpectedIdentifier     = "ErrExpectedIdentifier"
 	ErrExpectedExistingMacro  = "ErrExpectedExistingMacro"
 	ErrExpectedJumplabel      = "ErrExpectedJumplabel"
+	ErrExpectedMacroType      = "ErrExpectedMacroType"
 )
 
 // NewParser creates and returns a nolol parser
@@ -92,9 +93,9 @@ func (p *Parser) ParseNestableElement() nast.NestableElement {
 		return block
 	}
 
-	mIns := p.ParseMacroInsertion()
-	if mIns != nil {
-		return mIns
+	fcall := p.ParseNestableElementFuncCall()
+	if fcall != nil {
+		return fcall
 	}
 
 	return p.ParseStatementLine()
@@ -180,9 +181,9 @@ func (p *Parser) ParseMacroDefinition() *nast.MacroDefinition {
 	}
 	p.Expect(ast.TypeSymbol, ")")
 
-	if p.IsCurrent(ast.TypeSymbol, "(") {
+	if p.IsCurrent(ast.TypeSymbol, "<") {
 		p.Advance()
-		for !p.IsCurrent(ast.TypeSymbol, ")") {
+		for !p.IsCurrent(ast.TypeSymbol, ">") {
 			if !p.IsCurrentType(ast.TypeID) {
 				p.ErrorString("Only comma separated identifiers are allowed as globals in a macro definition", ErrExpectedIdentifier)
 				break
@@ -195,42 +196,75 @@ func (p *Parser) ParseMacroDefinition() *nast.MacroDefinition {
 			}
 			break
 		}
-		p.Expect(ast.TypeSymbol, ")")
+		p.Expect(ast.TypeSymbol, ">")
 	}
+
+	if !p.IsCurrentType(ast.TypeKeyword) || !p.IsCurrentValueIn([]string{nast.MacroTypeBlock, nast.MacroTypeLine, nast.MacroTypeExpr}) {
+		p.ErrorString("Expected macro-type definiton ('block', 'line' or 'expr')", ErrExpectedMacroType)
+		return nil
+	}
+
+	mdef.Type = p.CurrentToken.Value
+	p.Advance()
 
 	p.Expect(ast.TypeNewline, "")
 
-	mdef.Block = p.ParseBlock(func() bool {
-		return p.IsCurrent(ast.TypeKeyword, "end")
-	})
-	p.Expect(ast.TypeKeyword, "end")
-
-	return mdef
-}
-
-// ParseMacroInsertion parses a macro insertion
-func (p *Parser) ParseMacroInsertion() *nast.MacroInsetion {
-	p.Log()
-	if !p.IsCurrent(ast.TypeKeyword, "insert") {
-		return nil
-	}
-	p.Advance()
-	mins := &nast.MacroInsetion{
-		Position: p.CurrentToken.Position,
-	}
-
-	mins.FuncCall = p.ParseFuncCall()
-
-	if mins.FuncCall == nil {
-		p.ErrorString("Expected a macro instanziation after the insert keyword", ErrExpectedExistingMacro)
-		return mins
+	if mdef.Type != nast.MacroTypeBlock {
+		mdef.PreComments = make([]string, 0)
+		for {
+			if p.IsCurrentType(ast.TypeComment) {
+				mdef.PreComments = append(mdef.PreComments, p.CurrentToken.Value)
+				p.Advance()
+				if p.IsCurrentType(ast.TypeNewline) {
+					p.Advance()
+				}
+			} else if p.IsCurrentType(ast.TypeNewline) {
+				mdef.PreComments = append(mdef.PreComments, "")
+				p.Advance()
+			} else {
+				break
+			}
+		}
 	}
 
-	if !p.IsCurrentType(ast.TypeEOF) {
+	if mdef.Type == nast.MacroTypeBlock {
+		mdef.Code = p.ParseBlock(func() bool {
+			return p.IsCurrent(ast.TypeKeyword, "end")
+		})
+	} else if mdef.Type == nast.MacroTypeLine {
+		mdef.Code = p.ParseStatementLine()
+		if mdef.Code == nil {
+			p.ErrorString("Expected a (single) line of statements", "")
+		}
+	} else if mdef.Type == nast.MacroTypeExpr {
+		mdef.Code = p.ParseExpression()
+		if mdef.Code == nil {
+			p.ErrorExpectedExpression("inside macro of type expr")
+		}
 		p.Expect(ast.TypeNewline, "")
 	}
 
-	return mins
+	if mdef.Type != nast.MacroTypeBlock {
+		mdef.PostComments = make([]string, 0)
+		for {
+			if p.IsCurrentType(ast.TypeComment) {
+				mdef.PostComments = append(mdef.PostComments, p.CurrentToken.Value)
+				p.Advance()
+				if p.IsCurrentType(ast.TypeNewline) {
+					p.Advance()
+				}
+			} else if p.IsCurrentType(ast.TypeNewline) {
+				mdef.PostComments = append(mdef.PostComments, "")
+				p.Advance()
+			} else {
+				break
+			}
+		}
+	}
+
+	p.Expect(ast.TypeKeyword, "end")
+
+	return mdef
 }
 
 // ParseStatementLine parses a statement line
@@ -369,36 +403,10 @@ func (p *Parser) ParseDefinition() *nast.Definition {
 		p.ErrorString("const keyword must be followed by an identifier", ErrExpectedIdentifier)
 	}
 	decl := &nast.Definition{
-		Name:         p.CurrentToken.Value,
-		Position:     startpos,
-		Placeholders: make([]string, 0),
+		Name:     p.CurrentToken.Value,
+		Position: startpos,
 	}
 	p.Advance()
-
-	if p.IsCurrent(ast.TypeSymbol, "(") {
-		starttoken := p.Advance()
-		for !p.IsCurrent(ast.TypeSymbol, ")") {
-			if !p.IsCurrentType(ast.TypeID) {
-				p.ErrorString("Only comma separated identifiers are allowed as arguments in a definition", ErrExpectedIdentifier)
-				break
-			}
-			decl.Placeholders = append(decl.Placeholders, p.CurrentToken.Value)
-			p.Advance()
-			if p.IsCurrent(ast.TypeSymbol, ",") {
-				p.Advance()
-				continue
-			}
-			break
-		}
-		endpos := p.Expect(ast.TypeSymbol, ")")
-		if len(decl.Placeholders) == 0 {
-			p.Error(&parser.Error{
-				Message:       "Definitions with placeholder-parenthesis need at least one placeholder",
-				StartPosition: starttoken.Position,
-				EndPosition:   endpos,
-			})
-		}
-	}
 
 	p.Expect(ast.TypeSymbol, "=")
 	value := p.ParseExpression()
@@ -568,11 +576,30 @@ func (p *Parser) ParseFuncCall() *nast.FuncCall {
 	return fc
 }
 
+// ParseNestableElementFuncCall parses a funccall that is the only element on the line
+func (p *Parser) ParseNestableElementFuncCall() *nast.FuncCall {
+	p.Log()
+	savedToken := p.CurrentToken
+	tokenizerCheckpoint := p.Tokenizer.Checkpoint()
+	fc := p.ParseFuncCall()
+	if fc != nil {
+		if !p.IsCurrentType(ast.TypeNewline) && !p.IsCurrentType(ast.TypeEOF) {
+			// This is not a single funccall. Its probably a StatementLine. Reset parser to checkpoint
+			p.CurrentToken = savedToken
+			p.Tokenizer.Restore(tokenizerCheckpoint)
+			return nil
+		}
+		fc.Type = nast.MacroTypeBlock
+	}
+	return fc
+}
+
 // ParseSingleExpression wraps the method of the yolol-parser and adds parsing of func-calls
 func (p *Parser) ParseSingleExpression() ast.Expression {
 	p.Log()
 	funccall := p.ParseFuncCall()
 	if funccall != nil {
+		funccall.Type = nast.MacroTypeExpr
 		return funccall
 	}
 	return p.Parser.ParseSingleExpression()
@@ -588,6 +615,11 @@ func (p *Parser) ParseStatement() ast.Statement {
 	continuestmt := p.ParseContinue()
 	if continuestmt != nil {
 		return continuestmt
+	}
+	funccall := p.ParseFuncCall()
+	if funccall != nil {
+		funccall.Type = nast.MacroTypeLine
+		return funccall
 	}
 	return p.Parser.ParseStatement()
 }

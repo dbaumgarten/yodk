@@ -81,13 +81,12 @@ func CopyAst(inp ast.Node) ast.Node {
 				copier.Copy(m, n)
 				m.Arguments = make([]string, len(n.Arguments))
 				m.Externals = make([]string, len(n.Externals))
+				m.PreComments = make([]string, len(n.PreComments))
+				m.PostComments = make([]string, len(n.PreComments))
 				copy(m.Arguments, n.Arguments)
-				newnode = m
-			case *MacroInsetion:
-				m := &MacroInsetion{
-					FuncCall: &FuncCall{},
-				}
-				copier.Copy(m, n)
+				copy(m.Externals, n.Externals)
+				copy(m.PreComments, n.PreComments)
+				copy(m.PostComments, n.PostComments)
 				newnode = m
 			case *FuncCall:
 				m := &FuncCall{}

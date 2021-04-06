@@ -61,28 +61,31 @@ func (np *Printer) handleNololNodes(node ast.Node, visitType int, p *parser.Prin
 			p.Write(")")
 			if len(n.Externals) != 0 {
 				extlist := strings.Join(n.Externals, ", ")
-				p.Write("(")
+				p.Write("<")
 				p.Write(extlist)
-				p.Write(")")
+				p.Write(">")
 			}
+			p.Space()
+			p.Write(n.Type)
 			p.Newline()
+			if n.Type != nast.MacroTypeBlock {
+				for _, comment := range n.PreComments {
+					p.Write(np.Indentation + comment + "\n")
+				}
+				p.Write(np.Indentation)
+			}
 			break
 		case ast.PostVisit:
+			if n.Type == nast.MacroTypeExpr {
+				p.Newline()
+			}
+			if n.Type != nast.MacroTypeBlock {
+				for _, comment := range n.PostComments {
+					p.Write(np.Indentation + comment + "\n")
+				}
+			}
 			p.Write("end")
 			break
-		}
-		break
-
-	case *nast.MacroInsetion:
-		switch visitType {
-		case ast.PreVisit:
-			p.Write("insert")
-			p.Space()
-			break
-		case ast.PostVisit:
-			p.Newline()
-			break
-		default:
 		}
 		break
 
@@ -196,12 +199,6 @@ func (np *Printer) handleNololNodes(node ast.Node, visitType int, p *parser.Prin
 			p.Write("define")
 			p.Space()
 			p.Write(n.Name)
-			if len(n.Placeholders) != 0 {
-				p.Write("(")
-				phlist := strings.Join(n.Placeholders, ", ")
-				p.Write(phlist)
-				p.Write(")")
-			}
 			p.OptionalSpace()
 			p.Write("=")
 			p.OptionalSpace()

@@ -4,5 +4,3 @@ cases:
   - name: TestDefinitions
     outputs:
       out: "Hello world and Peter"
-      sum: 223
-      bar: "Hello, Peter183"

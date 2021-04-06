@@ -5,7 +5,7 @@ define addr=:a
 define write=:m
 
 // store value at idx in array
-macro set(idx, value)
+macro set(idx, value) block
 	write=1
 	data=value
 	addr=idx
@@ -15,7 +15,7 @@ macro set(idx, value)
 end
 
 // retrieve value from idx
-macro get(idx, value)
+macro get(idx, value) block
 	write=0
 	addr=idx
 	// this will block until addr is 0.
@@ -25,12 +25,12 @@ macro get(idx, value)
 end
 
 while ++i<5 do
-	insert set(i,i*2)
+	set(i,i*2)
 end
 
 :sum=""
 while ++j<5 do
-	insert get(j,retrieved)
+	get(j,retrieved)
 	:sum+=retrieved+","
 end
 

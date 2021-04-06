@@ -50,6 +50,9 @@ func CheckForFormattingErrorNolol(unformatted *nast.Program, formatted string) e
 	checkstring2 := ComputeASTCheckstring(formattedProg)
 
 	if checkstring1 != checkstring2 {
+		fmt.Println(checkstring1)
+		fmt.Println("------------------------")
+		fmt.Println(checkstring2)
 		return getErrmsgEqual(formatted)
 	}
 

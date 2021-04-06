@@ -30,36 +30,6 @@ func (c *Converter) convertDefinition(decl *nast.Definition, visitType int) erro
 	return nil
 }
 
-// convertDefinitionFunction converts a definition that contains placeholders (=behaves like a function)
-func (c *Converter) convertDefinitionFunction(fc *nast.FuncCall) error {
-	def, exists := c.getDefinition(fc.Function)
-	if !exists {
-		return nil
-	}
-	if len(def.Placeholders) == 0 {
-		return nil
-	}
-
-	if len(def.Placeholders) != len(fc.Arguments) {
-		return nil
-	}
-
-	// gather replacements
-	replacements := make(map[string]ast.Expression)
-	for i := range fc.Arguments {
-		lvarname := strings.ToLower(def.Placeholders[i])
-		replacements[lvarname] = fc.Arguments[i]
-	}
-
-	copy := nast.CopyAst(def.Value)
-	err := c.replacePlaceholders(copy, replacements, nil, false)
-	if err != nil {
-		return err
-	}
-
-	return ast.NewNodeReplacement(copy)
-}
-
 // convertDefinitionAssignment replaces assignments with definitions
 func (c *Converter) convertDefinitionAssignment(ass *ast.Assignment, visitType int) error {
 	if visitType == ast.PostVisit {

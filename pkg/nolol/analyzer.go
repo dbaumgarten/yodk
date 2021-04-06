@@ -66,10 +66,6 @@ func Analyse(prog *nast.Program) (*AnalysisReport, error) {
 					res.Labels = append(res.Labels, n.Label)
 				}
 			}
-		case *nast.FuncCall:
-			if visitType == ast.PreVisit && n.Function == "line" {
-				n.Arguments = []ast.Expression{}
-			}
 		default:
 			//prevDocstrings = ""
 		}
@@ -122,18 +118,12 @@ func (a AnalysisReport) GetMacroLocalVars(mac *nast.MacroDefinition) []string {
 	return vars
 }
 
-// GetDefinitionLocalVars returns the placeholders for the given Definition
-func (a AnalysisReport) GetDefinitionLocalVars(def *nast.Definition) []string {
-	return def.Placeholders
-}
-
 // GetVarsAtLine returns all variables that are in scope at the given line
 func (a AnalysisReport) GetVarsAtLine(line int) []string {
 	vars := make([]string, 0, len(a.Variables)+10)
 	for _, def := range a.Definitions {
 		if def.Start().Line == line {
 			vars = append(vars, a.Variables...)
-			vars = append(vars, a.GetDefinitionLocalVars(def)...)
 			return vars
 		}
 	}

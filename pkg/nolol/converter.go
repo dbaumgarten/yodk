@@ -15,7 +15,8 @@ type Converter struct {
 	convertedProg *ast.Program
 	files         FileSystem
 	err           error
-	lineLabels    map[string]int
+	// all fount line-labels
+	lineLabels map[string]int
 	// the names of definitions are case-insensitive. Keys are converted to lowercase before using them
 	// all lookups MUST also use lowercased keys
 	definitions      map[string]*nast.Definition
@@ -25,15 +26,21 @@ type Converter struct {
 	loopcounter      int
 	// keeps track of the current loop we are in while converting
 	// the last element in the list is the current innermost loop
-	loopLevel           []int
-	sexpOptimizer       *optimizers.StaticExpressionOptimizer
-	boolexpOptimizer    *optimizers.ExpressionInversionOptimizer
-	varnameOptimizer    *optimizers.VariableNameOptimizer
-	includecount        int
-	macros              map[string]*nast.MacroDefinition
-	macroLevel          []string
-	macroInsertionCount int
-	debug               bool
+	loopLevel        []int
+	sexpOptimizer    *optimizers.StaticExpressionOptimizer
+	boolexpOptimizer *optimizers.ExpressionInversionOptimizer
+	varnameOptimizer *optimizers.VariableNameOptimizer
+	includecount     int
+	// holds all found defined macros
+	macros map[string]*nast.MacroDefinition
+	// a stack of macro-scopes, used for renaming local vars
+	macroLevel []string
+	// a count of total insertions to detect loops
+	macroInsertionCount       int
+	macroCurrentStatementLine *nast.StatementLine
+	macroCurrentStatement     int
+	// if true, enable debug-logging
+	debug bool
 	// Spaceless uses spaceless printer-style for yolol
 	spaceless bool
 }
@@ -154,23 +161,31 @@ func (c *Converter) ProcessCodeExpansion() ConverterNodes {
 
 	f := func(node ast.Node, visitType int) error {
 		switch n := node.(type) {
-		case *nast.MacroDefinition:
-			return c.convertMacroDef(n, visitType)
-
-		case *nast.MacroInsetion:
-			return c.convertMacroInsertion(n, visitType)
+		case *nast.Definition:
+			return c.convertDefinition(n, visitType)
 
 		case *ast.Assignment:
 			return c.convertDefinitionAssignment(n, visitType)
 
-		case *nast.Definition:
-			return c.convertDefinition(n, visitType)
-
 		case *ast.Dereference:
 			return c.convertDefinitionDereference(n)
 
+		case *nast.MacroDefinition:
+			return c.convertMacroDef(n, visitType)
+
 		case *nast.FuncCall:
-			return c.convertDefinitionFunction(n)
+			return c.convertMacroInsertion(n, visitType)
+
+		case *InsertedMacro:
+			return c.convertInsertedMacro(n, visitType)
+
+		case *nast.StatementLine:
+			if visitType == ast.PreVisit {
+				c.macroCurrentStatementLine = n
+			}
+			if visitType >= 0 {
+				c.macroCurrentStatement = visitType
+			}
 		}
 		return nil
 	}
@@ -230,11 +245,6 @@ func (c *Converter) ProcessNodes() ConverterLines {
 		case *ast.BinaryOperation:
 			if visitType == ast.PostVisit {
 				return ast.NewNodeReplacementSkip(c.optimizeExpression(n))
-			}
-		case *nast.Trigger:
-			if n.Kind == "macroleft" {
-				c.macroLevel = c.macroLevel[:len(c.macroLevel)-1]
-				return ast.NewNodeReplacement()
 			}
 		}
 

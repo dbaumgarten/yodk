@@ -50,8 +50,13 @@ func (s *LangServer) getNololCompletions(params *lsp.CompletionParams) []lsp.Com
 	}
 
 	for _, m := range analysis.Macros {
+		text := m.Name + "(" + strings.Join(m.Arguments, ",") + ")"
+		if len(m.Externals) > 0 {
+			text += "<" + strings.Join(m.Externals, ",") + ">"
+		}
+		text += " " + m.Type
 		item := lsp.CompletionItem{
-			Detail:           m.Name + "(" + strings.Join(m.Arguments, ",") + ")",
+			Detail:           text,
 			Label:            m.Name,
 			Kind:             15,
 			InsertText:       m.Name + argsToSnippet(m.Arguments),
@@ -67,11 +72,6 @@ func (s *LangServer) getNololCompletions(params *lsp.CompletionParams) []lsp.Com
 		kind := 21.0
 		insert := ""
 		detail := ""
-		if len(d.Placeholders) > 0 {
-			kind = 3.0
-			detail += d.Name + "(" + strings.Join(d.Placeholders, ",") + ")"
-			insert = d.Name + argsToSnippet(d.Placeholders)
-		}
 		item := lsp.CompletionItem{
 			Label:            d.Name,
 			Kind:             kind,

@@ -89,7 +89,7 @@ func (c *Converter) convertFuncCall(function *nast.FuncCall, visitType int) erro
 		}
 	}
 	return &parser.Error{
-		Message:       fmt.Sprintf("Unknown function: %s(%d arguments)", function.Function, len(function.Arguments)),
+		Message:       fmt.Sprintf("Unknown function or macro: %s(%d arguments)", function.Function, len(function.Arguments)),
 		StartPosition: function.Start(),
 		EndPosition:   function.End(),
 	}

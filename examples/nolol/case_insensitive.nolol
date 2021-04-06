@@ -20,10 +20,10 @@ while num++ <4 do
 	:loopok=num==NUM
 end
 
-macro fooBar(bar)
+macro fooBar(bar) line
 	:macroOK=bar==BAR and bar=="FOO"
 end
 
-insert FOOBAR(TEST)
+FOOBAR(TEST)
 
 :done=1
