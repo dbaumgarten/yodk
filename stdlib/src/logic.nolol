@@ -1,0 +1,21 @@
+// This file contains basic definitions and macros for logic-operations
+// Import using ' include "std/logic" '
+
+// Returns a if condition is true, otherwise b
+// condition, a and b must be numbers. condition must be 0 or 1
+macro logic_ternary(condition, a, b) expr
+    b + (a-b)*condition
+end
+
+// If condition is 0, produces a runtime-error that will skip the remaining line
+// Usage: "logic_continue_line(var); do=1; stuff=2 $"
+// The $ is important to not skip too much
+macro logic_continue_line(condition)<ignore> line
+    ignore/=condition
+end
+
+// Returns 1 if a or b is true, but not both
+// a and b must be 0 or 1
+macro logic_xor(a,b) expr
+    a != b
+end

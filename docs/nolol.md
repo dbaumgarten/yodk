@@ -135,7 +135,7 @@ YOLOL Output:
 [measuring_time.yolol](generated/code/nolol/measuring_time.yolol ':include')
 
 ## Including Files
-Nolol files can include other nolol files unsing the ```include "file"``` command. The ```include``` command is replaced during compilation with the contents of the encluded file and the resulting file is then converted to yolol.
+Nolol files can include other nolol files unsing the ```include "file"``` command. The ```include``` command is replaced during compilation with the contents of the encluded file and the resulting file is then converted to yolol. (Note: The ".nolol"-suffix is optional when using include)
 
 This file:
 
@@ -200,6 +200,16 @@ Macros are especially useful when combined with [includes](/nolol?id=including-f
 Macro-definitions can contain insertions for macros (a macro can itself use another macro). However, macros can not be used to implement recursion (a macro can not include itself) as this would result in an infinite insertion-loop.  
 
 You may wonder why there are different types and macros and why you have to clearly state what type of macro you are writing. Can't the compiler figure it out on it's own? Why cant there be macros that contain statements AND return a value? I tried that, really. It was complicated, error-prone, generated horrible code AND gave surprising results. You never really knew what code the compiler would generate if you used a macro. If we just compiled to machine-code that would not be an issue, but with yolol, you WANT control over the generated code and every single character counts! The way it works now, you can, just by looking at the macro-signature, tell exactly how the compiler will insert the code. No surprises.
+
+## Standard-library
+
+NOLOL comes with a small standard-library containing a few usefull definitions and macros for common tasks (string manioulation, math, logic etc.).
+You can use these as follows:
+
+[stdlib_demo.yolol](generated/code/nolol/stdlib_demo.nolol ':include')
+
+Check out the [documentation](/nolol-stdlib) for a full list and explanation of all the functions of the standard-library.
+
 
 # Multi-chip example
 

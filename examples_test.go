@@ -12,6 +12,7 @@ import (
 func TestExamples(t *testing.T) {
 	runTestfiles(filepath.Join("examples", "yolol"), t)
 	runTestfiles(filepath.Join("examples", "nolol"), t)
+	runTestfiles("stdlib", t)
 }
 
 func runTestfiles(path string, t *testing.T) {

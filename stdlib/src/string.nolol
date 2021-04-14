@@ -1,0 +1,24 @@
+// This file contains basic definitions and macros for string-manipulation
+// Import using ' include "std/string" '
+
+// Removes the last character from str and returns it
+macro string_pop(str) expr
+    str---str
+end
+
+// Returns 1 if str contains x
+macro string_contains(str,x) expr
+    str-x!=str
+end
+
+// Adds the lenght of str to out
+// str is set to "" in the process
+macro string_len(str, out) line
+    here> if str != "" then str-- out++ goto here end
+end
+
+// Appends the reverse of str to out.
+// str is set to "" in the process
+macro string_reverse(str,out) line
+    here> if str!="" then out+=string_pop(str) goto here end
+end

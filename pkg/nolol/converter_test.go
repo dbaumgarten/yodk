@@ -54,9 +54,9 @@ include "testProg"
 `
 
 var testfs = nolol.MemoryFileSystem{
-	"testProg":  testProg,
-	"testProg2": testProg2,
-	"testProg3": testProg3,
+	"testProg.nolol":  testProg,
+	"testProg2.nolol": testProg2,
+	"testProg3.nolol": testProg3,
 }
 
 func TestNolol(t *testing.T) {

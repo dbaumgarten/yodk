@@ -1,0 +1,44 @@
+// This file contains basic definitions and macros for math
+// Import using ' include "std/math" '
+
+// The mathematical constant pi
+define math_pi=3.141
+
+// The mathematical constant e
+define math_e=2.718
+
+// Returns the absolute value of x.
+// Works on a basic-chip
+macro math_abs_basic(x) expr
+	(x>=0)*x-(x<0)*x
+end
+
+// If x is >0, returns 1 if <0 return -1, otherwise returns 0
+macro math_sign(x) expr
+	(x>=0)-(x<=0)
+end
+
+// Returns the next lower integer to x
+// Requires at least a basic chip
+macro math_floor(x) expr
+	x-x%1
+end
+
+// Returns the next lower integer to x
+macro math_floor_basic(x) expr
+	x/1000*1000
+end
+
+// Returns the bitwise xor of a and b in out
+macro math_xor(a, b, out) block
+	out=0
+	ctr=0
+	while 1 do
+		out+=(a%2!=b%2)*2^ctr++ 
+		a=math_floor(a/2)
+		b=math_floor(b/2)
+		if a+b==0 then
+			break 
+		end
+	end
+end

@@ -1,0 +1,33 @@
+scripts: 
+  - testcases.nolol
+
+ignoreerrs: true
+cases:
+  - name: TestStdlib
+    outputs:
+      pi: 1
+      e: 1
+      abs1: 1
+      abs2: 1
+      abs3: 1
+      sign1: 1
+      sign2: 1
+      sign3: 1
+      floor1: 1
+      floor2: 1
+      floor3: 1
+      floor4: 1
+      mxor: 1
+      pop1: 1
+      pop2: 1
+      cont1: 1
+      cont2: 1
+      rev1: 1
+      rev2: 1
+      tern1: 1
+      tern2: 1
+      abort: 1
+      xor1: 1
+      xor2: 1
+      xor3: 1
+  

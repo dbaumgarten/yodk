@@ -35,4 +35,7 @@ cp README.md docs/README.md
 sed -i 's/https:\/\/dbaumgarten.github.io\/yodk\/#//g' docs/README.md
 echo "help" | ${YODK_BINARY} debug examples/yolol/fizzbuzz.yolol | grep -v EOF > docs/generated/cli/debug-help.txt
 
+cat docs/nolol-stdlib-header.md > docs/nolol-stdlib.md
+${YODK_BINARY} docs stdlib/src/*.nolol -n 'std/$1' -r 'stdlib/src/(.*).nolol' >> docs/nolol-stdlib.md
+
 chmod -R a+r docs

@@ -1,0 +1,56 @@
+// This file defines test-cases for macros of the standard-library
+
+include "std/math"
+include "std/string"
+include "std/logic"
+
+:pi=math_pi==3.141
+:e=math_e==2.718
+
+:abs1=math_abs_basic(10)==10
+:abs2=math_abs_basic(-10)==10
+:abs3=math_abs_basic(0)==0
+
+:sign1=math_sign(10)==1
+:sign2=math_sign(-10)==-1
+:sign3=math_sign(0)==0
+
+:floor1=math_floor(5.5)==5
+:floor2=math_floor(5)==5
+
+:floor3=math_floor_basic(5.5)==5
+:floor4=math_floor_basic(5)==5
+
+a=5
+b=3
+math_xor(a,b,out)
+:mxor=out==6
+
+string="abc"
+:pop1=string_pop(string)=="c"
+:pop2=string=="ab"
+
+string="World"
+:cont1=string_contains(string,"orl")
+:cont2=not string_contains(string,"lol")
+
+string="abcde"
+out=""
+string_reverse(string,out)
+:rev1=out=="edcba"
+:rev2=string==""
+
+string="abcde"
+string_len(string,strlen); :len=strlen==5
+
+:tern1=logic_ternary(1,5,7)==5
+:tern2=logic_ternary(0,5,7)==7
+
+:abort=1; logic_continue_line(0); :abort=0 $
+
+:xor1=logic_xor(1,0)
+:xor2=logic_xor(0,1)
+:xor3=logic_xor(1,1)==0
+:xor4=logic_xor(0,0)==0
+
+:done=1

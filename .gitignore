@@ -12,5 +12,6 @@ vscode-yolol/.vscode-test/
 docs/README.md
 docs/vscode-yolol.md
 docs/generated/*
+docs/nolol-stdlib.md
 examples/nolol/*.yolol
 CHANGELOG.md

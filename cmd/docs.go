@@ -37,7 +37,7 @@ var docsCmd = &cobra.Command{
 func getMacroSignature(m *nast.MacroDefinition) string {
 	text := m.Name + "(" + strings.Join(m.Arguments, ", ") + ")"
 	if len(m.Externals) > 0 {
-		text += "<" + strings.Join(m.Arguments, ", ") + ">"
+		text += "<" + strings.Join(m.Externals, ", ") + ">"
 	}
 	text += " " + m.Type
 	return text

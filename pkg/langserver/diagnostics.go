@@ -2,7 +2,6 @@ package langserver
 
 import (
 	"context"
-	"io/ioutil"
 	"log"
 	"net/url"
 	"path/filepath"
@@ -21,8 +20,8 @@ import (
 // other files from the filesystem. It is used when compiling a nolol file, as nolol files may
 // depend on files from the file-system using includes
 type fs struct {
-	*LangServer
-	Dir      string
+	*nolol.DiskFileSystem
+	ls       *LangServer
 	Mainfile string
 }
 
@@ -38,22 +37,19 @@ func getFilePath(u lsp.DocumentURI) string {
 
 func newfs(ls *LangServer, mainfile lsp.DocumentURI) *fs {
 	return &fs{
-		LangServer: ls,
-		Dir:        filepath.Dir(getFilePath(mainfile)),
-		Mainfile:   string(mainfile),
+		ls: ls,
+		DiskFileSystem: &nolol.DiskFileSystem{
+			Dir: filepath.Dir(getFilePath(mainfile)),
+		},
+		Mainfile: string(mainfile),
 	}
 }
 
 func (f fs) Get(name string) (string, error) {
 	if name == f.Mainfile {
-		return f.cache.Get(lsp.DocumentURI(name))
+		return f.ls.cache.Get(lsp.DocumentURI(name))
 	}
-	path := filepath.Join(f.Dir, name)
-	content, err := ioutil.ReadFile(path)
-	if err != nil {
-		return "", err
-	}
-	return string(content), err
+	return f.DiskFileSystem.Get(name)
 }
 
 func convertToErrorlist(errs error) parser.Errors {

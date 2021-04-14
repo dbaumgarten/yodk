@@ -5,3 +5,4 @@
 * [Vscode-yolol](/vscode-yolol)
     - [Instructions](/vscode-instructions)
 * [NOLOL](/nolol)
+* [NOLOL-stdlib](/nolol-stdlib)
