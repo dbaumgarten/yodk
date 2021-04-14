@@ -112,6 +112,12 @@ yodk compile myfile.nolol
 This will create the file myfile.yolol, which contains the compiled code.
 Learn more about nolol [here](/nolol).
 
+# Documentation for nolol
+The cli can generate markdown-documentation for nolol-files. These documentation will contain the comment right at the start of the file (up to the first empty line), and a list of all definitions and macros inside the file, together with the comments exactly above them.
+```
+yodk docs myfile.nolol
+```
+
 # Language Server
 The yodk binary contains an implementation of the Language Server Protocoll. This is used to extend editors and IDEs with support for new languages.  
 

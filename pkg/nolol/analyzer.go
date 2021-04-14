@@ -9,11 +9,12 @@ import (
 
 // AnalysisReport contains collected information about a nolol-programm
 type AnalysisReport struct {
-	Definitions map[string]*nast.Definition
-	Macros      map[string]*nast.MacroDefinition
-	Variables   []string
-	Labels      []string
-	Docstrings  map[string]string
+	FileDocstring string
+	Definitions   map[string]*nast.Definition
+	Macros        map[string]*nast.MacroDefinition
+	Variables     []string
+	Labels        []string
+	Docstrings    map[string]string
 }
 
 // Analyse returns an AnalysisReport for the given program
@@ -28,29 +29,34 @@ func Analyse(prog *nast.Program) (*AnalysisReport, error) {
 	}
 
 	prevDocstrings := ""
+	isStartOfFile := true
 
 	vars := make(map[string]bool)
 
 	f := func(node ast.Node, visitType int) error {
 		switch n := node.(type) {
 		case *nast.Definition:
+			isStartOfFile = false
 			res.Definitions[n.Name] = n
 			if prevDocstrings != "" {
 				res.Docstrings[n.Name] = prevDocstrings
 			}
 			return ast.NewNodeReplacementSkip()
 		case *nast.MacroDefinition:
+			isStartOfFile = false
 			res.Macros[n.Name] = n
 			if prevDocstrings != "" {
 				res.Docstrings[n.Name] = prevDocstrings
 			}
 			return ast.NewNodeReplacementSkip()
 		case *ast.Assignment:
+			isStartOfFile = false
 			if _, isDef := res.Definitions[n.Variable]; !isDef {
 				vars[n.Variable] = true
 			}
 			return nil
 		case *ast.Dereference:
+			isStartOfFile = false
 			if _, isDef := res.Definitions[n.Variable]; !isDef {
 				vars[n.Variable] = true
 			}
@@ -60,6 +66,10 @@ func Analyse(prog *nast.Program) (*AnalysisReport, error) {
 				if isDocsLine(n) {
 					prevDocstrings += strings.TrimLeft(n.Comment, "/ \t") + "\n"
 				} else {
+					if isStartOfFile {
+						res.FileDocstring = prevDocstrings
+						isStartOfFile = false
+					}
 					prevDocstrings = ""
 				}
 				if n.Label != "" {
