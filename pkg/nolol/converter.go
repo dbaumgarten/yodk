@@ -214,9 +214,6 @@ func (c *Converter) ProcessNodes() ConverterLines {
 	f := func(node ast.Node, visitType int) error {
 		switch n := node.(type) {
 
-		case *nast.WaitDirective:
-			return c.convertWait(n, visitType)
-
 		case *nast.FuncCall:
 			return c.convertFuncCall(n, visitType)
 

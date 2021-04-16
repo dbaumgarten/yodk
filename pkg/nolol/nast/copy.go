@@ -128,10 +128,6 @@ func CopyAst(inp ast.Node) ast.Node {
 				m.Elements = make([]Element, len(n.Elements))
 				copy(m.Elements, n.Elements)
 				newnode = m
-			case *WaitDirective:
-				m := &WaitDirective{}
-				copier.Copy(m, n)
-				newnode = m
 			case *BreakStatement:
 				m := &BreakStatement{}
 				copier.Copy(m, n)

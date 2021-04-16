@@ -12,42 +12,6 @@ import (
 // reservedTimeVariable is the variable used to track passed time
 var reservedTimeVariable = "_time"
 
-// convert a wait directive to yolol
-func (c *Converter) convertWait(wait *nast.WaitDirective, visitType int) error {
-	if visitType == ast.PostVisit {
-		label := fmt.Sprintf("wait%d", c.waitlabelcounter)
-		c.waitlabelcounter++
-		line := &nast.StatementLine{
-			Label:  label,
-			HasEOL: true,
-			Line: ast.Line{
-				Position: wait.Start(),
-				Statements: []ast.Statement{
-					&ast.IfStatement{
-						Position:  wait.Start(),
-						Condition: wait.Condition,
-						IfBlock: []ast.Statement{
-							c.gotoForLabel(label),
-						},
-					},
-				},
-			},
-		}
-		if wait.Statements != nil {
-			line.Statements = append(line.Statements, wait.Statements...)
-		}
-		if c.getLengthOfLine(&line.Line) > c.maxLineLength() {
-			return &parser.Error{
-				Message:       "The line is too long to be converted to yolol",
-				StartPosition: wait.Start(),
-				EndPosition:   wait.End(),
-			}
-		}
-		return ast.NewNodeReplacementSkip(line)
-	}
-	return nil
-}
-
 // convert a built-in function to yolol
 func (c *Converter) convertFuncCall(function *nast.FuncCall, visitType int) error {
 

@@ -165,35 +165,6 @@ func (n *WhileLoop) El() {}
 // NestEl implements the type-marker method
 func (n *WhileLoop) NestEl() {}
 
-// WaitDirective blocks execution as long as the condition is true
-type WaitDirective struct {
-	Position   ast.Position
-	Condition  ast.Expression
-	Statements []ast.Statement
-}
-
-// Start is needed to implement ast.Node
-func (n *WaitDirective) Start() ast.Position {
-	return n.Position
-}
-
-// End is needed to implement ast.Node
-func (n *WaitDirective) End() ast.Position {
-	if len(n.Statements) == 0 {
-		if n.Condition == nil {
-			return n.Position
-		}
-		return n.Condition.End()
-	}
-	return n.Statements[len(n.Statements)-1].End()
-}
-
-// El implements the type-marker method
-func (n *WaitDirective) El() {}
-
-// NestEl implements the type-marker method
-func (n *WaitDirective) NestEl() {}
-
 // IncludeDirective represents the inclusion of another file in the source-file
 type IncludeDirective struct {
 	Position ast.Position

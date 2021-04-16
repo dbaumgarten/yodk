@@ -209,32 +209,6 @@ func (np *Printer) handleNololNodes(node ast.Node, visitType int, p *parser.Prin
 		}
 	case *nast.Program:
 		break
-	case *nast.WaitDirective:
-		if visitType == ast.PreVisit {
-			p.Write("wait")
-			p.Space()
-			break
-		}
-		if n.Statements != nil {
-			if visitType == ast.InterVisit1 {
-				p.Space()
-				p.Write("then")
-				p.Space()
-				break
-			}
-			if visitType > 0 {
-				p.OptionalSpace()
-				p.Write(";")
-				p.OptionalSpace()
-				break
-			}
-			if visitType == ast.PostVisit {
-				p.Space()
-				p.Write("end")
-				break
-			}
-		}
-		break
 	case *nast.BreakStatement:
 		p.Write("break")
 		p.Space()

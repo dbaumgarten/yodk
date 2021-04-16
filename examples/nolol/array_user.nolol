@@ -1,5 +1,7 @@
 // This script uses array.nolol to store some values and retrieve themm again
 
+include "std/logic"
+
 define data=:d
 define addr=:a
 define write=:m
@@ -11,7 +13,7 @@ macro set(idx, value) block
 	addr=idx
 	// this will block until addr is 0.
 	// the array will set addr to 0 once it stored the value
-	wait addr	
+	logic_wait(addr)
 end
 
 // retrieve value from idx
@@ -20,7 +22,7 @@ macro get(idx, value) block
 	addr=idx
 	// this will block until addr is 0.
 	// the array will set addr to 0 once it retrieved the value
-	wait addr	
+	logic_wait(addr)
 	value=data
 end
 

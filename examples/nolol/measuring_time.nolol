@@ -1,19 +1,15 @@
 // nolol provides a built-in funtion time() that returns the amount of lines
 // that have been executed in this script
 
+include "std/logic"
+
 // open door and set close-time to now (1) plus 10 cycles
 // also take note of the start time so we can check the result later
 // as all statements are on the same line (separated by ;) they are executed at the same time
 :door="open"; closewhen=time()+10; start=time()
-// the wait directive blocks while the given condition (time()<closewhen) is true 
-// the statements in the (optional) then-part are executed immediately when the condition becomes false
-wait time()<closewhen then :door="closed";closedAfter=time()-start end
+// the logic_wait macro blocks while the given condition (time()<closewhen) is true
+logic_wait(time()<closewhen); :door="closed";closedAfter=time()-start
 // the line after wait is executed one tick after the then-block of the wait
 :out="door closed after "+closedAfter+" cycles"
 
 :done=1
-
-//note: wait is effectively just syntactic sugar
-// the wait line above can also be written as
-// Note that we use an inline-if here to force everything into one line
-this> if time()<closewhen then goto this end; :door="closed"; closedAfter=time()-start $

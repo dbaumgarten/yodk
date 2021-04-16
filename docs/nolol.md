@@ -124,9 +124,7 @@ YOLOL Output:
 ## Measuring time
 Sometimes you need to measure the time between two events and you can not (or dont want to) count lines and calculate execution times. This is why NOLOL can do this for you. Via the built-in ```time()``` function and the ```wait``` statement you can precisely measure time and wait for things.  
 
-Time is measured in executed lines and when the ```time()``` function is used in your script, the compile will add code that automatically counts the executed rows. The current count is returned by ```time()``` and can be used for calculations.  
-
-The wait-directive blocks while the given condition is true. As soon the condition is false, the ;-separated statements in the then-part are imediately (at the same yolol-line) executed. The "then \<statements\> end" part is optional and can be left out. The line after the wait directive is ALWAYS placed on the next yolol-line (as if the wait-line ended with $).
+Time is measured in executed lines and when the ```time()``` function is used in your script, the compiler will add code that automatically counts the executed rows. The current count is returned by ```time()``` and can be used for calculations.  
 
 [measuring_time.nolol](generated/code/nolol/measuring_time.nolol ':include')
 

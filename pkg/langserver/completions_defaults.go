@@ -132,19 +132,11 @@ var DefaultNololCompletions = []lsp.CompletionItem{
 		Kind:  14,
 	},
 	{
-		Label: "wait",
-		Kind:  14,
-	},
-	{
 		Label: "define",
 		Kind:  14,
 	},
 	{
 		Label: "include",
-		Kind:  14,
-	},
-	{
-		Label: "insert",
 		Kind:  14,
 	},
 	{

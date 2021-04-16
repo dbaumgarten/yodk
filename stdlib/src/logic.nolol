@@ -19,3 +19,8 @@ end
 macro logic_xor(a,b) expr
     a != b
 end
+
+// Blocks as long as condition is true
+macro logic_wait(condition) line
+    here> if condition then goto here end
+end

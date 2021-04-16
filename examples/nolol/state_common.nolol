@@ -1,6 +1,8 @@
 // This is an example on how to implement a state-machine spanning multiple chips
 // This file defines constants and macros for the other scripts
 
+include "std/logic"
+
 // define possible states
 define STATE_PING=0
 define STATE_PONG=1
@@ -12,11 +14,11 @@ define :STATEVAR=:state
 define :OUTPUT=:out
 
 // define some macros
-macro SMBEGIN(waitfor) block
-	wait :STATEVAR!=waitfor	
+macro SMBEGIN(waitfor) line
+	logic_wait(:STATEVAR!=waitfor)
 end
 
-macro SMEND(newstate) block
+macro SMEND(newstate) line
 	:STATEVAR=newstate
 end
 
