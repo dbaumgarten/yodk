@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"sort"
 	"strings"
 	"time"
 
@@ -483,8 +484,15 @@ func (h *YODKHandler) OnVariablesRequest(arguments *dap.VariablesArguments) (*da
 		i++
 	}
 
-	return resp, nil
+	sortVariableList(resp.Variables)
 
+	return resp, nil
+}
+
+func sortVariableList(vars []dap.Variable) {
+	sort.Slice(vars, func(i, j int) bool {
+		return vars[i].Name < vars[j].Name
+	})
 }
 
 // OnSetVariableRequest implements the Handler interface
