@@ -148,9 +148,7 @@ func typeYololCodeSSC(code string) {
 	lines := strings.Split(code, "\n")
 	for _, line := range lines {
 		win32.SendString(line)
-		time.Sleep(typeDelay)
-		win32.SendInput(win32.KeyDownInput(win32.KeycodeDown), win32.KeyUpInput(win32.KeycodeDown))
-		win32.SendInput(win32.KeyDownInput(win32.KeycodeDown), win32.KeyUpInput(win32.KeycodeDown))
+		nextLineSSC()
 	}
 }
 
@@ -169,9 +167,7 @@ func overwriteYololCodeSSC(code string) {
 	for _, line := range lines {
 		deleteLine()
 		win32.SendString(line)
-		time.Sleep(typeDelay)
-		win32.SendInput(win32.KeyDownInput(win32.KeycodeDown), win32.KeyUpInput(win32.KeycodeDown))
-		win32.SendInput(win32.KeyDownInput(win32.KeycodeDown), win32.KeyUpInput(win32.KeycodeDown))
+		nextLineSSC()
 	}
 }
 
@@ -185,9 +181,16 @@ func deleteAllLines() {
 func deleteAllLinesSSC() {
 	for i := 0; i < 20; i++ {
 		deleteLine()
-		win32.SendInput(win32.KeyDownInput(win32.KeycodeDown), win32.KeyUpInput(win32.KeycodeDown))
-
+		nextLineSSC()
 	}
+}
+
+func nextLineSSC() {
+	time.Sleep(typeDelay)
+	win32.SendInput(win32.KeyDownInputArrowDownSSC(), win32.KeyUpInputArrowDownSSC())
+	time.Sleep(typeDelay)
+	win32.SendInput(win32.KeyDownInputArrowDownSSC(), win32.KeyUpInputArrowDownSSC())
+	time.Sleep(typeDelay)
 }
 
 func deleteLine() {

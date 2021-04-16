@@ -16,7 +16,7 @@ If you experience any issues or would like to request a feature, please [open an
 - Auto-completion
 - Commands for optimizing yolol
 - Interactively debug YOLOL-code in vscode
-- AUto-type your code into Starbase
+- Auto-type your code into Starbase (see [here](https://dbaumgarten.github.io/yodk/#/vscode-instructions?id=auto-typing-into-starbase) for the Shortcuts)
 - Also supports nolol
 
 # Instructions

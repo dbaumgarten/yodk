@@ -67,6 +67,26 @@ func SendInput(inputEvents ...Input) error {
 	return nil
 }
 
+func KeyDownInputArrowDownSSC() Input {
+	return Input{
+		InputType: 1,
+		KeyboardInput: KeyboardInput{
+			ScanCode: 0x50,
+			Flags:    KeyeventfScancode | KeyeventfExtendedkey,
+		},
+	}
+}
+
+func KeyUpInputArrowDownSSC() Input {
+	return Input{
+		InputType: 1,
+		KeyboardInput: KeyboardInput{
+			ScanCode: 0x50 + 128,
+			Flags:    KeyeventfScancode | KeyeventfKeyup | KeyeventfExtendedkey,
+		},
+	}
+}
+
 // SendString sends input-events to the OS, that simulate typing the given string
 func SendString(s string) {
 	for _, r := range s {
