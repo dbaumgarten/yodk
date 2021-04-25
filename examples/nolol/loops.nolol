@@ -28,4 +28,13 @@ end
 // X0000X
 // XXXXXX
 
+// the compiler will always try to choose the best possible compilation
+// this loop-body for example is small enough to be compiled as a single-line-loop
+foo=5
+while foo-- do
+	:out2+=1
+end
+
+
+
 :done=1

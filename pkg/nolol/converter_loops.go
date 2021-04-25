@@ -36,6 +36,11 @@ func (c *Converter) convertWhileLoop(loop *nast.WhileLoop, visitType int) error 
 	startLabel := fmt.Sprintf("while%d", loopnr)
 	endLabel := fmt.Sprintf("endwhile%d", loopnr)
 
+	inlineloop, err := c.convertWhileLoopInline(loop, startLabel)
+	if err == nil {
+		return ast.NewNodeReplacementSkip(inlineloop)
+	}
+
 	repl := []ast.Node{
 		&nast.StatementLine{
 			Label: startLabel,
@@ -97,10 +102,43 @@ func (c *Converter) convertWhileLoop(loop *nast.WhileLoop, visitType int) error 
 	})
 
 	return ast.NewNodeReplacementSkip(repl...)
-
 }
 
-// convertBreakStatement converts the rbeak keyword
+func (c *Converter) convertWhileLoopInline(loop *nast.WhileLoop, looplabel string) (ast.Node, error) {
+	mergedIfElements, _ := c.mergeNololNestableElements(loop.Block.Elements)
+
+	if len(mergedIfElements) > 1 || (len(mergedIfElements) > 0 && mergedIfElements[0].(*nast.StatementLine).Label != "") {
+		return nil, errInlineIfImpossible
+	}
+
+	statements := []ast.Statement{}
+	if len(mergedIfElements) > 0 {
+		statements = mergedIfElements[0].(*nast.StatementLine).Line.Statements
+	}
+	statements = append(statements, c.gotoForLabel(looplabel))
+
+	repl := &nast.StatementLine{
+		Label: looplabel,
+		Line: ast.Line{
+			Position: loop.Position,
+			Statements: []ast.Statement{
+				&ast.IfStatement{
+					Position:  loop.Position,
+					Condition: loop.Condition,
+					IfBlock:   statements,
+				},
+			},
+		},
+	}
+
+	if c.getLengthOfLine(&repl.Line) > c.maxLineLength() {
+		return nil, errInlineIfImpossible
+	}
+
+	return repl, nil
+}
+
+// convertBreakStatement converts the beak keyword
 func (c *Converter) convertBreakStatement(brk *nast.BreakStatement) error {
 	if len(c.loopLevel) == 0 {
 		return &parser.Error{
