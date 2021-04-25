@@ -38,6 +38,7 @@ func (c *Converter) gotoForLabelPos(label string, pos ast.Position) *ast.GoToSta
 	return &ast.GoToStatement{
 		Position: pos,
 		Line: &ast.Dereference{
+			Position: pos.Add(4),
 			Variable: label,
 		},
 	}

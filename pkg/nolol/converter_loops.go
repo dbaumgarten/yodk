@@ -75,7 +75,7 @@ func (c *Converter) convertWhileLoop(loop *nast.WhileLoop, visitType int) error 
 				Position:  loop.Condition.Start(),
 				Condition: condition,
 				IfBlock: []ast.Statement{
-					c.gotoForLabel(endLabel),
+					c.gotoForLabelPos(endLabel, loop.Condition.End()),
 				},
 			},
 		}
