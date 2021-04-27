@@ -80,7 +80,7 @@ func (n Number) Float64() float64 {
 func (n Number) String() string {
 	prefix := int(n / scale)
 	str := strconv.Itoa(prefix)
-	remainder := n.Abs() % scale
+	remainder := (n % scale).Abs()
 	if remainder != 0 {
 		deci := strconv.Itoa(int(remainder))
 		str += "." + strings.Repeat("0", 3-len(deci)) + deci
