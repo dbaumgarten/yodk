@@ -71,9 +71,19 @@ func FromFloat64(in float64) Number {
 	return Number(int64(in * float64(scale)))
 }
 
+// FromFloat32 creates a Number from the given float
+func FromFloat32(in float32) Number {
+	return Number(int32(in * float32(scale)))
+}
+
 // Float64 returns the value of the number as float
 func (n Number) Float64() float64 {
 	return float64(n) / float64(scale)
+}
+
+// Float32 returns the value of the number as float
+func (n Number) Float32() float32 {
+	return float32(n) / float32(scale)
 }
 
 // String returns the value of the number as string
@@ -153,35 +163,49 @@ func (n Number) Pow(m Number) Number {
 	return FromFloat64(math.Pow(n.Float64(), m.Float64()))
 }
 
+// convert given degree to radians
+func toRad(n float32) float32 {
+	return n * math.Pi / 180
+}
+
+// convert given radian to degrees
+func toDeg(n float32) float32 {
+	return n * 180 / math.Pi
+}
+
+// execute the given trigonometric function with the given argument, but only use 32bits of precision (to match the game's implementation)
+func reducedPresisionTrig(f func(float64) float64, arg float32) float32 {
+	return float32(f(float64(arg)))
+}
+
 // Sin returns the sin of the number (in degrees)
 func (n Number) Sin() Number {
-	return FromFloat64(math.Sin(n.Float64() * math.Pi / 180))
+	return FromFloat32(reducedPresisionTrig(math.Sin, toRad(n.Float32())))
 }
 
 // Cos returns the cos of the number (in degrees)
 func (n Number) Cos() Number {
-	return FromFloat64(math.Cos(n.Float64() * math.Pi / 180))
+	return FromFloat32(reducedPresisionTrig(math.Cos, toRad(n.Float32())))
 }
 
 // Tan returns the tan of the number (in degrees)
 func (n Number) Tan() Number {
-	if n == FromInt(90) {
-		return MaxValue
-	}
-	return FromFloat64(math.Tan(n.Float64() * math.Pi / 180))
+	rads := toRad(n.Float32())
+	i := int64(math.Tan(float64(rads)) * 1000)
+	return Number(i)
 }
 
 // Asin returns the asin of the number in degrees
 func (n Number) Asin() Number {
-	return FromFloat64(math.Asin(n.Float64()) * 180 / math.Pi)
+	return FromFloat32(toDeg(reducedPresisionTrig(math.Asin, n.Float32())))
 }
 
 // Acos returns the acos of the number in degrees
 func (n Number) Acos() Number {
-	return FromFloat64(math.Acos(n.Float64()) * 180 / math.Pi)
+	return FromFloat32(toDeg(reducedPresisionTrig(math.Acos, n.Float32())))
 }
 
 // Atan returns the atan of the number in degrees
 func (n Number) Atan() Number {
-	return FromFloat64(math.Atan(n.Float64()) * 180 / math.Pi)
+	return FromFloat32(toDeg(reducedPresisionTrig(math.Atan, n.Float32())))
 }
