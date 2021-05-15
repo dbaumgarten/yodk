@@ -49,15 +49,7 @@ func RunUnaryOperation(arg *Variable, operator string) (*Variable, error) {
 		result.Value = arg.Number().Atan()
 		break
 	case "!":
-		num := arg.Number()
-		res := 1
-		i := 0
-		for num > 0 {
-			i++
-			num = num.Sub(number.One)
-			res *= i
-		}
-		result.Value = number.FromInt(res)
+		result.Value = arg.Number().Factorial()
 	default:
 		return nil, fmt.Errorf("Unknown unary operator for numbers '%s'", operator)
 	}

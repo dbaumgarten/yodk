@@ -209,3 +209,18 @@ func (n Number) Acos() Number {
 func (n Number) Atan() Number {
 	return FromFloat32(toDeg(reducedPresisionTrig(math.Atan, n.Float32())))
 }
+
+// Factorial computes the factorial (!)
+func (n Number) Factorial() Number {
+	if n < 0 {
+		return MinValue
+	}
+	res := 1
+	i := 0
+	for n > 0 {
+		i++
+		n = n.Sub(One)
+		res *= i
+	}
+	return FromInt(res)
+}
