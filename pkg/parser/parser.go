@@ -458,15 +458,12 @@ func (p *Parser) ParseBinaryExpression(idx int) ast.Expression {
 		ops = []string{"+", "-"}
 		break
 	case 3:
-		ops = []string{"==", "!="}
+		ops = []string{"==", "!=", "<=", ">=", "<", ">"}
 		break
 	case 4:
-		ops = []string{"<=", ">=", "<", ">"}
-		break
-	case 5:
 		ops = []string{"*", "/", "%"}
 		break
-	case 6:
+	case 5:
 		ops = []string{"^"}
 		leftAssoc = false
 		break
