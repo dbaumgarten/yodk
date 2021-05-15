@@ -1,9 +1,9 @@
-i=0 j=i++ k= ++i :testi=i==2 and j==0 and k==2
+i=0 j=i++ k= ++i :testi=i==2 and j==1 and k==2
 hw="hello" hw++ 
 hw+="world"
 :testhw=hw=="hello world" //comment2
 abc="abc"
-:testssub=hw-"world"=="hello " and abc-- =="abc" and abc=="ab" and --abc=="a" and abc=="a"
+:testssub=hw-"world"=="hello " and abc-- =="ab" and abc=="ab" and --abc=="a" and abc=="a"
 :testsin=abs (sin (90)-1)<0.01
 :testcos=abs (cos (90-0))<0.01
 :testtan=abs (tan (0-0))<0.01

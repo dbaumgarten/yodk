@@ -1,7 +1,7 @@
 if :testif!=1000 then if 1==1 then :testnestedif=1 end end
 :testnested=3+(1+1)*5==13
 k=2
-:testnestedop=(k+5)*k++ ==14
+:testnestedop=(k+5)*k++ ==21
 :testautoconv="test "+123=="test 123"
 :constexp=1+2*5+sin (3.141*2/2)
 :testaadd=10 :testaadd+=2

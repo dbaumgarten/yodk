@@ -26,14 +26,14 @@ macro block_while(condition) line
 	here> if condition then goto here end; :foo=1
 end
 
-block_while(:timer++ <10); :go=1
+block_while(:timer++ <=10); :go=1
 
 
 // macros of type block can contain (almost) anything, like for example multi-line constructs
 // the can only be used, if they are the only thing on that line (and can not be used as expressions)
 macro greet(output, name) block
 	output="Hello"
-	while i++ <5 do
+	while i++ <=5 do
 		output+=separator
 	end
 	output+=name
@@ -49,7 +49,7 @@ macro goodbye(output, name) block
 	output="Goodbye"
 	// i is a macro-local variable. Changes to i are local to macro-insertions
 	// if you insert greet() multipe time, all insertions will have their own version of i
-	while i++ <5 do
+	while i++ <=5 do
 		output+=separator
 	end
 	// "name" is replaced by the second argument provided when using the macro

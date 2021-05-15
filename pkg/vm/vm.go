@@ -724,10 +724,8 @@ func (v *VM) runDeref(d *ast.Dereference) (*Variable, error) {
 		}
 		v.setVariable(d.Variable, &newval)
 	}
-	if d.PrePost == "Pre" {
-		return &newval, nil
-	}
-	return oldval, nil
+
+	return &newval, nil
 }
 
 func (v *VM) runBinOp(op *ast.BinaryOperation) (*Variable, error) {

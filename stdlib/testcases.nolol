@@ -27,7 +27,7 @@ math_xor(a,b,out)
 :mxor=out==6
 
 string="abc"
-:pop1=string_pop(string)=="c"
+string_pop(string,popout); :pop1=popout=="c"
 :pop2=string=="ab"
 
 string="World"
