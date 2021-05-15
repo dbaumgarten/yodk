@@ -8,7 +8,7 @@ end
 
 // Returns 1 if str contains x
 macro string_contains(str,x) expr
-    str-x!=str
+    (str-x)!=str
 end
 
 // Adds the lenght of str to out

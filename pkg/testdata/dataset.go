@@ -8,8 +8,8 @@ import (
 	"github.com/dbaumgarten/yodk/pkg/vm"
 )
 
-var TestProgram = `:testsum = 1 + 2 == 3
-:testsub = 3 - 1 == 2
+var TestProgram = `:testsum = (1 + 2) == 3
+:testsub = (3 - 1) == 2
 :testmul = 2*5 == 10
 :testdiv = 20 / 10 == 2
 :testmod = 11 % 10 == 1

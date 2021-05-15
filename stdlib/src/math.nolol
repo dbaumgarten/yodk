@@ -38,7 +38,7 @@ macro math_xor(a, b, out) block
 		out+=(a%2!=b%2)*2^ctr++ 
 		a=math_floor(a/2)
 		b=math_floor(b/2)
-		if a+b==0 then
+		if (a+b)==0 then
 			break 
 		end
 	end

@@ -455,13 +455,13 @@ func (p *Parser) ParseBinaryExpression(idx int) ast.Expression {
 		expectedType = ast.TypeKeyword
 		break
 	case 2:
-		ops = []string{"==", "!="}
+		ops = []string{"+", "-"}
 		break
 	case 3:
-		ops = []string{"<=", ">=", "<", ">"}
+		ops = []string{"==", "!="}
 		break
 	case 4:
-		ops = []string{"+", "-"}
+		ops = []string{"<=", ">=", "<", ">"}
 		break
 	case 5:
 		ops = []string{"*", "/", "%"}
