@@ -552,6 +552,15 @@ func (p *Parser) ParseNegationExpression() ast.Expression {
 		if subexp == nil {
 			p.ErrorExpectedExpression(fmt.Sprintf("on right side of %s", unaryExp.Operator))
 		}
+		// Usualy, just parsing the positive number and wrapping it in a negation works fine
+		// But 9223372036854775.808 can not be stored inside the 64bit number-type. -9223372036854775.808 can.
+		// So as a workaround, a negation of this special number is folded into the constant itself
+		if nconst, is := subexp.(*ast.NumberConstant); is {
+			if nconst.Value == "9223372036854775.808" {
+				nconst.Value = "-9223372036854775.808"
+				return nconst
+			}
+		}
 		unaryExp.Exp = subexp
 		return unaryExp
 	}
