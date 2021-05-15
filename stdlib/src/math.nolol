@@ -19,7 +19,7 @@ macro math_sign(x) expr
 end
 
 // Returns the next lower integer to x
-// Requires at least a basic chip
+// Requires at least an advanced chip
 macro math_floor(x) expr
 	x-x%1
 end
@@ -30,6 +30,7 @@ macro math_floor_basic(x) expr
 end
 
 // Returns the bitwise xor of a and b in out
+// Requires at least an advanced chip
 macro math_xor(a, b, out) block
 	out=0
 	ctr=0
