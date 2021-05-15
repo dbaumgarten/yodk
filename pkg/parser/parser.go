@@ -51,6 +51,7 @@ type YololParserFunctions interface {
 	ParseExpression() ast.Expression
 	ParseBinaryExpression(int) ast.Expression
 	ParseUnaryExpression() ast.Expression
+	ParseUnaryNotExpression() ast.Expression
 	ParseFactorioalExpression() ast.Expression
 	ParseNegationExpression() ast.Expression
 	ParseBracketExpression() ast.Expression
@@ -455,15 +456,17 @@ func (p *Parser) ParseBinaryExpression(idx int) ast.Expression {
 		expectedType = ast.TypeKeyword
 		break
 	case 2:
+		return p.ParseUnaryNotExpression()
+	case 3:
 		ops = []string{"+", "-"}
 		break
-	case 3:
+	case 4:
 		ops = []string{"==", "!=", "<=", ">=", "<", ">"}
 		break
-	case 4:
+	case 5:
 		ops = []string{"*", "/", "%"}
 		break
-	case 5:
+	case 6:
 		ops = []string{"^"}
 		leftAssoc = false
 		break
@@ -515,10 +518,29 @@ func (p *Parser) ParseBinaryExpression(idx int) ast.Expression {
 	return exp
 }
 
+// ParseUnaryNotExpression parses a "not" expression
+func (p *Parser) ParseUnaryNotExpression() ast.Expression {
+	p.Log()
+	if p.IsCurrent(ast.TypeKeyword, "not") {
+		unaryExp := &ast.UnaryOperation{
+			Operator: p.CurrentToken.Value,
+			Position: p.CurrentToken.Position,
+		}
+		p.Advance()
+		subexp := p.This.ParseUnaryNotExpression()
+		if subexp == nil {
+			p.ErrorExpectedExpression(fmt.Sprintf("on right side of %s", unaryExp.Operator))
+		}
+		unaryExp.Exp = subexp
+		return unaryExp
+	}
+	return p.This.ParseBinaryExpression(3)
+}
+
 // ParseUnaryExpression parses an unary expression
 func (p *Parser) ParseUnaryExpression() ast.Expression {
 	p.Log()
-	preUnaryOps := []string{"not", "abs", "sqrt", "sin", "cos", "tan", "asin", "acos", "atan"}
+	preUnaryOps := []string{"abs", "sqrt", "sin", "cos", "tan", "asin", "acos", "atan"}
 	if p.IsCurrentValueIn(preUnaryOps) && p.IsCurrentType(ast.TypeKeyword) {
 		unaryExp := &ast.UnaryOperation{
 			Operator: p.CurrentToken.Value,
