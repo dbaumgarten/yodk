@@ -69,8 +69,8 @@ var unaryOperatorPriority = map[string]int{
 	"asin": 7,
 	"acos": 7,
 	"atan": 7,
-	"!":    8,
-	"-":    9,
+	"-":    8,
+	"!":    9,
 }
 
 // end and else are missing here, because unlike other keywords they might require a space after them

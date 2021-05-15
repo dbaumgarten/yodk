@@ -535,25 +535,7 @@ func (p *Parser) ParseUnaryExpression() ast.Expression {
 		unaryExp.Exp = subexp
 		return unaryExp
 	}
-	return p.This.ParseFactorioalExpression()
-}
-
-// ParseFactorioalExpression parses a factorial
-func (p *Parser) ParseFactorioalExpression() ast.Expression {
-	p.Log()
-
-	subexp := p.This.ParseNegationExpression()
-	if subexp != nil {
-		for p.IsCurrent(ast.TypeSymbol, "!") {
-			subexp = &ast.UnaryOperation{
-				Operator: "!",
-				Position: p.CurrentToken.Position,
-				Exp:      subexp,
-			}
-			p.Advance()
-		}
-	}
-	return subexp
+	return p.This.ParseNegationExpression()
 }
 
 // ParseNegationExpression parses a negation
@@ -573,7 +555,25 @@ func (p *Parser) ParseNegationExpression() ast.Expression {
 		unaryExp.Exp = subexp
 		return unaryExp
 	}
-	return p.This.ParseBracketExpression()
+	return p.This.ParseFactorioalExpression()
+}
+
+// ParseFactorioalExpression parses a factorial
+func (p *Parser) ParseFactorioalExpression() ast.Expression {
+	p.Log()
+
+	subexp := p.This.ParseBracketExpression()
+	if subexp != nil {
+		for p.IsCurrent(ast.TypeSymbol, "!") {
+			subexp = &ast.UnaryOperation{
+				Operator: "!",
+				Position: p.CurrentToken.Position,
+				Exp:      subexp,
+			}
+			p.Advance()
+		}
+	}
+	return subexp
 }
 
 // ParseBracketExpression parses a racketed expression
