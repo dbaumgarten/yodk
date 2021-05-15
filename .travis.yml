@@ -4,7 +4,7 @@ dist: bionic
 services:
   - xvfb
 env:
-  - NODE_VERSION="8.10" GO111MODULE=on
+  - NODE_VERSION="16.1" GO111MODULE=on
 
 before_install:
   - nvm install $NODE_VERSION
