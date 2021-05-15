@@ -197,11 +197,17 @@ func (n Number) Tan() Number {
 
 // Asin returns the asin of the number in degrees
 func (n Number) Asin() Number {
+	if n > One || n < -One {
+		return MinValue
+	}
 	return FromFloat32(toDeg(reducedPresisionTrig(math.Asin, n.Float32())))
 }
 
 // Acos returns the acos of the number in degrees
 func (n Number) Acos() Number {
+	if n > One || n < -One {
+		return MinValue
+	}
 	return FromFloat32(toDeg(reducedPresisionTrig(math.Acos, n.Float32())))
 }
 
