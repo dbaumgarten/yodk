@@ -203,6 +203,9 @@ func (n *Assignment) Start() Position {
 
 // End is needed to implement Node
 func (n *Assignment) End() Position {
+	if n.Value == nil {
+		return n.Position.Add(len(n.Variable) + len(n.Operator))
+	}
 	if n.Value.End().Before(n.Position) {
 		return n.Position.Add(70)
 	}

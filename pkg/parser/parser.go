@@ -21,6 +21,8 @@ type Parser struct {
 	AllErrors bool
 	// If true, print debug logs
 	DebugLog bool
+	// Is true when the current token was preceeded by whitespace
+	skippedWhitespace bool
 }
 
 /*
@@ -96,7 +98,9 @@ func (p *Parser) HasNext() bool {
 // Advance advances the current token to the next (non whitespace) token in the list
 func (p *Parser) Advance() *ast.Token {
 	p.CurrentToken = p.Tokenizer.Next()
+	p.skippedWhitespace = false
 	for p.CurrentToken.Type == ast.TypeWhitespace {
+		p.skippedWhitespace = true
 		p.CurrentToken = p.Tokenizer.Next()
 	}
 	return p.CurrentToken
@@ -266,6 +270,7 @@ func (p *Parser) ParseLine() *ast.Line {
 			p.Advance()
 		}
 		ret.Statements = append(ret.Statements, stmt)
+		hadWhitespace := p.skippedWhitespace
 
 		if p.IsCurrentType(ast.TypeComment) {
 			ret.Comment = p.CurrentToken.Value
@@ -275,6 +280,11 @@ func (p *Parser) ParseLine() *ast.Line {
 		// line ends after statement (or after comment)
 		if p.IsCurrentType(ast.TypeNewline) || p.IsCurrentType(ast.TypeEOF) {
 			p.Advance()
+			return &ret
+		}
+
+		if !hadWhitespace {
+			p.ErrorString("Statements on a line must be separated by spaces", "")
 			return &ret
 		}
 	}
@@ -403,12 +413,21 @@ func (p *Parser) ParseIf() ast.Statement {
 	p.Expect(ast.TypeKeyword, "then")
 	ret.IfBlock = make([]ast.Statement, 0, 1)
 
-	for {
+	for p.HasNext() {
+		hadWhitespace := p.skippedWhitespace
 		stmt := p.This.ParseStatement()
 		if stmt == nil {
 			break
 		}
 		ret.IfBlock = append(ret.IfBlock, stmt)
+		if len(ret.IfBlock) > 1 && !hadWhitespace {
+			p.Error(&Error{
+				Message:       "Statements on a line must be separated by spaces",
+				StartPosition: stmt.Start(),
+				EndPosition:   stmt.End(),
+			})
+			return &ret
+		}
 	}
 
 	if p.IsCurrent(ast.TypeKeyword, "else") {
@@ -416,12 +435,21 @@ func (p *Parser) ParseIf() ast.Statement {
 
 		ret.ElseBlock = make([]ast.Statement, 0, 1)
 
-		for {
+		for p.HasNext() {
+			hadWhitespace := p.skippedWhitespace
 			stmt := p.This.ParseStatement()
 			if stmt == nil {
 				break
 			}
 			ret.ElseBlock = append(ret.ElseBlock, stmt)
+			if len(ret.ElseBlock) > 1 && !hadWhitespace {
+				p.Error(&Error{
+					Message:       "Statements on a line must be separated by spaces",
+					StartPosition: stmt.Start(),
+					EndPosition:   stmt.End(),
+				})
+				return &ret
+			}
 		}
 	}
 
