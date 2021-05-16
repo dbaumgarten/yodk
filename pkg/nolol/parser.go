@@ -598,3 +598,57 @@ func (p *Parser) ParseContinue() ast.Statement {
 	}
 	return nil
 }
+
+// ParseIf parses an if-node. Copied nearly 1to1 from yolol-parser, but requires ; instead of " " between statements
+func (p *Parser) ParseIf() ast.Statement {
+	p.Log()
+	ret := ast.IfStatement{
+		Position: p.CurrentToken.Position,
+	}
+	if !p.IsCurrent(ast.TypeKeyword, "if") {
+		return nil
+	}
+	p.Advance()
+
+	ret.Condition = p.This.ParseExpression()
+	if ret.Condition == nil {
+		p.ErrorExpectedExpression("as if-condition")
+	}
+
+	p.Expect(ast.TypeKeyword, "then")
+	ret.IfBlock = make([]ast.Statement, 0, 1)
+
+	for p.HasNext() {
+		stmt := p.This.ParseStatement()
+		if stmt == nil {
+			break
+		}
+		ret.IfBlock = append(ret.IfBlock, stmt)
+		if !p.IsCurrent(ast.TypeSymbol, ";") {
+			break
+		}
+		p.Advance()
+	}
+
+	if p.IsCurrent(ast.TypeKeyword, "else") {
+		p.Advance()
+
+		ret.ElseBlock = make([]ast.Statement, 0, 1)
+
+		for p.HasNext() {
+			stmt := p.This.ParseStatement()
+			if stmt == nil {
+				break
+			}
+			ret.ElseBlock = append(ret.ElseBlock, stmt)
+			if !p.IsCurrent(ast.TypeSymbol, ";") {
+				break
+			}
+			p.Advance()
+		}
+	}
+
+	p.Expect(ast.TypeKeyword, "end")
+
+	return &ret
+}

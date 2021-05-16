@@ -3,22 +3,22 @@
 
 // Removes the last character from str and places it into out
 macro string_pop(str, out)<ignore> line
-    ignore=str; out=ignore-str--
+	ignore=str; out=ignore-str-- 
 end
 
 // Returns 1 if str contains x
-macro string_contains(str,x) expr
-    (str-x)!=str
+macro string_contains(str, x) expr
+	(str-x)!=str
 end
 
 // Adds the lenght of str to out
 // str is set to "" in the process
 macro string_len(str, out) line
-    here> if str != "" then str-- out++ goto here end
+	here> if str!="" then str-- ; out++ ; goto here end
 end
 
 // Appends the reverse of str to out.
 // str is set to "" in the process
-macro string_reverse(str,out)<ignore> line
-    here> if str!="" then ignore=str out+=ignore-str-- goto here end
+macro string_reverse(str, out)<ignore> line
+	here> if str!="" then ignore=str; out+=ignore-str-- ; goto here end
 end

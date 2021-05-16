@@ -25,7 +25,7 @@ end
 
 // You can still use the plain old yolol-inline-ifs. You usually dont need them, as the compiler will figure out if he can use an inline-ip on its own.
 // However, if you ABSOLUTELY need an inline if (or an error if thats not possible), it can still be usefull.
-a=1; if 1==1 then :foo=1 else :foo=2 end; b=2
+a=1; if 1==1 then :foo=1; lala=123 else :foo=2 end; b=2
 
 :other="done"
 :done=1

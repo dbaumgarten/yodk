@@ -87,7 +87,7 @@ Goto can (still) jump to any expression, not only to labels. Jumping to an expre
 
 ## Multiline ifs
 NOLOL features multiline ifs, including else-if blocks. Ifs can be aribitarily nested. YOLOLs on-line ifs are NOT supported anymore, but the multiline ifs are compiled to one-line if, whenever possible (when the compiled if is small enough to fit into one line of yolol).  
-In some rare cases you may need the old yolol-one-line-if, for example when you absolutely need to make sure the complete if stays on one line. The old-style if is still available, and can be used as usual.
+In some rare cases you may need the old yolol-one-line-if, for example when you absolutely need to make sure the complete if stays on one line. The old-style if is still available, and can be used as usual (with the exception of needing ";" between statements instead of " ").
 
 [ifelse.nolol](generated/code/nolol/ifelse.nolol ':include')
 
