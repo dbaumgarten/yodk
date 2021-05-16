@@ -8,7 +8,7 @@ include "std/logic"
 // as all statements are on the same line (separated by ;) they are executed at the same time
 :door="open"; closewhen=time()+10; start=time()
 // the logic_wait macro blocks while the given condition (time()<closewhen) is true
-logic_wait(time()<closewhen); :door="closed";closedAfter=time()-start
+logic_wait(time()<closewhen); :door="closed"; closedAfter=time()-start
 // the line after wait is executed one tick after the then-block of the wait
 :out="door closed after "+closedAfter+" cycles"
 
