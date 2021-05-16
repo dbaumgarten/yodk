@@ -62,7 +62,10 @@ You can install ```vscode-yolol``` directly from the vscode marketplace. For mor
 Absolutely none. There will be massive changes to the codebase in the near future and things WILL definetly break.  
 If you want to use this projects code in your own project, you best use go-modules to pin your dependency to a fixed version number.
 
-Also, as starbase has not been released, there is a lot of guesswork involved in the code. The goal is to be 100% compatible to starbase's implementation.
+The goal is to be as compatible to the game as (reasonably) possible. Even if that means to re-implement weird bugs of the ingame-parser.  
+In cases where full compatibility is not feasible, yodk will try to be "downward-compatible" to the game: Everything that works in yodk SHOULD also work in-game. But a few weird edge-cases that work in the game will be treated as errors in yodk.  
+
+If you find differences between the game's implementation and yodk, please open an issue.
 
 # Supported Operating Systems
 Yodk (and therefore also vscode-yolol) supports the following Systems:  

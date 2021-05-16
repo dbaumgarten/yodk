@@ -38,6 +38,27 @@ In YOLOL everything is case insensitive. I personally think that this is a stupi
 
 While even the keywords (if, while etc.) are case insensitive, the casing of the keywords is not retained when formatting code. This would require tremendous implementation effort and also I think that it is good to enforce a somewhat uniform formatting for a language. Casing of identifiers (variable names, function names etc.) however is preserved when formatting.
 
+## Operator-precedence
+NOLOL inherits yolol's weird operator-precedence. That makes it easier to switch between yolol and nolol, even though it is absolute bullshit.
+The order of operations from first to last executed is:
+
+```
+++ --
+!
+operators (sqrt, abs etc.)
+- (neg)
+^
+* /
+< > == != <= >=
++ -
+not (logical negation)
+or
+and
+```
+
+Some time in the future nolol might switch to a more reasonable precedence and translate it to yolol's when compiling.
+
+
 ## Automatic optimizations
 During the compilation various optimizations like:
 - Shortening of variable names
