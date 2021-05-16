@@ -745,6 +745,21 @@ func (v *VM) runBinOp(op *ast.BinaryOperation) (*Variable, error) {
 }
 
 func (v *VM) runUnaryOp(op *ast.UnaryOperation) (*Variable, error) {
+
+	if op.Operator == "!" {
+		switch op.Exp.(type) {
+		case *ast.NumberConstant:
+			break
+		case *ast.Dereference:
+			break
+		default:
+			return nil, RuntimeError{
+				fmt.Errorf("Yolol only allows factorials on number-constants and variables."),
+				op,
+			}
+		}
+	}
+
 	arg, err := v.runExpr(op.Exp)
 	if err != nil {
 		return nil, err
