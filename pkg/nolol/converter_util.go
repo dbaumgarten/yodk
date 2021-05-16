@@ -162,11 +162,7 @@ func (c *Converter) mergeStatementElements(lines []*nast.StatementLine) ([]*nast
 //getLengthOfLine returns the amount of characters needed to represent the given line as yolol-code
 func (c *Converter) getLengthOfLine(line ast.Node) int {
 	ygen := parser.Printer{}
-	if c.spaceless {
-		ygen.Mode = parser.PrintermodeSpaceless
-	} else {
-		ygen.Mode = parser.PrintermodeCompact
-	}
+	ygen.Mode = parser.PrintermodeCompact
 
 	silenceGotoExpression := false
 	ygen.PrinterExtensionFunc = func(node ast.Node, visitType int, p *parser.Printer) (bool, error) {

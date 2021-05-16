@@ -29,7 +29,7 @@ var formatCmd = &cobra.Command{
 
 func format(filepath string) {
 
-	if formatMode != "readable" && formatMode != "compact" && formatMode != "spaceless" {
+	if formatMode != "readable" && formatMode != "compact" {
 		fmt.Println("Fomatting mode must be one of: readable|compact|spaceless")
 		os.Exit(1)
 	}
@@ -50,9 +50,6 @@ func format(filepath string) {
 			break
 		case "compact":
 			gen.Mode = parser.PrintermodeCompact
-			break
-		case "spaceless":
-			gen.Mode = parser.PrintermodeSpaceless
 			break
 		}
 		generated, err = gen.Print(parsed)

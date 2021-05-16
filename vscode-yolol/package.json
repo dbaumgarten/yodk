@@ -33,15 +33,13 @@
           "type": "string",
           "enum": [
             "Readable",
-            "Compact",
-            "Spaceless"
+            "Compact"
           ],
           "default": "Compact",
           "description": "Controls how yolol is formatted",
           "enumDescriptions": [
             "Add spaces to improve readability",
-            "Only add spaces when reasonable (works good for ingame)",
-            "Only add spaces when ABSOLUTELY necessary (may produce errors ingame, but good for Referee"
+            "Only add spaces when reasonable (works good for ingame)"
           ]
         },
         "yolol.lengthChecking.mode": {

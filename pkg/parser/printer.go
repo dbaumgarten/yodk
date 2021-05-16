@@ -3,7 +3,6 @@ package parser
 import (
 	"fmt"
 	"reflect"
-	"regexp"
 	"strings"
 	"unicode"
 
@@ -18,8 +17,6 @@ const (
 	PrintermodeCompact Printermode = 0
 	// PrintermodeReadable inserts spaces the improve readability
 	PrintermodeReadable Printermode = 1
-	// PrintermodeSpaceless inserts only spaces that are strictly necessary. This may break ingame-scripts but works fine for Referee
-	PrintermodeSpaceless Printermode = 2
 )
 
 // Printer generates yolol-code from an AST
@@ -30,13 +27,9 @@ type Printer struct {
 	// The function should return true, if it can handle the given node and does not want this printer to continue processing it
 	PrinterExtensionFunc func(node ast.Node, visitType int, p *Printer) (bool, error)
 	// If true, only insert spaces where absolutely necessary
-	Mode           Printermode
-	text           string
-	lastWasSpace   bool
-	prevWasKeyword bool
-	// identifiers that ent with a number must be treated specially
-	prevWasSpecialIdentifier bool
-	requestedSpace           bool
+	Mode         Printermode
+	text         string
+	lastWasSpace bool
 	// If true, at position-information to every printed token.
 	// Does not produce valid yolol, but is usefull for debugging
 	DebugPositions bool
@@ -73,9 +66,6 @@ var unaryOperatorPriority = map[string]int{
 	"!":    9,
 }
 
-// end and else are missing here, because unlike other keywords they might require a space after them
-var keywordRegex = regexp.MustCompile("(if|then|goto|and|or|not|abs|sqrt|sin|cos|tan|asin|acos|atan)")
-
 func charType(b byte) int {
 	s := rune(b)
 	if unicode.IsLetter(s) {
@@ -98,28 +88,12 @@ func charType(b byte) int {
 
 // Write adds text to the source-code that is currently build
 func (p *Printer) Write(content string) {
-	if p.requestedSpace && !p.prevWasKeyword && charType(p.text[len(p.text)-1]) == charType(content[0]) {
-		p.forceSpace()
-	}
 	p.text += content
-	p.prevWasKeyword = keywordRegex.MatchString(content)
-	p.prevWasSpecialIdentifier = false
 	p.lastWasSpace = false
-	p.requestedSpace = false
 }
 
 // Space adds a space to the source-code that is currently build
 func (p *Printer) Space() {
-	if p.Mode == PrintermodeSpaceless {
-		// in spaceless-mode, just recod a space was requested.
-		// If it it really necessary, it will be added with the next Write()
-		p.requestedSpace = true
-		return
-	}
-	p.forceSpace()
-}
-
-func (p *Printer) forceSpace() {
 	if !p.lastWasSpace {
 		p.text += " "
 	}
@@ -194,17 +168,9 @@ func (p *Printer) Print(prog ast.Node) (string, error) {
 			if visitType > 0 {
 				p.StatementSeparator()
 			}
-			if visitType == ast.PostVisit {
-				p.prevWasSpecialIdentifier = false
-			}
 			break
 		case *ast.Assignment:
 			if visitType == ast.PreVisit {
-				// if the previously printed string was a dereference ending in a number
-				// and this thing starts with a letter or number, we must enforce a space
-				if p.prevWasSpecialIdentifier && charType(n.Variable[0]) <= 1 {
-					p.forceSpace()
-				}
 				p.Write(n.Variable)
 				p.OptionalSpace()
 				p.Write(n.Operator)
@@ -221,19 +187,7 @@ func (p *Printer) Print(prog ast.Node) (string, error) {
 			}
 			break
 		case *ast.Dereference:
-			if n.PrePost != "Pre" && p.prevWasSpecialIdentifier {
-				if n.Variable[0] != ':' {
-					p.forceSpace()
-				}
-			}
 			p.printDeref(n)
-			if n.PrePost != "Post" {
-				lastchar := n.Variable[len(n.Variable)-1:]
-				if charType(lastchar[0]) == 1 {
-					// if the identifier ended with a number, a space may be required after it
-					p.prevWasSpecialIdentifier = true
-				}
-			}
 			break
 		case *ast.StringConstant:
 			p.Write("\"" + insertEscapesIntoString(n.Value) + "\"")
@@ -324,7 +278,7 @@ func (p *Printer) printUnaryOperation(o *ast.UnaryOperation, visitType int) {
 	if visitType == ast.PreVisit {
 		if o.Operator == "-" {
 			if charType(p.text[len(p.text)-1]) == 2 {
-				p.forceSpace()
+				p.Space()
 			} else {
 				p.OptionalSpace()
 			}

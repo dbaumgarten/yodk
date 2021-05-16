@@ -41,8 +41,6 @@ type Converter struct {
 	macroCurrentStatement     int
 	// if true, enable debug-logging
 	debug bool
-	// Spaceless uses spaceless printer-style for yolol
-	spaceless bool
 }
 
 // NewConverter creates a new converter
@@ -86,12 +84,6 @@ func (c *Converter) RunConversion() ConverterDone {
 // SetDebug enables/disables debug logging
 func (c *Converter) SetDebug(b bool) ConverterEmpty {
 	c.debug = b
-	return c
-}
-
-// SetSpaceless enables/disables spaceless-mode
-func (c *Converter) SetSpaceless(b bool) ConverterEmpty {
-	c.spaceless = b
 	return c
 }
 

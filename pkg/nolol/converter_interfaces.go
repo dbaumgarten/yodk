@@ -11,7 +11,6 @@ type ConverterEmpty interface {
 	LoadFile(mainfile string) ConverterIncludes
 	LoadFileEx(mainfile string, files FileSystem) ConverterIncludes
 	SetDebug(b bool) ConverterEmpty
-	SetSpaceless(b bool) ConverterEmpty
 }
 
 // ConverterIncludes is part of the Sequenced-Builder-Pattern of the Converter

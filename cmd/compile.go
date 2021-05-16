@@ -13,8 +13,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var spaceless bool
-
 // compileCmd represents the compile command
 var compileCmd = &cobra.Command{
 	Use:   "compile [file]+",
@@ -31,7 +29,6 @@ var compileCmd = &cobra.Command{
 func compileFile(fpath string) {
 	outfile := strings.Replace(fpath, path.Ext(fpath), ".yolol", -1)
 	converter := nolol.NewConverter()
-	converter.SetSpaceless(spaceless)
 	converter.SetDebug(debugLog)
 	converted, compileerr := converter.LoadFile(fpath).Convert()
 
@@ -41,9 +38,7 @@ func compileFile(fpath string) {
 	}
 
 	gen := parser.Printer{}
-	if spaceless {
-		gen.Mode = parser.PrintermodeSpaceless
-	}
+
 	generated, err := gen.Print(converted)
 	exitOnError(err, "generating code")
 	err = ioutil.WriteFile(outfile, []byte(generated), 0700)
@@ -60,5 +55,4 @@ func init() {
 	rootCmd.AddCommand(compileCmd)
 	compileCmd.Flags().StringVarP(&outputFile, "out", "o", "<inputfile>.out", "The output file")
 	compileCmd.Flags().BoolVarP(&debugLog, "debug", "d", false, "Print debug logs while parsing")
-	compileCmd.Flags().BoolVar(&spaceless, "spaceless", false, "If true, output code with minimal spaces (might break script)")
 }
