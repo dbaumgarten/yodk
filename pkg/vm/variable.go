@@ -130,3 +130,13 @@ func (v *Variable) Number() number.Number {
 	}
 	return number.Zero
 }
+
+// Bool returns the truth-value of a variable
+func (v *Variable) Bool() *Variable {
+	if v.IsString() {
+		return &Variable{
+			Value: number.Zero,
+		}
+	}
+	return v
+}

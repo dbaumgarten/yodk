@@ -9,10 +9,15 @@ import (
 
 // RunUnaryOperation executes the given operation with the given argument and returns the result
 func RunUnaryOperation(arg *Variable, operator string) (*Variable, error) {
+	var result Variable
 	if !arg.IsNumber() {
+		if operator == "not" {
+			result.Value = number.Zero
+			return &result, nil
+		}
 		return nil, fmt.Errorf("Unary operator '%s' is only available for numbers", operator)
 	}
-	var result Variable
+
 	switch strings.ToLower(operator) {
 	case "-":
 		result.Value = arg.Number().Mul(number.FromInt(-1))
@@ -58,6 +63,27 @@ func RunUnaryOperation(arg *Variable, operator string) (*Variable, error) {
 
 // RunBinaryOperation executes the given operation with the given arguments and returns the result
 func RunBinaryOperation(arg1 *Variable, arg2 *Variable, operator string) (*Variable, error) {
+
+	var endResult Variable
+
+	// and/or work differently regarding strings. We need to handle that before type-conversions
+	switch operator {
+	case "and":
+		if arg1.Bool().Number() != number.Zero && arg2.Bool().Number() != number.Zero {
+			endResult.Value = number.One
+		} else {
+			endResult.Value = number.Zero
+		}
+		return &endResult, nil
+	case "or":
+		if arg1.Bool().Number() != number.Zero || arg2.Bool().Number() != number.Zero {
+			endResult.Value = number.One
+		} else {
+			endResult.Value = number.Zero
+		}
+		return &endResult, nil
+	}
+
 	// automatic type casting
 	if !arg1.SameType(arg2) {
 		// do NOT modify the existing variable. Create a temporary new one
@@ -72,7 +98,6 @@ func RunBinaryOperation(arg1 *Variable, arg2 *Variable, operator string) (*Varia
 			}
 		}
 	}
-	var endResult Variable
 
 	if arg1.IsNumber() {
 		switch operator {
@@ -139,20 +164,6 @@ func RunBinaryOperation(arg1 *Variable, arg2 *Variable, operator string) (*Varia
 			break
 		case "<":
 			if arg1.Number() < arg2.Number() {
-				endResult.Value = number.One
-			} else {
-				endResult.Value = number.Zero
-			}
-			break
-		case "and":
-			if arg1.Number() != number.Zero && arg2.Number() != number.Zero {
-				endResult.Value = number.One
-			} else {
-				endResult.Value = number.Zero
-			}
-			break
-		case "or":
-			if arg1.Number() != number.Zero || arg2.Number() != number.Zero {
 				endResult.Value = number.One
 			} else {
 				endResult.Value = number.Zero
