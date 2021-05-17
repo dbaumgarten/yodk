@@ -1,4 +1,4 @@
-if:testif!=1000thenif1==1then:testnestedif=1endend
+if:testfi!=1000thenif1==1then:testnestedfi=1endend
 :testnested=(3+(1+1)*5)==13
 k=2
 :testnestedop=(k+5)*k++ ==21

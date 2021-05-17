@@ -6,6 +6,6 @@ cases:
       assignOK: 1
       derefOK: 1
       funcok: 1
-      ifok: 1
+      fiok: 1
 
       

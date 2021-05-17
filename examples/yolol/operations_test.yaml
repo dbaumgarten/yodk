@@ -8,8 +8,8 @@ cases:
       testmul: 1
       testdiv: 1
       testmod: 1
-      testgoto: 1
-      testgotovar: 1
+      testgot: 1
+      testgotvar: 1
       testexp: 1
       testeq: 1
       testneq: 1

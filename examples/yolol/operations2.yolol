@@ -14,7 +14,7 @@ abc="abc"
 :testab=abs-5==5 and abs 5==5 and abs 5==abs 5
 :testz=(not 1 and not 10 and not not 0)==0
 :testor=20 or 0
-:testif=0
+:testfi=0
 pi=3.141
-ifpi>3then:testif=1else:testif=0end
+ifpi>3then:testfi=1else:testfi=0end
 :done=1

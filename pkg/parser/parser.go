@@ -216,13 +216,21 @@ func (p *Parser) Reset() {
 func (p *Parser) Parse(prog string) (*ast.Program, error) {
 	p.Reset()
 	p.Tokenizer.Load(prog)
-	// Advance twice to fill CurrentToken
+
+	// Advance once to fill CurrentToken
 	p.Advance()
 	parsed := p.ParseProgram()
-	if len(p.Errors) == 0 {
-		return parsed, nil
+	if len(p.Errors) != 0 {
+		return nil, p.Errors
 	}
-	return nil, p.Errors
+
+	validationErrors := Validate(parsed)
+	p.Errors = append(p.Errors, validationErrors...)
+	if len(p.Errors) != 0 {
+		return nil, p.Errors
+	}
+
+	return parsed, nil
 }
 
 // ParseProgram parses a programm-node

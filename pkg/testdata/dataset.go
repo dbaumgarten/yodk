@@ -16,7 +16,7 @@ var TestProgram = `:testsum = (1 + 2) == 3
 counter=0
 counter++
 if counter < 20 then goto 7 end
-:testgoto = counter == 20
+:testgot = counter == 20
 // comment1
 :testexp = 10^2 == 100
 :testeq = 42 == 42 and not (41 == 24)

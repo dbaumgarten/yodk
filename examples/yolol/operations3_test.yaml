@@ -3,7 +3,7 @@ scripts:
 cases:
   - name: TestOperationSuccess
     outputs:
-      testnestedif: 1
+      testnestedfi: 1
       testnested: 1
       testnestedop: 1
       testautoconv: 1

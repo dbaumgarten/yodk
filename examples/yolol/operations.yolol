@@ -6,9 +6,9 @@
 counter=0
 counter++ 
 ifcounter<20thengoto7end
-:testgoto=counter==20
-:testgotovar=1
-gotocounter-8 :testgotovar=0
+:testgot=counter==20
+:testgotvar=1
+gotocounter-8 :testgtvar=0
 // comment1
 :testexp=10^2==100
 :testeq=42==42 and not 41==24
