@@ -5,7 +5,7 @@
 :testmod=11%10==1
 counter=0
 counter++ 
-if counter<20 then goto7 end
+ifcounter<20thengoto7end
 :testgoto=counter==20
 :testgotovar=1
 gotocounter-8 :testgotovar=0

@@ -12,6 +12,9 @@
 					"include": "#keyword"
 				},
 				{
+					"include": "#keyword2"
+				},
+				{
 					"include": "#string"
 				},
 				{
@@ -35,7 +38,11 @@
 			]
 		},
 		"keyword": {
-			"match": "(?i)(?<=\\b|[^a-zA-Z])(if|then|else\\b|end\\b|goto|abs|sqrt|sin|cos|tan|asin|acos|atan)+",
+			"match": "(?i)(?<=^|\\s|[^a-zA-Z0-9_:])(not|abs|sqrt|sin|cos|tan|asin|acos|atan)(?=[^a-zA-Z0-9_:]|$)",
+			"name": "keyword.control"
+		},
+		"keyword2": {
+			"match": "(?i)(?<=^|\\s|[^a-zA-Z_:])(if|then|else|end|goto)+",
 			"name": "keyword.control"
 		},
 		"string": {
@@ -55,7 +62,7 @@
 			}
 		},
 		"operator": {
-			"match": "(?i)(?<=\\b|[^a-zA-Z])(and|or|not)+",
+			"match": "(?i)(?<=[^a-zA-Z0-9_:])(and|or)(?=[^a-zA-Z0-9_:])",
 			"name": "keyword.operator"
 		},
 		"extvariable": {

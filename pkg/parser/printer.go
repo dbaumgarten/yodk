@@ -27,9 +27,11 @@ type Printer struct {
 	// The function should return true, if it can handle the given node and does not want this printer to continue processing it
 	PrinterExtensionFunc func(node ast.Node, visitType int, p *Printer) (bool, error)
 	// If true, only insert spaces where absolutely necessary
-	Mode         Printermode
-	text         string
-	lastWasSpace bool
+	Mode                      Printermode
+	text                      string
+	lastWasSpace              bool
+	lastWasIdentifier         bool
+	spaceIfNextIdentifierChar bool
 	// If true, at position-information to every printed token.
 	// Does not produce valid yolol, but is usefull for debugging
 	DebugPositions bool
@@ -66,30 +68,29 @@ var unaryOperatorPriority = map[string]int{
 	"!":    9,
 }
 
-func charType(b byte) int {
+func isIdentifierChar(b byte) bool {
 	s := rune(b)
 	if unicode.IsLetter(s) {
-		return 0
+		return true
 	}
 	if unicode.IsDigit(s) {
-		return 1
+		return true
 	}
-	if s == '-' {
-		return 2
+	if s == '_' || s == ':' {
+		return true
 	}
-	if s == '+' {
-		return 3
-	}
-	if s == ':' {
-		return 4
-	}
-	return 5
+	return false
 }
 
 // Write adds text to the source-code that is currently build
 func (p *Printer) Write(content string) {
+	if p.spaceIfNextIdentifierChar && isIdentifierChar(content[0]) {
+		p.Space()
+	}
 	p.text += content
+	p.spaceIfNextIdentifierChar = false
 	p.lastWasSpace = false
+	p.lastWasIdentifier = false
 }
 
 // Space adds a space to the source-code that is currently build
@@ -98,12 +99,30 @@ func (p *Printer) Space() {
 		p.text += " "
 	}
 	p.lastWasSpace = true
+	p.lastWasIdentifier = false
+	p.spaceIfNextIdentifierChar = false
 }
 
 // OptionalSpace adds a space to the source-code that is currently build, IF we are not producing compressed output
 func (p *Printer) OptionalSpace() {
 	if p.Mode == PrintermodeReadable {
 		p.Space()
+	}
+}
+
+// SpaceIfAfterIdentifier writes a space if the previously printed thing was an identifier
+func (p *Printer) SpaceIfAfterIdentifier() {
+	if p.Mode == PrintermodeReadable || p.lastWasIdentifier {
+		p.Space()
+	}
+}
+
+// SpaceIfFollowedByIdentifierChar adds a space, if the next character is one of the chars that are allowed inside identifiers
+func (p *Printer) SpaceIfFollowedByIdentifierChar() {
+	if p.Mode == PrintermodeReadable {
+		p.Space()
+	} else {
+		p.spaceIfNextIdentifierChar = true
 	}
 }
 
@@ -121,6 +140,8 @@ func (p *Printer) StatementSeparator() {
 func (p *Printer) Newline() {
 	p.text += "\n"
 	p.lastWasSpace = false
+	p.lastWasIdentifier = false
+	p.spaceIfNextIdentifierChar = false
 }
 
 // Print returns the yolol-code the ast-node and it's children represent
@@ -172,6 +193,7 @@ func (p *Printer) Print(prog ast.Node) (string, error) {
 		case *ast.Assignment:
 			if visitType == ast.PreVisit {
 				p.Write(n.Variable)
+				p.lastWasIdentifier = true
 				p.OptionalSpace()
 				p.Write(n.Operator)
 				p.OptionalSpace()
@@ -277,7 +299,7 @@ func (p *Printer) printUnaryOperation(o *ast.UnaryOperation, visitType int) {
 	thisPrio := priorityForExpression(o)
 	if visitType == ast.PreVisit {
 		if o.Operator == "-" {
-			if charType(p.text[len(p.text)-1]) == 2 {
+			if p.text[len(p.text)-1] == byte('=') {
 				p.Space()
 			} else {
 				p.OptionalSpace()
@@ -288,7 +310,7 @@ func (p *Printer) printUnaryOperation(o *ast.UnaryOperation, visitType int) {
 			//do not write anything in PreVisit
 		} else {
 			p.Write(o.Operator)
-			p.Space()
+			p.SpaceIfFollowedByIdentifierChar()
 		}
 		if childPrio < thisPrio {
 			p.Write("(")
@@ -320,20 +342,20 @@ func (p *Printer) printIf(visitType int) {
 	switch visitType {
 	case ast.PreVisit:
 		p.Write("if")
-		p.Space()
+		p.OptionalSpace()
 		break
 	case ast.InterVisit1:
-		p.Space()
+		p.SpaceIfAfterIdentifier()
 		p.Write("then")
-		p.Space()
+		p.OptionalSpace()
 		break
 	case ast.InterVisit2:
-		p.Space()
+		p.SpaceIfAfterIdentifier()
 		p.Write("else")
-		p.Space()
+		p.OptionalSpace()
 		break
 	case ast.PostVisit:
-		p.Space()
+		p.SpaceIfAfterIdentifier()
 		p.Write("end")
 		break
 	default:
@@ -349,6 +371,7 @@ func (p *Printer) printDeref(d *ast.Dereference) {
 		p.Write(d.Operator)
 	}
 	p.Write(d.Variable)
+	p.lastWasIdentifier = true
 	if d.PrePost == "Post" {
 		p.Write(d.Operator)
 		p.Space()

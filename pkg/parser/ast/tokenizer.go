@@ -69,7 +69,9 @@ func (p Position) Before(other Position) bool {
 var symbols = []string{"!==", "++", "--", ">=", "<=", "!=", "==", "==", "+=", "-=", "*=", "/=", "%=",
 	"=", ">", "<", "+", "-", "*", "/", "^", "%", ",", "(", ")", "!"}
 
-var keywordRegex = regexp.MustCompile(`(?i)^(if|else\b|end\b|then|goto|and|or|not|abs|sqrt|sin|cos|tan|asin|acos|atan)`)
+var keywordRegex1 = regexp.MustCompile(`(?i)^(and|or|not|abs|sqrt|sin|cos|tan|asin|acos|atan)(?:[^a-zA-Z0-9_:]|$)`)
+var keywordRegex2 = regexp.MustCompile(`(?i)^(if|then|else|end|goto)`)
+var keywordRegexes = []*regexp.Regexp{keywordRegex1, keywordRegex2}
 
 var identifierRegex = regexp.MustCompile("^:?[a-zA-Z]+[a-zA-Z0-9_]*")
 
@@ -105,8 +107,8 @@ type Tokenizer struct {
 	currentToken Token
 	// List of symbols the tokenizer should recognize
 	Symbols []string
-	// KeywordRegex is used to parse keywords
-	KeywordRegex *regexp.Regexp
+	// KeywordRegexes are used to parse keywords
+	KeywordRegexes []*regexp.Regexp
 	// IdentifierRegex is used to parse identifiers
 	IdentifierRegex *regexp.Regexp
 	// NumberRegex is used to parse numbers
@@ -125,7 +127,7 @@ type TokenizerCheckpoint struct {
 func NewTokenizer() *Tokenizer {
 	tk := &Tokenizer{
 		Symbols:         symbols,
-		KeywordRegex:    keywordRegex,
+		KeywordRegexes:  keywordRegexes,
 		IdentifierRegex: identifierRegex,
 		NumberRegex:     numberRegex,
 		CommentRegex:    commentRegex,
@@ -285,12 +287,14 @@ func (t *Tokenizer) getComment() (*Token, int) {
 }
 
 func (t *Tokenizer) getKeyword() (*Token, int) {
-	found := t.KeywordRegex.FindSubmatch(t.remaining)
-	if found != nil {
-		kw := found[1]
-		// keywords are always treated as lowercase
-		tok := t.newToken(TypeKeyword, strings.ToLower(string(kw)))
-		return tok, len(found[0])
+	for _, regex := range t.KeywordRegexes {
+		found := regex.FindSubmatch(t.remaining)
+		if found != nil {
+			kw := found[1]
+			// keywords are always treated as lowercase
+			tok := t.newToken(TypeKeyword, strings.ToLower(string(kw)))
+			return tok, len(found[1])
+		}
 	}
 	return nil, 0
 }

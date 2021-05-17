@@ -2,5 +2,5 @@
 a="hello world"
 a+=:aglobal+b
 :x=2020
-:answ=not (:a or :b or :c or :d)
+:answ=not(:a or :b or :c or :d)
 :answ=not :answ

@@ -1,6 +1,6 @@
-if :out==0 then :out="" end
-if :number>100 then goto7 end
-if :number%3==0 and :number%5==0 then :out+="fizzbuzz " goto6 end
-if :number%3==0 then :out+="fizz " goto6 end
-if :number%5==0 then :out+="buzz " end
+if:out==0then:out=""end
+if:number>100thengoto7end
+if:number%3==0 and :number%5==0then:out+="fizzbuzz " goto6end
+if:number%3==0then:out+="fizz " goto6end
+if:number%5==0then:out+="buzz "end
 :number++ goto2
