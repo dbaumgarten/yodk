@@ -128,6 +128,9 @@ func (t Test) GetRunner(casenr int) (runner *CaseRunner, err error) {
 
 	c.initializeVariables(runner.Coordinator)
 	runner.VMs, runner.VarTranslations, err = t.createVMs(runner.Coordinator)
+	if err != nil {
+		return nil, err
+	}
 
 	runner.StopConditions = mergeStopConditions(&t, &c)
 

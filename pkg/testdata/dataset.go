@@ -30,7 +30,10 @@ if counter < 20 then goto 7 end
 func ExecuteTestProgram(prog string) error {
 	var err error
 
-	v, _ := vm.CreateFromSource(prog)
+	v, err := vm.CreateFromSource(prog)
+	if err != nil {
+		return err
+	}
 	v.SetErrorHandler(vm.ErrorHandlerFunc(func(v *vm.VM, e error) bool {
 		err = e
 		return true
