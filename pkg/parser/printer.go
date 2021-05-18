@@ -299,7 +299,7 @@ func (p *Printer) printUnaryOperation(o *ast.UnaryOperation, visitType int) {
 	thisPrio := priorityForExpression(o)
 	if visitType == ast.PreVisit {
 		if o.Operator == "-" {
-			if p.text[len(p.text)-1] == byte('=') {
+			if p.text[len(p.text)-1] == byte('-') {
 				p.Space()
 			} else {
 				p.OptionalSpace()
