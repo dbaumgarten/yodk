@@ -72,6 +72,22 @@ func Validate(prog *ast.Program) []*Error {
 				if n.Operator != "()" {
 					checkForInnerNot(n.Exp)
 				}
+				if n.Operator == "!" {
+					switch n.Exp.(type) {
+					case *ast.NumberConstant:
+						break
+					case *ast.Dereference:
+						break
+					default:
+						errors = append(errors, &Error{
+							Message:       "Yolol only allows factorials on number-constants and variables.",
+							StartPosition: n.Exp.Start(),
+							EndPosition:   n.Exp.End(),
+						})
+
+					}
+
+				}
 			case *ast.BinaryOperation:
 				if n.Operator == "and" || n.Operator == "or" {
 					checkForInnerNot(n.Exp1)
