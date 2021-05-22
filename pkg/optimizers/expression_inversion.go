@@ -61,6 +61,14 @@ func pushDownNots(node ast.Node) ast.Expression {
 				if inner.Operator == "not" {
 					return inner.Exp
 				}
+				if inner.Operator == "()" {
+					inner.Exp = &ast.UnaryOperation{
+						Operator: "not",
+						Exp:      inner.Exp,
+						Position: inner.Exp.Start(),
+					}
+					return inner
+				}
 			}
 		}
 	}
@@ -80,6 +88,20 @@ func bubbleUpNots(node ast.Node) ast.Expression {
 					Operator: "not",
 					Exp:      bin,
 					Position: bin.Start(),
+				}
+			}
+		}
+	}
+	if un, isUnary := node.(*ast.UnaryOperation); isUnary {
+		if un.Operator == "()" {
+			if innerun, is := un.Exp.(*ast.UnaryOperation); is {
+				if innerun.Operator == "not" {
+					un.Exp = innerun.Exp
+					return &ast.UnaryOperation{
+						Operator: "not",
+						Exp:      un,
+						Position: un.Start(),
+					}
 				}
 			}
 		}

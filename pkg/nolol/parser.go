@@ -56,6 +56,8 @@ func (p *Parser) Parse(prog string) (*nast.Program, error) {
 	// Advance to fill CurrentToken
 	p.Advance()
 	parsed := p.ParseProgram()
+	parser.RemoveParenthesis(parsed)
+
 	if len(p.Errors) == 0 {
 		return parsed, nil
 	}

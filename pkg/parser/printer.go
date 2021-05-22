@@ -250,6 +250,17 @@ func insertEscapesIntoString(in string) string {
 	return in
 }
 
+func isLogicalNotExpression(n ast.Node) bool {
+	if unary, is := n.(*ast.UnaryOperation); is {
+		return unary.Operator == "not"
+	}
+	return false
+}
+
+func isAndOr(op string) bool {
+	return op == "and" || op == "or"
+}
+
 func (p *Printer) printBinaryOperation(o *ast.BinaryOperation, visitType int) {
 	lPrio := priorityForExpression(o.Exp1)
 	rPrio := priorityForExpression(o.Exp2)
@@ -263,16 +274,16 @@ func (p *Printer) printBinaryOperation(o *ast.BinaryOperation, visitType int) {
 
 	switch visitType {
 	case ast.PreVisit:
-		if lPrio < myPrio || rightAssocL {
+		if lPrio < myPrio || rightAssocL || (isLogicalNotExpression(o.Exp1) && isAndOr(o.Operator)) {
 			p.Write("(")
 		}
 		break
 	case ast.InterVisit1:
-		if lPrio < myPrio || rightAssocL {
+		if lPrio < myPrio || rightAssocL || (isLogicalNotExpression(o.Exp1) && isAndOr(o.Operator)) {
 			p.Write(")")
 		}
 		op := o.Operator
-		if op == "and" || op == "or" {
+		if isAndOr(o.Operator) {
 			p.Space()
 			p.Write(op)
 			p.Space()
@@ -282,12 +293,12 @@ func (p *Printer) printBinaryOperation(o *ast.BinaryOperation, visitType int) {
 			p.OptionalSpace()
 		}
 
-		if rIsBinary && rPrio <= myPrio && !rightAssocR {
+		if (rIsBinary && rPrio <= myPrio && !rightAssocR) || (isLogicalNotExpression(o.Exp2) && !isAndOr(o.Operator)) {
 			p.Write("(")
 		}
 		break
 	case ast.PostVisit:
-		if rIsBinary && rPrio <= myPrio && !rightAssocR {
+		if rIsBinary && rPrio <= myPrio && !rightAssocR || (isLogicalNotExpression(o.Exp2) && !isAndOr(o.Operator)) {
 			p.Write(")")
 		}
 		break
@@ -312,12 +323,12 @@ func (p *Printer) printUnaryOperation(o *ast.UnaryOperation, visitType int) {
 			p.Write(o.Operator)
 			p.SpaceIfFollowedByIdentifierChar()
 		}
-		if childPrio < thisPrio {
+		if childPrio < thisPrio || isLogicalNotExpression(o.Exp) {
 			p.Write("(")
 		}
 	}
 	if visitType == ast.PostVisit {
-		if childPrio < thisPrio {
+		if childPrio < thisPrio || isLogicalNotExpression(o.Exp) {
 			p.Write(")")
 		}
 		if o.Operator == "!" {

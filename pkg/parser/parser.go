@@ -230,6 +230,8 @@ func (p *Parser) Parse(prog string) (*ast.Program, error) {
 		return nil, p.Errors
 	}
 
+	RemoveParenthesis(parsed)
+
 	return parsed, nil
 }
 
@@ -525,8 +527,11 @@ func (p *Parser) ParseBinaryExpression(idx int) ast.Expression {
 		p.Advance()
 		rightExp := p.This.ParseBinaryExpression(idx)
 		if rightExp == nil {
-			p.ErrorExpectedExpression(fmt.Sprintf("on right side of %s", binexp.Operator))
-			return binexp
+			rightExp = p.ParseUnaryNotExpression()
+			if rightExp == nil {
+				p.ErrorExpectedExpression(fmt.Sprintf("on right side of %s", binexp.Operator))
+				return binexp
+			}
 		}
 
 		if exp == nil {
@@ -644,13 +649,18 @@ func (p *Parser) ParseFactorioalExpression() ast.Expression {
 func (p *Parser) ParseBracketExpression() ast.Expression {
 	p.Log()
 	if p.IsCurrent(ast.TypeSymbol, "(") {
+		pos := p.CurrentToken.Position
 		p.Advance()
 		innerExp := p.This.ParseExpression()
 		if innerExp == nil {
 			p.ErrorExpectedExpression("after '('")
 		}
 		p.Expect(ast.TypeSymbol, ")")
-		return innerExp
+		return &ast.UnaryOperation{
+			Position: pos,
+			Operator: "()",
+			Exp:      innerExp,
+		}
 	}
 	return p.This.ParseSingleExpression()
 }
