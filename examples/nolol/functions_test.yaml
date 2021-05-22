@@ -5,7 +5,7 @@ cases:
     outputs:
       timeok: 1
       absok: 1
-      absinifok: 1
+      absinfiok: 1
       sqrtok: 1
 
       

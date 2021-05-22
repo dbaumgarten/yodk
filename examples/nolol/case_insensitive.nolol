@@ -9,7 +9,7 @@ FoO="test"
 :funcOK=sin(3)==SIN(3)
 
 if foo==FOO then
-	:ifok=1
+	:fiok=1
 end
 
 define TEST="FOO"

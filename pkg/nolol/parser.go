@@ -56,12 +56,20 @@ func (p *Parser) Parse(prog string) (*nast.Program, error) {
 	// Advance to fill CurrentToken
 	p.Advance()
 	parsed := p.ParseProgram()
+
+	if len(p.Errors) != 0 {
+		return nil, p.Errors
+	}
+
+	validationErrors := parser.Validate(parsed, parser.ValidateAll^parser.ValidateLocalVars)
+	p.Errors = append(p.Errors, validationErrors...)
+	if len(p.Errors) != 0 {
+		return nil, p.Errors
+	}
+
 	parser.RemoveParenthesis(parsed)
 
-	if len(p.Errors) == 0 {
-		return parsed, nil
-	}
-	return nil, p.Errors
+	return parsed, nil
 }
 
 // ParseProgram parses the program

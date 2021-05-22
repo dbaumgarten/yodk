@@ -224,7 +224,7 @@ func (p *Parser) Parse(prog string) (*ast.Program, error) {
 		return nil, p.Errors
 	}
 
-	validationErrors := Validate(parsed)
+	validationErrors := Validate(parsed, ValidateAll)
 	p.Errors = append(p.Errors, validationErrors...)
 	if len(p.Errors) != 0 {
 		return nil, p.Errors
