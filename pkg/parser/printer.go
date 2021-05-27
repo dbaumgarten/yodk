@@ -215,7 +215,7 @@ func (p *Printer) Print(prog ast.Node) (string, error) {
 			p.Write("\"" + insertEscapesIntoString(n.Value) + "\"")
 			break
 		case *ast.NumberConstant:
-			if strings.HasPrefix(n.Value, "-") {
+			if strings.HasPrefix(n.Value, "-") && p.text[len(p.text)-1] == byte('-') {
 				p.Space()
 			}
 			p.Write(fmt.Sprintf(n.Value))
