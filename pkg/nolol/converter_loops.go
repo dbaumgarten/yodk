@@ -36,9 +36,20 @@ func (c *Converter) convertWhileLoop(loop *nast.WhileLoop, visitType int) error 
 	startLabel := fmt.Sprintf("while%d", loopnr)
 	endLabel := fmt.Sprintf("endwhile%d", loopnr)
 
-	inlineloop, err := c.convertWhileLoopInline(loop, startLabel)
-	if err == nil {
-		return ast.NewNodeReplacementSkip(inlineloop)
+	condition := c.sexpOptimizer.OptimizeExpression(loop.Condition)
+	conditionIsAlwaysTrue := false
+	if numberconst, is := condition.(*ast.NumberConstant); is {
+		variable := vm.VariableFromString(numberconst.Value)
+		if variable.Number() != number.Zero {
+			conditionIsAlwaysTrue = true
+		}
+	}
+
+	if !conditionIsAlwaysTrue {
+		inlineloop, err := c.convertWhileLoopInline(loop, startLabel)
+		if err == nil {
+			return ast.NewNodeReplacementSkip(inlineloop)
+		}
 	}
 
 	repl := []ast.Node{
@@ -49,16 +60,6 @@ func (c *Converter) convertWhileLoop(loop *nast.WhileLoop, visitType int) error 
 				Statements: []ast.Statement{},
 			},
 		},
-	}
-
-	condition := c.sexpOptimizer.OptimizeExpression(loop.Condition)
-
-	conditionIsAlwaysTrue := false
-	if numberconst, is := condition.(*ast.NumberConstant); is {
-		variable := vm.VariableFromString(numberconst.Value)
-		if variable.Number() != number.Zero {
-			conditionIsAlwaysTrue = true
-		}
 	}
 
 	// if the condition is always true, we do not need to add a condition-check
