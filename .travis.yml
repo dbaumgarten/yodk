@@ -49,7 +49,7 @@ deploy:
     on:
       tags: true
   - provider: script
-    script: cd vscode-yolol && vsce publish -p ${VSCODE_MARKETPLACE_TOKEN}
+    script: rm *.zip && cd vscode-yolol && vsce publish -p ${VSCODE_MARKETPLACE_TOKEN}
     skip_cleanup: true
     on:
       tags: true
