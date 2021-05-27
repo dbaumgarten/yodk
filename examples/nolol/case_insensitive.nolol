@@ -16,7 +16,7 @@ define TEST="FOO"
 :defineOK=test=="FOO"
 
 NUM=1
-while num++ <4 do
+while num++<4 do
 	:loopok=num==NUM
 end
 
@@ -25,5 +25,7 @@ macro fooBar(bar) line
 end
 
 FOOBAR(TEST)
+:x=-1
+:y=++a
 
 :done=1

@@ -13,10 +13,10 @@ while y<=height do
 		else
 			:out+="0"
 		end
-		x++ 
+		x++
 	end
 	x=0
-	y++ 
+	y++
 	:out+="\n"
 end
 

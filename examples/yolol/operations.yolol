@@ -4,7 +4,7 @@
 :testdiv=20/10==2
 :testmod=11%10==1
 counter=0
-counter++ 
+counter++
 ifcounter<20thengoto7end
 :testgot=counter==20
 :testgotvar=1

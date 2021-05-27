@@ -17,5 +17,5 @@ while :number<=upto do
 			:out+=buzz+sep
 		end
 	end
-	:number++ 
+	:number++
 end

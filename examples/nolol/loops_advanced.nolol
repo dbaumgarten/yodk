@@ -2,11 +2,11 @@
 if :out==0 then
 	:out=""
 end
-while j++ <=2 do
+while j++<=2 do
 	i=0
 	:out+="|"
 	while 1==1 do
-		i++ 
+		i++
 		if i==10 then
 			// break immediately leaves the current (innermost) loop
 			break 

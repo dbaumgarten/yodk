@@ -378,13 +378,18 @@ func (p *Printer) printIf(visitType int) {
 
 func (p *Printer) printDeref(d *ast.Dereference) {
 	if d.PrePost == "Pre" {
-		p.Space()
+		prev := string(p.text[len(p.text)-1])
+		if strings.HasPrefix(d.Operator, prev) {
+			p.Space()
+		} else {
+			p.OptionalSpace()
+		}
 		p.Write(d.Operator)
 	}
 	p.Write(d.Variable)
 	p.lastWasIdentifier = true
 	if d.PrePost == "Post" {
 		p.Write(d.Operator)
-		p.Space()
+		p.OptionalSpace()
 	}
 }

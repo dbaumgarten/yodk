@@ -7,6 +7,6 @@ end
 SMBEGIN(STATE_PING)
 
 :OUTPUT+="ping "
-:counter++ 
+:counter++
 
 SMEND(STATE_PONG)

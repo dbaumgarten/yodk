@@ -3,6 +3,6 @@ Var=123 var=456
 :assignok=Var==456
 FoO="test"
 :derefok=Foo==FoO
-:funcOK=sIn 3==sin 3
+:funcOK=sin 3==sin 3
 iffoo==FOO then:fiok=1end
 :done=1

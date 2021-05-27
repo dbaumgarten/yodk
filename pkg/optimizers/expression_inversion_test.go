@@ -21,8 +21,8 @@ var inversionCases = map[string]string{
 	"x=(not a) and not b and (not c) and not d":    "x=not(a or b or c or d)",
 	"x=:number%3==0 and :number%5==0":              "x=:number%3==0 and :number%5==0",
 	"x=not(:number%3==0 and :number%5==0)":         "x=:number%3!=0 or :number%5!=0",
-	"y=not (c++ <5)":                               "y=c++ >=5",
-	"y=c++ >=5":                                    "y=c++ >=5",
+	"y=not (c++ <5)":                               "y=c++>=5",
+	"y=c++ >=5":                                    "y=c++>=5",
 }
 
 func TestInversionOptimization(t *testing.T) {
