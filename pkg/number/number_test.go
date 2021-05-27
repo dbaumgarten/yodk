@@ -31,7 +31,7 @@ func TestFromString(t *testing.T) {
 		},
 		{
 			teststr: "1.5678",
-			want:    FromFloat64(1.567),
+			wanterr: true,
 		},
 		{
 			teststr: "1.56.7",

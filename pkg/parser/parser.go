@@ -5,6 +5,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/dbaumgarten/yodk/pkg/number"
 	"github.com/dbaumgarten/yodk/pkg/parser/ast"
 )
 
@@ -695,10 +696,20 @@ func (p *Parser) ParseSingleExpression() ast.Expression {
 	}
 	if p.IsCurrentType(ast.TypeNumber) {
 		defer p.Advance()
-		return &ast.NumberConstant{
+		nconst := &ast.NumberConstant{
 			Value:    p.CurrentToken.Value,
 			Position: p.CurrentToken.Position,
 		}
+		_, err := number.FromString(nconst.Value)
+		if err != nil {
+			p.Error(&Error{
+				Message:       "Invalid number-constant: " + err.Error(),
+				StartPosition: nconst.Start(),
+				EndPosition:   nconst.End(),
+			})
+		}
+
+		return nconst
 	}
 
 	// log error here and remove nil checks in other expression functions?

@@ -40,7 +40,7 @@ func FromString(str string) (Number, error) {
 	}
 	if len(parts) == 2 {
 		if len(parts[1]) > decimals {
-			parts[1] = parts[1][:decimals]
+			return Zero, fmt.Errorf("Numbers can have at most 3 decimal-places")
 		}
 		parts[1] += strings.Repeat("0", decimals-len(parts[1]))
 		num, err := strconv.Atoi(parts[0] + parts[1])
