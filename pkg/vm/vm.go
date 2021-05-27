@@ -726,13 +726,14 @@ func (v *VM) runDeref(d *ast.Dereference) (*Variable, error) {
 }
 
 func (v *VM) runBinOp(op *ast.BinaryOperation) (*Variable, error) {
-	arg1, err1 := v.runExpr(op.Exp1)
-	if err1 != nil {
-		return nil, err1
-	}
+	// evaluate arg2 first, because that is how the game does it
 	arg2, err2 := v.runExpr(op.Exp2)
 	if err2 != nil {
 		return nil, err2
+	}
+	arg1, err1 := v.runExpr(op.Exp1)
+	if err1 != nil {
+		return nil, err1
 	}
 	result, err := RunBinaryOperation(arg1, arg2, op.Operator)
 	if err != nil {
