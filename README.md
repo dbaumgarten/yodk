@@ -10,7 +10,7 @@ The yodk aims to be a toolkit that helps with the development of YOLOL-Scripts. 
 It mainly consists of:
 - A cli application that bundles helpful features for yolol-development ([docs](https://dbaumgarten.github.io/yodk/#/cli))
 - A vscode extension, that makes the features of the cli available directly in vscode ([docs](https://dbaumgarten.github.io/yodk/#/vscode-yolol))
-- A new programming language called NOLOL, that extends YOLOL with a lot of features, experienced dvelopers really miss when using yolol. Lern more about [nolol](https://dbaumgarten.github.io/yodk/#/nolol).
+- A new programming language called NOLOL, that extends YOLOL with a lot of features, experienced developers really miss when using yolol. Learn more about [nolol](https://dbaumgarten.github.io/yodk/#/nolol).
 
 # Features
 
@@ -30,6 +30,7 @@ For more detailed information, see the [documentation](https://dbaumgarten.githu
 - Automatically find and highlight errors in your code in realtime
 - Automatically format your code
 - Debug your yolol/nolol-code directly inside vscode
+- Auto-type your scripts into the game
 - Use yodk commands directly from within vscode
     - Optimize YOLOL-code
     - Compile NOLOL to YOLOL
@@ -59,13 +60,13 @@ It is helpful to add the yodk-binary to your path.
 You can install ```vscode-yolol``` directly from the vscode marketplace. For more information, see the [documentation](https://dbaumgarten.github.io/yodk/#/vscode-yolol).
 
 # Compatibility guarantees
-Absolutely none. There will be massive changes to the codebase in the near future and things WILL definetly break.  
+Absolutely none. There yould be breaking changes to the code at any time.  
 If you want to use this projects code in your own project, you best use go-modules to pin your dependency to a fixed version number.
 
 The goal is to be as compatible to the game as (reasonably) possible. Even if that means to re-implement weird bugs of the ingame-parser.  
 In cases where full compatibility is not feasible, yodk will try to be "downward-compatible" to the game: Everything that works in yodk SHOULD also work in-game. But a few weird edge-cases that work in the game will be treated as errors in yodk.  
 
-If you find differences between the game's implementation and yodk, please open an issue.
+If you find differences between the game's implementation and yodk, please [open an issue](https://github.com/dbaumgarten/yodk/issues/new?assignees=&labels=compatibility&template=bug_report+copy.md&title=).
 
 # Supported Operating Systems
 Yodk (and therefore also vscode-yolol) supports the following Systems:  
