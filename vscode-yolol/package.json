@@ -100,6 +100,11 @@
         "path": "./syntaxes/nolol.tmGrammar.json"
       }
     ],
+    "configurationDefaults": {
+      "[yolol]": {
+        "editor.rulers": [70]
+      }
+    },
     "commands": [
       {
         "command": "yodk.compileNolol",
