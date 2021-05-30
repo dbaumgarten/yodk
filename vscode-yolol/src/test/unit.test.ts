@@ -33,9 +33,7 @@ describe('Interact with binary', async () => {
 
   it('Answers on version', async () =>{
     let result = await runYodkCommand(["version"])
-    let correct = result["output"] == "\nUNVERSIONED BUILD\n" || result["output"].startsWith("\nv")
     assert.equal(result["code"],0)
-    assert.equal(correct,true)
   })
 
   it('Errors on unknown', async () =>{

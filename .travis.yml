@@ -5,36 +5,16 @@ services:
   - xvfb
 env:
   - NODE_VERSION="16.1" GO111MODULE=on
-
 before_install:
   - nvm install $NODE_VERSION
 install:
-  - go mod download
-  - cd vscode-yolol && npm install && npm install -g vsce && cd ..
+  - ./ci/ci.sh install ${TRAVIS_BRANCH}
 before_script:
   - export DISPLAY=:99.0;
 script:
-  - go test ./...
-  - go build -ldflags "-X github.com/dbaumgarten/yodk/cmd.YodkVersion=${TRAVIS_BRANCH}"
-  - ./yodk version
-  - GOOS=windows go build -ldflags "-X github.com/dbaumgarten/yodk/cmd.YodkVersion=${TRAVIS_BRANCH}"
-  - GOOS=darwin go build -o yodk-darwin -ldflags "-X github.com/dbaumgarten/yodk/cmd.YodkVersion=${TRAVIS_BRANCH}"
-  - cd vscode-yolol
-  - npm run vscode:prepublish
-  - npm test --silent
-  - cd ..
-  - ./build-changelog.sh
-before_deploy:
-  - cp CHANGELOG.md vscode-yolol/
-  - cd vscode-yolol
-  - npm version --no-git-tag-version $(echo ${TRAVIS_TAG} | tr -d v) --allow-same-version
-  - vsce package
-  - cp *.vsix ../vscode-yolol.vsix
-  - cd ..
-  - zip yodk-win.zip yodk.exe
-  - zip yodk-linux.zip yodk
-  - zip yodk-darwin.zip yodk-darwin
-  - ./build-docs.sh
+  - ./ci/ci.sh build ${TRAVIS_BRANCH}
+  - ./ci/ci.sh test ${TRAVIS_BRANCH}
+  - ./ci/ci.sh prepublish ${TRAVIS_BRANCH}
 deploy:
   - provider: releases
     api-key: $GH_TOKEN
@@ -49,7 +29,7 @@ deploy:
     on:
       tags: true
   - provider: script
-    script: vsce publish --packagePath vscode-yolol.vsix -p ${VSCODE_MARKETPLACE_TOKEN}
+    script: ./ci/ci.sh publish ${TRAVIS_TAG} ${VSCODE_MARKETPLACE_TOKEN}
     skip_cleanup: true
     on:
       tags: true
