@@ -599,6 +599,8 @@ func (p *Parser) ParseUnaryExpression() ast.Expression {
 	return p.This.ParseNegationExpression()
 }
 
+var problematicNumberConstant = "9223372036854775.808"
+
 // ParseNegationExpression parses a negation
 func (p *Parser) ParseNegationExpression() ast.Expression {
 	p.Log()
@@ -617,8 +619,8 @@ func (p *Parser) ParseNegationExpression() ast.Expression {
 		// But 9223372036854775.808 can not be stored inside the 64bit number-type. -9223372036854775.808 can.
 		// So as a workaround, a negation of this special number is folded into the constant itself
 		if nconst, is := subexp.(*ast.NumberConstant); is {
-			if nconst.Value == "9223372036854775.808" {
-				nconst.Value = "-9223372036854775.808"
+			if nconst.Value == problematicNumberConstant {
+				nconst.Value = "-" + problematicNumberConstant
 				return nconst
 			}
 		}
@@ -700,13 +702,15 @@ func (p *Parser) ParseSingleExpression() ast.Expression {
 			Value:    p.CurrentToken.Value,
 			Position: p.CurrentToken.Position,
 		}
-		_, err := number.FromString(nconst.Value)
-		if err != nil {
-			p.Error(&Error{
-				Message:       "Invalid number-constant: " + err.Error(),
-				StartPosition: nconst.Start(),
-				EndPosition:   nconst.End(),
-			})
+		if nconst.Value != problematicNumberConstant {
+			_, err := number.FromString(nconst.Value)
+			if err != nil {
+				p.Error(&Error{
+					Message:       "Invalid number-constant: " + err.Error(),
+					StartPosition: nconst.Start(),
+					EndPosition:   nconst.End(),
+				})
+			}
 		}
 
 		return nconst

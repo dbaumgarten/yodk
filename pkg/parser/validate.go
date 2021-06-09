@@ -66,6 +66,14 @@ func Validate(prog ast.Node, flags int) []*Error {
 	f := func(node ast.Node, visitType int) error {
 		if visitType == ast.PostVisit || visitType == ast.SingleVisit {
 			switch n := node.(type) {
+			case *ast.NumberConstant:
+				if n.Value == problematicNumberConstant {
+					errors = append(errors, &Error{
+						Message:       "Invalid number-constant. This value is too large.",
+						StartPosition: n.Start(),
+						EndPosition:   n.End(),
+					})
+				}
 			case *ast.Assignment:
 				checkVarname(n.Variable, n)
 				break
