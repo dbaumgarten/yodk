@@ -142,12 +142,17 @@ func (n Number) Sqrt() Number {
 	if n >= FromInt(9223372036854775) {
 		return MinValue
 	}
-	// Yes, this is cheating. But nobody knows what the everliving fuck the ingame-yolol is doint with it's sqrt
-	// Using this cheat we atleast pass the conformance-tests
-	if n == FromInt(24) {
-		return FromFloat64(4.899)
+
+	// blatantly copied from: https://github.com/martindevans/Yolol/blob/837322c51836c70b89e35e8c5b2e649732cbb2ec/Yolol/Execution/Number.cs#L540
+	result := math.Sqrt(n.Float64())
+	var epsilon float64
+	if result < 0 {
+		epsilon = -0.00005
+	} else {
+		epsilon = 0.00005
 	}
-	return FromFloat64(math.Sqrt(n.Float64()))
+
+	return FromFloat64(result + epsilon)
 }
 
 // Mod returns the modulus of the number
