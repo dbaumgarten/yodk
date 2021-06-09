@@ -8,12 +8,12 @@ env:
 before_install:
   - nvm install $NODE_VERSION
 install:
-  - ./ci/ci.sh install ${TRAVIS_BRANCH}
+  - ./ci/ci.sh install
 before_script:
   - export DISPLAY=:99.0;
 script:
   - ./ci/ci.sh build ${TRAVIS_BRANCH}
-  - ./ci/ci.sh test ${TRAVIS_BRANCH}
+  - ./ci/ci.sh test
   - ./ci/ci.sh prepublish ${TRAVIS_BRANCH}
 deploy:
   - provider: releases
@@ -29,7 +29,7 @@ deploy:
     on:
       tags: true
   - provider: script
-    script: ./ci/ci.sh publish ${TRAVIS_TAG} ${VSCODE_MARKETPLACE_TOKEN}
+    script: ./ci/ci.sh publish ${VSCODE_MARKETPLACE_TOKEN}
     skip_cleanup: true
     on:
       tags: true

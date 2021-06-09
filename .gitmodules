@@ -1,0 +1,3 @@
+[submodule "acid-tests"]
+	path = acid-tests
+	url = https://github.com/martindevans/Yolol-Acid-Test.git
