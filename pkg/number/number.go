@@ -28,28 +28,24 @@ const decimals = 3
 // FromString parses a string into a Number
 func FromString(str string) (Number, error) {
 	parts := strings.Split(str, ".")
-	if len(parts) > 2 {
-		return Zero, fmt.Errorf("invalid number %s", str)
-	}
-	if len(parts) == 1 {
-		num, err := strconv.Atoi(parts[0])
-		if err != nil {
-			return Zero, err
-		}
-		return FromInt(num), nil
-	}
-	if len(parts) == 2 {
+	switch len(parts) {
+	case 1:
+		str += "000"
+		break
+	case 2:
 		if len(parts[1]) > decimals {
 			return Zero, fmt.Errorf("Numbers can have at most 3 decimal-places")
 		}
-		parts[1] += strings.Repeat("0", decimals-len(parts[1]))
-		num, err := strconv.Atoi(parts[0] + parts[1])
-		if err != nil {
-			return Zero, err
-		}
-		return Number(num), nil
+		str = parts[0] + parts[1] + strings.Repeat("0", decimals-len(parts[1]))
+		break
+	default:
+		return Zero, fmt.Errorf("invalid number %s", str)
 	}
-	return Zero, nil
+	num, err := strconv.Atoi(str)
+	if err != nil {
+		return Zero, err
+	}
+	return Number(num), nil
 }
 
 // MustFromString parses a string into a Number. Panics on parsing erros

@@ -14,6 +14,10 @@ func TestFromString(t *testing.T) {
 		wanterr bool
 	}{
 		{
+			teststr: "0",
+			want:    FromInt(0),
+		},
+		{
 			teststr: "5",
 			want:    FromInt(5),
 		},
