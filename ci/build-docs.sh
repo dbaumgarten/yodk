@@ -5,7 +5,6 @@ set -e
 # It is automatically run by the ci-tool
 # This way, duplicatin between repo and documentation is reduced massively and the documentation is automatically kept up-to-date.
 
-
 rm -rf docs/generated || true
 mkdir -p docs/generated/code/yolol
 mkdir -p docs/generated/code/nolol
@@ -28,5 +27,38 @@ echo "help" | ./yodk debug examples/yolol/fizzbuzz.yolol | grep -v EOF > docs/ge
 
 cat docs/nolol-stdlib-header.md > docs/nolol-stdlib.md
 ./yodk docs stdlib/src/*.nolol -n 'std/$1' -r 'stdlib/src/(.*).nolol' >> docs/nolol-stdlib.md
+
+echo Generating sitemap
+ROOTURL="https://dbaumgarten.github.io/yodk/#/"
+IGNORE_IN_SITEMAP="README.md,nolol-stdlib-header.md,_sidebar.md"
+
+cd docs
+cat << EOF > sitemap.xml
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<url>
+      <loc>${ROOTURL}</loc>
+      <lastmod>$(date -r README.md "+%Y-%m-%dT%H:%M:%S%:z")</lastmod>
+</url>
+EOF
+
+for FILE in *.md; do
+if ! echo ${IGNORE_IN_SITEMAP} | grep -q ${FILE}; then
+CHANGEDATE=$(date -r ${FILE} "+%Y-%m-%dT%H:%M:%S%:z")
+cat << EOF >> sitemap.xml
+<url>
+      <loc>${ROOTURL}${FILE}</loc>
+      <lastmod>${CHANGEDATE}</lastmod>
+</url>
+EOF
+fi
+done
+
+cat << EOF >> sitemap.xml
+</urlset> 
+EOF
+
+cd ..
+
 
 chmod -R a+r docs

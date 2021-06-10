@@ -19,7 +19,7 @@ set -ex
 
 if [ "$PHASE" == "clean" ]; then
     rm -rf yodk* *.zip *.vsix CHANGELOG.md vscode-yolol/*.vsix vscode-yolol/CHANGELOG.md vscode-yolol/bin/yo* || true
-    rm -rf docs/generated/* docs/vscode-yolol.md docs/README.md docs/nolol-stdlib.md || true
+    rm -rf docs/sitemap.xml docs/generated/* docs/vscode-yolol.md docs/README.md docs/nolol-stdlib.md || true
 
 elif [ "$PHASE" == "install" ]; then
     go mod download

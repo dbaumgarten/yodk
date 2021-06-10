@@ -13,6 +13,7 @@ docs/README.md
 docs/vscode-yolol.md
 docs/generated/*
 docs/nolol-stdlib.md
+docs/sitemap.xml
 examples/nolol/*.yolol
 CHANGELOG.md
 yodk*.zip
