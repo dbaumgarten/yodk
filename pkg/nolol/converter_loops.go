@@ -10,9 +10,22 @@ import (
 	"github.com/dbaumgarten/yodk/pkg/vm"
 )
 
-// getCurrentLoopNumber returns the number of the current (innermost) loop that is beeing converted
-func (c *Converter) getCurrentLoopNumber() int {
-	return c.loopLevel[len(c.loopLevel)-1]
+type loopinfo struct {
+	Number            int
+	HasBreakStatement bool
+}
+
+func (li loopinfo) StartLabel() string {
+	return fmt.Sprintf("while%d", li.Number)
+}
+
+func (li loopinfo) EndLabel() string {
+	return fmt.Sprintf("endwhile%d", li.Number)
+}
+
+// getCurrentLoop returns information about the innermost loop that is currently being processed
+func (c *Converter) getCurrentLoop() *loopinfo {
+	return &c.loopLevel[len(c.loopLevel)-1]
 }
 
 // convertWhileLoop converts while loops into yolol-code
@@ -20,7 +33,9 @@ func (c *Converter) convertWhileLoop(loop *nast.WhileLoop, visitType int) error 
 
 	if visitType == ast.PreVisit {
 		c.loopcounter++
-		c.loopLevel = append(c.loopLevel, c.loopcounter)
+		c.loopLevel = append(c.loopLevel, loopinfo{
+			Number: c.loopcounter,
+		})
 		return nil
 	}
 
@@ -32,9 +47,7 @@ func (c *Converter) convertWhileLoop(loop *nast.WhileLoop, visitType int) error 
 		c.loopLevel = c.loopLevel[:len(c.loopLevel)-1]
 	}()
 
-	loopnr := c.getCurrentLoopNumber()
-	startLabel := fmt.Sprintf("while%d", loopnr)
-	endLabel := fmt.Sprintf("endwhile%d", loopnr)
+	currentloop := c.getCurrentLoop()
 
 	condition := c.sexpOptimizer.OptimizeExpression(loop.Condition)
 	conditionIsAlwaysTrue := false
@@ -46,15 +59,15 @@ func (c *Converter) convertWhileLoop(loop *nast.WhileLoop, visitType int) error 
 	}
 
 	if !conditionIsAlwaysTrue {
-		inlineloop, err := c.convertWhileLoopInline(loop, startLabel)
+		inlineloop, err := c.convertWhileLoopInline(loop)
 		if err == nil {
-			return ast.NewNodeReplacementSkip(inlineloop)
+			return ast.NewNodeReplacementSkip(inlineloop...)
 		}
 	}
 
 	repl := []ast.Node{
 		&nast.StatementLine{
-			Label: startLabel,
+			Label: currentloop.StartLabel(),
 			Line: ast.Line{
 				Position:   loop.Position,
 				Statements: []ast.Statement{},
@@ -76,7 +89,7 @@ func (c *Converter) convertWhileLoop(loop *nast.WhileLoop, visitType int) error 
 				Position:  loop.Condition.Start(),
 				Condition: condition,
 				IfBlock: []ast.Statement{
-					c.gotoForLabelPos(endLabel, loop.Condition.End()),
+					c.gotoForLabelPos(currentloop.EndLabel(), loop.Condition.End()),
 				},
 			},
 		}
@@ -89,13 +102,13 @@ func (c *Converter) convertWhileLoop(loop *nast.WhileLoop, visitType int) error 
 		Line: ast.Line{
 			Position: ast.UnknownPosition,
 			Statements: []ast.Statement{
-				c.gotoForLabel(startLabel),
+				c.gotoForLabel(currentloop.StartLabel()),
 			},
 		},
 	})
 
 	repl = append(repl, &nast.StatementLine{
-		Label: endLabel,
+		Label: currentloop.EndLabel(),
 		Line: ast.Line{
 			Position:   loop.Position,
 			Statements: []ast.Statement{},
@@ -105,7 +118,7 @@ func (c *Converter) convertWhileLoop(loop *nast.WhileLoop, visitType int) error 
 	return ast.NewNodeReplacementSkip(repl...)
 }
 
-func (c *Converter) convertWhileLoopInline(loop *nast.WhileLoop, looplabel string) (ast.Node, error) {
+func (c *Converter) convertWhileLoopInline(loop *nast.WhileLoop) ([]ast.Node, error) {
 	mergedIfElements, _ := c.mergeNololNestableElements(loop.Block.Elements)
 
 	if len(mergedIfElements) > 1 || (len(mergedIfElements) > 0 && mergedIfElements[0].(*nast.StatementLine).Label != "") {
@@ -116,10 +129,10 @@ func (c *Converter) convertWhileLoopInline(loop *nast.WhileLoop, looplabel strin
 	if len(mergedIfElements) > 0 {
 		statements = mergedIfElements[0].(*nast.StatementLine).Line.Statements
 	}
-	statements = append(statements, c.gotoForLabel(looplabel))
+	statements = append(statements, c.gotoForLabel(c.getCurrentLoop().StartLabel()))
 
 	repl := &nast.StatementLine{
-		Label: looplabel,
+		Label: c.getCurrentLoop().StartLabel(),
 		Line: ast.Line{
 			Position: loop.Position,
 			Statements: []ast.Statement{
@@ -132,11 +145,25 @@ func (c *Converter) convertWhileLoopInline(loop *nast.WhileLoop, looplabel strin
 		},
 	}
 
+	repllist := make([]ast.Node, 1, 2)
+	repllist[0] = repl
+
 	if c.getLengthOfLine(&repl.Line) > c.maxLineLength() {
 		return nil, errInlineIfImpossible
 	}
 
-	return repl, nil
+	if c.getCurrentLoop().HasBreakStatement {
+		repllist = append(repllist, &nast.StatementLine{
+			Label: c.getCurrentLoop().EndLabel(),
+			Line: ast.Line{
+				Position:   loop.Position,
+				Statements: []ast.Statement{},
+			},
+		})
+	}
+
+	return repllist, nil
+
 }
 
 // convertBreakStatement converts the beak keyword
@@ -148,8 +175,9 @@ func (c *Converter) convertBreakStatement(brk *nast.BreakStatement) error {
 			EndPosition:   brk.End(),
 		}
 	}
-	endLabel := fmt.Sprintf("endwhile%d", c.getCurrentLoopNumber())
-	return ast.NewNodeReplacementSkip(c.gotoForLabelPos(endLabel, brk.Position))
+	current := c.getCurrentLoop()
+	current.HasBreakStatement = true
+	return ast.NewNodeReplacementSkip(c.gotoForLabelPos(current.EndLabel(), brk.Position))
 }
 
 // convertContinueStatement converts the continue keyword
@@ -161,6 +189,5 @@ func (c *Converter) convertContinueStatement(cnt *nast.ContinueStatement) error 
 			EndPosition:   cnt.End(),
 		}
 	}
-	startLabel := fmt.Sprintf("while%d", c.getCurrentLoopNumber())
-	return ast.NewNodeReplacementSkip(c.gotoForLabelPos(startLabel, cnt.Position))
+	return ast.NewNodeReplacementSkip(c.gotoForLabelPos(c.getCurrentLoop().StartLabel(), cnt.Position))
 }

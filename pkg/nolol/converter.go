@@ -26,7 +26,7 @@ type Converter struct {
 	loopcounter      int
 	// keeps track of the current loop we are in while converting
 	// the last element in the list is the current innermost loop
-	loopLevel        []int
+	loopLevel        []loopinfo
 	sexpOptimizer    *optimizers.StaticExpressionOptimizer
 	boolexpOptimizer *optimizers.ExpressionInversionOptimizer
 	varnameOptimizer *optimizers.VariableNameOptimizer
@@ -53,7 +53,7 @@ func NewConverter() ConverterEmpty {
 		sexpOptimizer:    optimizers.NewStaticExpressionOptimizer(),
 		boolexpOptimizer: &optimizers.ExpressionInversionOptimizer{},
 		varnameOptimizer: optimizers.NewVariableNameOptimizer(),
-		loopLevel:        make([]int, 0),
+		loopLevel:        make([]loopinfo, 0),
 	}
 }
 
