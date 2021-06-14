@@ -152,11 +152,17 @@ export async function restartLangServer() {
 
 export function activate(lcontext: ExtensionContext) {
 	context = lcontext
-	const compileCommandHandler = () => {
+	const compileCommandHandler = async () => {
+		if (vscode.window.activeTextEditor.document.isDirty){
+			await vscode.window.activeTextEditor.document.save()
+		}
 		runYodkCommand(["compile", vscode.window.activeTextEditor.document.fileName])
 	};
 
-	const optimizeCommandHandler = () => {
+	const optimizeCommandHandler = async ()  => {
+		if (vscode.window.activeTextEditor.document.isDirty){
+			await vscode.window.activeTextEditor.document.save()
+		}
 		runYodkCommand(["optimize", vscode.window.activeTextEditor.document.fileName])
 	};
 
