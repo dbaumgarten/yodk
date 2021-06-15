@@ -5,7 +5,7 @@
 [YOLOL](https://wiki.starbasegame.com/index.php/YOLOL) is the ingame programming language for the upcoming game starbase.
 
 # What is the YODK?
-The yodk aims to be a toolkit that helps with the development of YOLOL-Scripts. YOLOL is a pretty limmited language and the lack of common features is really annoying for experienced programmers. The yodk (and in the future especially nolol) will try to mitigate this.  
+The yodk aims to be a toolkit that helps with the development of YOLOL-Scripts. YOLOL is a pretty limited language and the lack of common features is really annoying for experienced programmers. The yodk (and in the future especially nolol) will try to mitigate this.  
 
 It mainly consists of:
 - A cli application that bundles helpful features for yolol-development ([docs](https://dbaumgarten.github.io/yodk/#/cli))
@@ -60,10 +60,10 @@ It is helpful to add the yodk-binary to your path.
 You can install ```vscode-yolol``` directly from the vscode marketplace. For more information, see the [documentation](https://dbaumgarten.github.io/yodk/#/vscode-yolol).
 
 # Compatibility guarantees
-Absolutely none. There yould be breaking changes to the code at any time.  
-If you want to use this projects code in your own project, you best use go-modules to pin your dependency to a fixed version number.
+Absolutely none. There could be breaking changes to the code at any time.
+If you want to use this project's code in your own project, you best use go-modules to pin your dependency to a fixed version number.
 
-The goal is to be as compatible to the game as (reasonably) possible. Even if that means to re-implement weird bugs of the ingame-parser.  
+The goal is to be as compatible with the game as (reasonably) possible. Even if that means to re-implement weird bugs of the ingame-parser.  
 In cases where full compatibility is not feasible, yodk will try to be "downward-compatible" to the game: Everything that works in yodk SHOULD also work in-game. But a few weird edge-cases that work in the game will be treated as errors in yodk.  
 
 If you find differences between the game's implementation and yodk, please [open an issue](https://github.com/dbaumgarten/yodk/issues/new?assignees=&labels=compatibility&template=bug_report+copy.md&title=).
@@ -77,4 +77,4 @@ Yodk (and therefore also vscode-yolol) supports the following Systems:
 # Contributing
 Found bugs, suggestions, want to add features? Just [open an issue](https://github.com/dbaumgarten/yodk/issues/new).  
 
-You can, of course, fork this repo and create your own version of the yodk, but please consider working on this together. This way we will archive more.
+You can, of course, fork this repo and create your own version of the yodk, but please consider working on this together. This way we will achieve more.
