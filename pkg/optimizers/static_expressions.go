@@ -28,7 +28,7 @@ func (o *StaticExpressionOptimizer) OptimizeExpression(e ast.Expression) ast.Exp
 
 // Visit is needed to implement the Visitor interface
 func (o *StaticExpressionOptimizer) Visit(node ast.Node, visitType int) error {
-	if visitType == ast.PostVisit {
+	if visitType == ast.PostVisit || visitType == ast.SingleVisit {
 		if exp, isexp := node.(ast.Expression); isexp {
 			optimized := o.OptimizeExpressionNonRecursive(exp)
 			if optimized != nil {
@@ -43,6 +43,10 @@ func (o *StaticExpressionOptimizer) Visit(node ast.Node, visitType int) error {
 // if no optimization is possible, nil is returned
 func (o *StaticExpressionOptimizer) OptimizeExpressionNonRecursive(exp ast.Expression) ast.Expression {
 	switch n := exp.(type) {
+	case *ast.NumberConstant:
+		trimNumberConstant(n)
+		return nil
+
 	case *ast.UnaryOperation:
 		if !isConstant(n.Exp) {
 			break
@@ -78,6 +82,13 @@ func (o *StaticExpressionOptimizer) OptimizeExpressionNonRecursive(exp ast.Expre
 		return varToConst(res, n.Exp1.Start())
 	}
 	return nil
+}
+
+func trimNumberConstant(cn *ast.NumberConstant) {
+	num, err := number.FromString(cn.Value)
+	if err == nil {
+		cn.Value = num.String()
+	}
 }
 
 // is the given expression constant (does not depend on a variable)
