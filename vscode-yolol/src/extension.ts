@@ -150,20 +150,63 @@ export async function restartLangServer() {
 	startLangServer()
 }
 
+async function showOutputFile(file){
+
+	if (!vscode.workspace.getConfiguration("yolol.autoopen")["enable"]){
+		return
+	}
+
+	var openPath = vscode.Uri.file(file);
+
+	// If the file is already visible, do not open it again
+	for (var editor of vscode.window.visibleTextEditors){
+		console.log(editor.document.fileName)
+		if (editor.document.fileName == file){
+			return
+		}
+	}
+
+	var doc = await vscode.workspace.openTextDocument(openPath)
+	await vscode.window.showTextDocument(doc,{
+		preview: false
+	});
+}
+
+function replaceLast(input, search, replacement) {
+	// Find last ocurrence
+	const index = input.lastIndexOf(search);
+	if (index === -1) {
+	  return input;
+	}
+	// Replace ocurrence
+	return input.substring(0, index) + replacement + input.substring(index + search.length);
+ }
+
 export function activate(lcontext: ExtensionContext) {
 	context = lcontext
+
 	const compileCommandHandler = async () => {
 		if (vscode.window.activeTextEditor.document.isDirty){
 			await vscode.window.activeTextEditor.document.save()
 		}
-		runYodkCommand(["compile", vscode.window.activeTextEditor.document.fileName])
+
+		var infile = vscode.window.activeTextEditor.document.fileName
+		await runYodkCommand(["compile", infile])
+
+		var outfile = replaceLast(infile,".nolol",".yolol")
+		showOutputFile(outfile)
 	};
 
 	const optimizeCommandHandler = async ()  => {
 		if (vscode.window.activeTextEditor.document.isDirty){
 			await vscode.window.activeTextEditor.document.save()
 		}
-		runYodkCommand(["optimize", vscode.window.activeTextEditor.document.fileName])
+
+		var infile = vscode.window.activeTextEditor.document.fileName
+		await runYodkCommand(["optimize", infile])
+
+		var outfile = replaceLast(infile,".yolol",".opt.yolol")
+		showOutputFile(outfile)
 	};
 
 	const restartCommandHandler = () => {

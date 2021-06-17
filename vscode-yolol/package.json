@@ -28,6 +28,12 @@
       "type": "object",
       "title": "vscode-yolol",
       "properties": {
+        "yolol.autoopen.enable": {
+          "scope": "window",
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically open the output-file after compiling or optimizing"
+        },
         "yolol.formatting.mode": {
           "scope": "window",
           "type": "string",
