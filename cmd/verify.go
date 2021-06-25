@@ -9,6 +9,7 @@ import (
 )
 
 var debugLog bool
+var chipType string
 
 // verifyCmd represents the verify command
 var verifyCmd = &cobra.Command{
@@ -20,10 +21,16 @@ var verifyCmd = &cobra.Command{
 			p := parser.NewParser()
 			p.SetDebugLog(debugLog)
 			file := loadInputFile(filepath)
-			_, errs := p.Parse(file)
+			parsed, errs := p.Parse(file)
 			exitOnError(errs, "parsing file '"+filepath+"'")
 
 			err := validators.ValidateCodeLength(file)
+			exitOnError(err, "validating code")
+
+			chip, err := validators.AutoChooseChipType(chipType, filepath)
+			exitOnError(err, "determining chip-type")
+
+			err = validators.ValidateAvailableOperations(parsed, chip)
 			exitOnError(err, "validating code")
 
 			fmt.Println(filepath, "is valid")
@@ -35,4 +42,5 @@ var verifyCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(verifyCmd)
 	verifyCmd.Flags().BoolVarP(&debugLog, "debug", "d", false, "Print debug logs while parsing")
+	verifyCmd.Flags().StringVarP(&chipType, "chip", "c", "auto", "Chip-type to validate for. (auto|professional|advanced|basic)")
 }

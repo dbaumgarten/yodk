@@ -70,34 +70,38 @@ func convertToErrorlist(errs error) parser.Errors {
 	}
 }
 
-func convertErrorsToDiagnostics(errs parser.Errors) []lsp.Diagnostic {
+func convertErrorsToDiagnostics(errs parser.Errors, source string, severity lsp.DiagnosticSeverity) []lsp.Diagnostic {
 	diags := make([]lsp.Diagnostic, 0)
 
 	for _, err := range errs {
-		diag := lsp.Diagnostic{
-			Source:   "parser",
-			Message:  err.Message,
-			Severity: lsp.SeverityError,
-			Range: lsp.Range{
-				Start: lsp.Position{
-					Line:      float64(err.StartPosition.Line) - 1,
-					Character: float64(err.StartPosition.Coloumn) - 1,
-				},
-				End: lsp.Position{
-					Line:      float64(err.EndPosition.Line) - 1,
-					Character: float64(err.EndPosition.Coloumn) - 1,
-				},
-			},
-		}
+		diag := convertErrorToDiagnostic(err, source, severity)
 		diags = append(diags, diag)
 	}
 
 	return diags
 }
 
-func (s *LangServer) validateCodeLength(uri lsp.DocumentURI, text string, parsed *ast.Program) *lsp.Diagnostic {
+func convertErrorToDiagnostic(err *parser.Error, source string, severity lsp.DiagnosticSeverity) lsp.Diagnostic {
+	return lsp.Diagnostic{
+		Source:   source,
+		Message:  err.Message,
+		Severity: severity,
+		Range: lsp.Range{
+			Start: lsp.Position{
+				Line:      float64(err.StartPosition.Line) - 1,
+				Character: float64(err.StartPosition.Coloumn) - 1,
+			},
+			End: lsp.Position{
+				Line:      float64(err.EndPosition.Line) - 1,
+				Character: float64(err.EndPosition.Coloumn) - 1,
+			},
+		},
+	}
+}
+
+func (s *LangServer) validateCodeLength(uri lsp.DocumentURI, text string, parsed *ast.Program) []lsp.Diagnostic {
 	// check if the code-length of yolol-code is OK
-	if s.settings.Yolol.LengthChecking.Mode != LengthCheckModeOff && strings.HasSuffix(string(uri), ".yolol") {
+	if s.settings.Yolol.LengthChecking.Mode != LengthCheckModeOff {
 		lengtherror := validators.ValidateCodeLength(text)
 
 		// check if the code is small enough after optimizing it
@@ -116,31 +120,31 @@ func (s *LangServer) validateCodeLength(uri lsp.DocumentURI, text string, parsed
 
 		if lengtherror != nil {
 			err := lengtherror.(*parser.Error)
-			return &lsp.Diagnostic{
-				Source:   "validator",
-				Message:  err.Message,
-				Severity: lsp.SeverityWarning,
-				Range: lsp.Range{
-					Start: lsp.Position{
-						Line:      float64(err.StartPosition.Line) - 1,
-						Character: float64(err.StartPosition.Coloumn) - 1,
-					},
-					End: lsp.Position{
-						Line:      float64(err.EndPosition.Line) - 1,
-						Character: float64(err.EndPosition.Coloumn) - 1,
-					},
-				},
-			}
+			diag := convertErrorToDiagnostic(err, "validator", lsp.SeverityWarning)
+			return []lsp.Diagnostic{diag}
+
 		}
 	}
-	return nil
+	return []lsp.Diagnostic{}
+}
+
+func (s *LangServer) validateAvailableOperations(uri lsp.DocumentURI, parsed ast.Node) []lsp.Diagnostic {
+	chipType, _ := validators.AutoChooseChipType(s.settings.Yolol.ChipType, string(uri))
+	err := validators.ValidateAvailableOperations(parsed, chipType)
+
+	if err != nil {
+		errors := convertToErrorlist(err)
+		return convertErrorsToDiagnostics(errors, "validator", lsp.SeverityError)
+	}
+
+	return []lsp.Diagnostic{}
 }
 
 func (s *LangServer) Diagnose(ctx context.Context, uri lsp.DocumentURI) {
 
 	go func() {
-		var errs error
-		var parsed *ast.Program
+		var parserError error
+		var validationDiagnostics []lsp.Diagnostic
 		var diagRes DiagnosticResults
 		text, _ := s.cache.Get(uri)
 
@@ -151,26 +155,34 @@ func (s *LangServer) Diagnose(ctx context.Context, uri lsp.DocumentURI) {
 
 		if strings.HasSuffix(string(uri), ".yolol") {
 			p := parser.NewParser()
-			parsed, errs = p.Parse(text)
+			var parsed *ast.Program
+			parsed, parserError = p.Parse(text)
 
 			if parsed != nil {
 				diagRes.Variables = findUsedVariables(parsed)
 			}
 
+			if parserError == nil {
+				validationDiagnostics = s.validateAvailableOperations(uri, parsed)
+				validationDiagnostics = append(validationDiagnostics, s.validateCodeLength(uri, text, parsed)...)
+			}
+
 		} else if strings.HasSuffix(string(uri), ".nolol") {
 			mainfile := string(uri)
 			converter := nolol.NewConverter().LoadFileEx(mainfile, newfs(s, uri)).ProcessIncludes()
-			errs = converter.Error()
+			parserError = converter.Error()
 
-			if errs == nil {
+			if parserError == nil {
 				intermediate := converter.GetIntermediateProgram()
 				// Analyze() will mutate the ast, so we create a copy of it
-				intermediate = nast.CopyAst(intermediate).(*nast.Program)
-				analysis, err := nolol.Analyse(intermediate)
+				analyse := nast.CopyAst(intermediate).(*nast.Program)
+				analysis, err := nolol.Analyse(analyse)
 				if err == nil {
 					diagRes.AnalysisReport = analysis
 				}
-				errs = converter.ProcessCodeExpansion().ProcessNodes().ProcessLineNumbers().ProcessFinalize().Error()
+
+				validationDiagnostics = s.validateAvailableOperations(uri, intermediate)
+				parserError = converter.ProcessCodeExpansion().ProcessNodes().ProcessLineNumbers().ProcessFinalize().Error()
 			}
 		} else {
 			return
@@ -178,18 +190,14 @@ func (s *LangServer) Diagnose(ctx context.Context, uri lsp.DocumentURI) {
 
 		s.cache.SetDiagnostics(uri, diagRes)
 
-		parserErrors := convertToErrorlist(errs)
+		parserErrors := convertToErrorlist(parserError)
 		if parserErrors == nil {
 			return
 		}
 
-		diags := convertErrorsToDiagnostics(parserErrors)
-
-		if len(diags) == 0 {
-			diag := s.validateCodeLength(uri, text, parsed)
-			if diag != nil {
-				diags = append(diags, *diag)
-			}
+		diags := convertErrorsToDiagnostics(parserErrors, "parser", lsp.SeverityError)
+		if validationDiagnostics != nil {
+			diags = append(diags, validationDiagnostics...)
 		}
 
 		s.client.PublishDiagnostics(ctx, &lsp.PublishDiagnosticsParams{

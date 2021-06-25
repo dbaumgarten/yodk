@@ -2,6 +2,9 @@ package langserver
 
 import (
 	"encoding/json"
+	"strings"
+
+	"github.com/dbaumgarten/yodk/pkg/validators"
 )
 
 const (
@@ -22,6 +25,7 @@ type Settings struct {
 type YololSettings struct {
 	Formatting     FormatSettings      `json:"formatting"`
 	LengthChecking LengthCheckSettings `json:"lengthChecking"`
+	ChipType       string              `json:"chipType"`
 }
 
 // FormatSettings contains formatting settings
@@ -39,7 +43,14 @@ func (s *Settings) Read(inp interface{}) error {
 	if err != nil {
 		return err
 	}
-	return json.Unmarshal(by, s)
+	err = json.Unmarshal(by, s)
+	if err != nil {
+		return err
+	}
+
+	s.Yolol.ChipType = strings.ToLower(s.Yolol.ChipType)
+
+	return nil
 }
 
 // DefaultSettings returns the default-settings for the server
@@ -52,6 +63,7 @@ func DefaultSettings() *Settings {
 			LengthChecking: LengthCheckSettings{
 				Mode: LengthCheckModeStrict,
 			},
+			ChipType: validators.ChipTypeAuto,
 		},
 	}
 }

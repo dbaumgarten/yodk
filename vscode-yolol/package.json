@@ -64,6 +64,24 @@
             "Never complain"
           ]
         },
+        "yolol.chipType": {
+          "scope": "window",
+          "type": "string",
+          "enum": [
+            "Auto",
+            "Professional",
+            "Advanced",
+            "Basic"
+          ],
+          "default": "Auto",
+          "description": "What chip-type the used operations should be checked against",
+          "enumDescriptions": [
+            "Get type from filename (e.g. script_basic.yolol). Defaults to professional.",
+            "Check against professional chips",
+            "Check against advanced chips",
+            "Check against basic chips"
+          ]
+        },
         "yolol.debug.enable": {
           "scope": "window",
           "type": "boolean",

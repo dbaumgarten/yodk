@@ -20,6 +20,8 @@ The yodk can verify that a given file does contain valid yolol code. Usefull as 
 yodk verify file1.yolol file2.yolol
 ```
 
+You can pass a chip-type (basic, advanced, professional) via ```--chip``` to check if your code can run on the provided chip-type. If no argument is passed, auto-mode is used. This means that the chip-type is determined by the name of the script. A script called myscript_basic.yolol is assumed to be intended for basic chips. A myscript_advanced.yolol for advanced and so on. If the file-name (without extention) does not match ```.*_(basic|advanced|professional).yolol``` it is assumed to be for professional chips.
+
 This command does not work for nolol. Use ```yodk compile``` instead.
 
 # Optimization

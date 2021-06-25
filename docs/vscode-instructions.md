@@ -16,6 +16,8 @@ It will also check if your code fits the size-limits of yolol (20 lines * 70 cha
 - Optimized: Complain if the code is too large even after [optimizing](/cli?id=optimization)
 - Off: Never complain
 
+Additionally it will check if the script uses operations that are unavailable on the intended chip-type. You can select the intended chip-type in the vscode settings. The default-setting is auto-mode. This means that the chip-type is determined by the name of the script. A script called myscript_basic.yolol is assumed to be intended for basic chips. A myscript_advanced.yolol for advanced and so on. If the file-name (without extention) does not match ```.*_(basic|advanced|professional).(y|n)olol``` it is assumed to be for professional chips.
+
 # Auto-completion
 While you type a .yolol program, vscode will suggest words for you. These are either keywords of yolol or variable-names found in your script.
 The fact that a word is suggested at a given position does not necessarily mean, that that word is syntactically valid at this position.

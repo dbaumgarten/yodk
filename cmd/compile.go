@@ -9,6 +9,7 @@ import (
 
 	"github.com/dbaumgarten/yodk/pkg/nolol"
 	"github.com/dbaumgarten/yodk/pkg/parser"
+	"github.com/dbaumgarten/yodk/pkg/validators"
 
 	"github.com/spf13/cobra"
 )
@@ -37,8 +38,13 @@ func compileFile(fpath string) {
 		exitOnError(compileerr, "converting '"+fpath+"' to yolol")
 	}
 
-	gen := parser.Printer{}
+	chip, err := validators.AutoChooseChipType(chipType, fpath)
+	exitOnError(err, "determining chip-type")
 
+	err = validators.ValidateAvailableOperations(converted, chip)
+	exitOnError(err, "validating code")
+
+	gen := parser.Printer{}
 	generated, err := gen.Print(converted)
 	exitOnError(err, "generating code")
 	err = ioutil.WriteFile(outfile, []byte(generated), 0700)
@@ -55,4 +61,5 @@ func init() {
 	rootCmd.AddCommand(compileCmd)
 	compileCmd.Flags().StringVarP(&outputFile, "out", "o", "<inputfile>.out", "The output file")
 	compileCmd.Flags().BoolVarP(&debugLog, "debug", "d", false, "Print debug logs while parsing")
+	compileCmd.Flags().StringVarP(&chipType, "chip", "c", "auto", "Chip-type to validate for. (auto|professional|advanced|basic)")
 }
