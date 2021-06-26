@@ -160,7 +160,6 @@ async function showOutputFile(file){
 
 	// If the file is already visible, do not open it again
 	for (var editor of vscode.window.visibleTextEditors){
-		console.log(editor.document.fileName)
 		if (editor.document.fileName == file){
 			return
 		}
@@ -191,7 +190,8 @@ export function activate(lcontext: ExtensionContext) {
 		}
 
 		var infile = vscode.window.activeTextEditor.document.fileName
-		await runYodkCommand(["compile", infile])
+		var chiptype = vscode.workspace.getConfiguration("yolol")["chipType"].toLowerCase()
+		await runYodkCommand(["compile", infile, "-c", chiptype])
 
 		var outfile = replaceLast(infile,".nolol",".yolol")
 		showOutputFile(outfile)

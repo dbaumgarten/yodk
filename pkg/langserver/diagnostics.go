@@ -169,11 +169,13 @@ func (s *LangServer) Diagnose(ctx context.Context, uri lsp.DocumentURI) {
 
 		} else if strings.HasSuffix(string(uri), ".nolol") {
 			mainfile := string(uri)
-			converter := nolol.NewConverter().LoadFileEx(mainfile, newfs(s, uri)).ProcessIncludes()
-			parserError = converter.Error()
+			converter := nolol.NewConverter()
+			converter.SetChipType(s.settings.Yolol.ChipType)
+			included := converter.LoadFileEx(mainfile, newfs(s, uri)).ProcessIncludes()
+			parserError = included.Error()
 
 			if parserError == nil {
-				intermediate := converter.GetIntermediateProgram()
+				intermediate := included.GetIntermediateProgram()
 				// Analyze() will mutate the ast, so we create a copy of it
 				analyse := nast.CopyAst(intermediate).(*nast.Program)
 				analysis, err := nolol.Analyse(analyse)
@@ -181,8 +183,7 @@ func (s *LangServer) Diagnose(ctx context.Context, uri lsp.DocumentURI) {
 					diagRes.AnalysisReport = analysis
 				}
 
-				validationDiagnostics = s.validateAvailableOperations(uri, intermediate)
-				parserError = converter.ProcessCodeExpansion().ProcessNodes().ProcessLineNumbers().ProcessFinalize().Error()
+				parserError = included.ProcessCodeExpansion().ProcessNodes().ProcessLineNumbers().ProcessFinalize().Error()
 			}
 		} else {
 			return

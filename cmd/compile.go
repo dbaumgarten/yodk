@@ -9,7 +9,6 @@ import (
 
 	"github.com/dbaumgarten/yodk/pkg/nolol"
 	"github.com/dbaumgarten/yodk/pkg/parser"
-	"github.com/dbaumgarten/yodk/pkg/validators"
 
 	"github.com/spf13/cobra"
 )
@@ -31,18 +30,14 @@ func compileFile(fpath string) {
 	outfile := strings.Replace(fpath, path.Ext(fpath), ".yolol", -1)
 	converter := nolol.NewConverter()
 	converter.SetDebug(debugLog)
+	converter.SetChipType(chipType)
+
 	converted, compileerr := converter.LoadFile(fpath).Convert()
 
 	// compilation failed completely. Fail now!
 	if converted == nil {
 		exitOnError(compileerr, "converting '"+fpath+"' to yolol")
 	}
-
-	chip, err := validators.AutoChooseChipType(chipType, fpath)
-	exitOnError(err, "determining chip-type")
-
-	err = validators.ValidateAvailableOperations(converted, chip)
-	exitOnError(err, "validating code")
 
 	gen := parser.Printer{}
 	generated, err := gen.Print(converted)

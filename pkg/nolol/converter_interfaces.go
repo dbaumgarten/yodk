@@ -11,6 +11,7 @@ type ConverterEmpty interface {
 	LoadFile(mainfile string) ConverterIncludes
 	LoadFileEx(mainfile string, files FileSystem) ConverterIncludes
 	SetDebug(b bool) ConverterEmpty
+	SetChipType(chip string) ConverterEmpty
 }
 
 // ConverterIncludes is part of the Sequenced-Builder-Pattern of the Converter

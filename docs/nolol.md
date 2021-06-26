@@ -10,6 +10,10 @@ yodk compile <filename.nolol>
 ```
 Which will create a file filename.yolol right next to the input file.
 
+You can specify the chip-type (basic, advanced, professional) you want to compile the script for using the ```--chip``` flag (or a setting in vscode).
+The default is "auto", which takes the chip-type from the filename of the compiled file. A file named ```script_basic.nolol``` is compiled for basic chips and so on.
+If mode is auto and the filename does not contain a chiptype, "professional" is assumed.
+
 
 # Example
 Take a look at this fizzbuzz-example:

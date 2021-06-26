@@ -1,10 +1,11 @@
-package validators
+package validators_test
 
 import (
 	"testing"
 
 	"github.com/dbaumgarten/yodk/pkg/nolol"
 	"github.com/dbaumgarten/yodk/pkg/parser"
+	"github.com/dbaumgarten/yodk/pkg/validators"
 )
 
 func TestAutoChoosingChiptype(t *testing.T) {
@@ -17,47 +18,47 @@ func TestAutoChoosingChiptype(t *testing.T) {
 		{
 			choosen:  "auto",
 			filename: "myscript_basic.yolol",
-			wanted:   ChipTypeBasic,
+			wanted:   validators.ChipTypeBasic,
 		},
 		{
 			choosen:  "auto",
 			filename: "C:\\test\\myscript_basic.yolol",
-			wanted:   ChipTypeBasic,
+			wanted:   validators.ChipTypeBasic,
 		},
 		{
 			choosen:  "auto",
 			filename: "myscript_advanced.yolol",
-			wanted:   ChipTypeAdvanced,
+			wanted:   validators.ChipTypeAdvanced,
 		},
 		{
 			choosen:  "auto",
 			filename: "/foo/myscript_professional.yolol",
-			wanted:   ChipTypeProfessional,
+			wanted:   validators.ChipTypeProfessional,
 		},
 		{
 			choosen:  "basic",
 			filename: "myscript_basic.yolol",
-			wanted:   ChipTypeBasic,
+			wanted:   validators.ChipTypeBasic,
 		},
 		{
 			choosen:  "basic",
 			filename: "C:\\test\\myscript_basic.yolol",
-			wanted:   ChipTypeBasic,
+			wanted:   validators.ChipTypeBasic,
 		},
 		{
 			choosen:  "basic",
 			filename: "myscript_advanced.yolol",
-			wanted:   ChipTypeBasic,
+			wanted:   validators.ChipTypeBasic,
 		},
 		{
 			choosen:  "basic",
 			filename: "myscript_professional.yolol",
-			wanted:   ChipTypeBasic,
+			wanted:   validators.ChipTypeBasic,
 		},
 		{
 			choosen:  "auto",
 			filename: "myscript.yolol",
-			wanted:   ChipTypeProfessional,
+			wanted:   validators.ChipTypeProfessional,
 		},
 		{
 			choosen:   "foobar",
@@ -67,7 +68,7 @@ func TestAutoChoosingChiptype(t *testing.T) {
 	}
 
 	for i, entry := range testdata {
-		out, err := AutoChooseChipType(entry.choosen, entry.filename)
+		out, err := validators.AutoChooseChipType(entry.choosen, entry.filename)
 		if err == nil && entry.expectErr {
 			t.Fatalf("Expected an error but got none for case %d", i)
 		}
@@ -88,42 +89,42 @@ func TestAvailableOps(t *testing.T) {
 	}{
 		{
 			prog:     "x=1+2",
-			chiptype: ChipTypeBasic,
+			chiptype: validators.ChipTypeBasic,
 		},
 		{
 			prog:     "x=1+2",
-			chiptype: ChipTypeAdvanced,
+			chiptype: validators.ChipTypeAdvanced,
 		},
 		{
 			prog:     "x=1+2",
-			chiptype: ChipTypeProfessional,
+			chiptype: validators.ChipTypeProfessional,
 		},
 		{
 			prog:      "x=1%2",
-			chiptype:  ChipTypeBasic,
+			chiptype:  validators.ChipTypeBasic,
 			expectErr: true,
 		},
 		{
 			prog:     "x=1%2",
-			chiptype: ChipTypeAdvanced,
+			chiptype: validators.ChipTypeAdvanced,
 		},
 		{
 			prog:     "x=1%2",
-			chiptype: ChipTypeProfessional,
+			chiptype: validators.ChipTypeProfessional,
 		},
 		{
 			prog:      "x=sin(13)",
-			chiptype:  ChipTypeBasic,
+			chiptype:  validators.ChipTypeBasic,
 			expectErr: true,
 		},
 		{
 			prog:      "x=sin(13)",
-			chiptype:  ChipTypeAdvanced,
+			chiptype:  validators.ChipTypeAdvanced,
 			expectErr: true,
 		},
 		{
 			prog:     "x=sin(13)",
-			chiptype: ChipTypeProfessional,
+			chiptype: validators.ChipTypeProfessional,
 		},
 	}
 	for i, entry := range testdata {
@@ -137,7 +138,7 @@ func TestAvailableOps(t *testing.T) {
 			t.Error(err)
 		}
 
-		err = ValidateAvailableOperations(parsed, entry.chiptype)
+		err = validators.ValidateAvailableOperations(parsed, entry.chiptype)
 		if err == nil && entry.expectErr {
 			t.Fatalf("Expected error for test %d", i)
 		}
@@ -145,7 +146,7 @@ func TestAvailableOps(t *testing.T) {
 			t.Fatalf("Expected no error for test %d", i)
 		}
 
-		err = ValidateAvailableOperations(nololParsed, entry.chiptype)
+		err = validators.ValidateAvailableOperations(nololParsed, entry.chiptype)
 		if err == nil && entry.expectErr {
 			t.Fatalf("Expected error for nolol-test %d", i)
 		}

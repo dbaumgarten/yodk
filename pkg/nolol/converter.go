@@ -7,6 +7,7 @@ import (
 	"github.com/dbaumgarten/yodk/pkg/optimizers"
 	"github.com/dbaumgarten/yodk/pkg/parser"
 	"github.com/dbaumgarten/yodk/pkg/parser/ast"
+	"github.com/dbaumgarten/yodk/pkg/validators"
 )
 
 // Converter can convert a nolol-ast to a yolol-ast
@@ -40,7 +41,8 @@ type Converter struct {
 	macroCurrentStatementLine *nast.StatementLine
 	macroCurrentStatement     int
 	// if true, enable debug-logging
-	debug bool
+	debug          bool
+	targetChipType string
 }
 
 // NewConverter creates a new converter
@@ -54,6 +56,7 @@ func NewConverter() ConverterEmpty {
 		boolexpOptimizer: &optimizers.ExpressionInversionOptimizer{},
 		varnameOptimizer: optimizers.NewVariableNameOptimizer(),
 		loopLevel:        make([]loopinfo, 0),
+		targetChipType:   validators.ChipTypeAuto,
 	}
 }
 
@@ -87,6 +90,12 @@ func (c *Converter) SetDebug(b bool) ConverterEmpty {
 	return c
 }
 
+// SetChipType sets the yolol chip-type for that the nolol-script should be compiled
+func (c *Converter) SetChipType(chip string) ConverterEmpty {
+	c.targetChipType = chip
+	return c
+}
+
 // LoadFile is a shortcut that loads a file to convert from the file-system
 // mainfile is the path to the file on the disk.
 // All included files are loaded relative to the mainfile.
@@ -105,6 +114,9 @@ func (c *Converter) LoadFileEx(mainfile string, files FileSystem) ConverterInclu
 		c.err = err
 		return c
 	}
+
+	c.targetChipType, _ = validators.AutoChooseChipType(c.targetChipType, mainfile)
+
 	p := NewParser()
 	p.Debug(c.debug)
 	parsed, err := p.Parse(file)
@@ -191,12 +203,18 @@ func (c *Converter) ProcessNodes() ConverterLines {
 		return c
 	}
 
+	err := validators.ValidateAvailableOperations(c.prog, c.targetChipType)
+	if err != nil {
+		c.err = err
+		return c
+	}
+
 	c.usesTimeTracking = usesTimeTracking(c.prog)
 	// reserve a name for use in time-tracking
 	c.varnameOptimizer.OptimizeVarName(reservedTimeVariable)
 
 	// find all user-defined line-labels
-	err := c.findLineLabels(c.prog, false)
+	err = c.findLineLabels(c.prog, false)
 	if err != nil {
 		c.err = err
 		return c

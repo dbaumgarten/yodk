@@ -8,6 +8,7 @@ import (
 	"github.com/dbaumgarten/yodk/pkg/nolol/nast"
 	"github.com/dbaumgarten/yodk/pkg/parser"
 	"github.com/dbaumgarten/yodk/pkg/parser/ast"
+	"github.com/dbaumgarten/yodk/pkg/validators"
 )
 
 // MaxExpandedMacros is the maximum number of macros to expand, before aborting due to a loop
@@ -87,6 +88,15 @@ func (c *Converter) convertMacroDef(def *nast.MacroDefinition, visitType int) er
 	// using pre-visit here is important
 	// the definition must be resolved, BEFORE its contents are processed
 	if visitType == ast.PreVisit {
+
+		// only check macros that are defined in the main-file
+		if def.Position.File == "" {
+			err := validators.ValidateAvailableOperations(def.Code, c.targetChipType)
+			if err != nil {
+				return err
+			}
+		}
+
 		c.setMacro(def.Name, def)
 		// remove the node from the output-code
 		return ast.NewNodeReplacementSkip()
@@ -254,6 +264,19 @@ func (c *Converter) convertInsertedMacro(em *InsertedMacro, visitType int) error
 
 		// pop one level
 		c.macroLevel = c.macroLevel[:len(c.macroLevel)-1]
+
+		if len(c.macroLevel) == 0 {
+			err := validators.ValidateAvailableOperations(em.Code, c.targetChipType)
+			if err != nil {
+				origerr := err.(parser.Errors)
+
+				return &parser.Error{
+					Message:       "Can't insert macro: " + origerr[0].Message,
+					StartPosition: em.FuncCall.Start(),
+					EndPosition:   em.FuncCall.End(),
+				}
+			}
+		}
 
 		if em.FuncCall.Type == nast.MacroTypeBlock {
 			if em.MacroType == nast.MacroTypeBlock {

@@ -34,7 +34,7 @@ There are several commands that can be executed from the command-palette (f1). Y
 - **Optimize**: Run the [optimizer](/cli?id=optimization) for the currently opened yolol-file. This will create a file \<name\>.opt.yolol in the same directory, containing the optimized code. Automatically opens the optimized file (this can be disabled in the vscode-settings).
 - **Run the current test.yaml**: If you have a .yaml file open, containing [test-cases](/cli?id=testing) for your yolol-code, this action will run the tests in the .yaml-file and report the results.
 - **Run all \*_test.yaml**: Will run the testcases in all *_test.yaml files in the current directory and report the results.
-- **Compile NOLOL**: If you have a [.nolol-file](/nolol) open, run this action to compile it to yolol. This will generate a file \<name\>.yolol in the same directory, containing the compiled code. Automatically opens the compiled file (this can be disabled in the vscode-settings).
+- **Compile NOLOL**: If you have a [.nolol-file](/nolol) open, run this action to compile it to yolol. This will generate a file \<name\>.yolol in the same directory, containing the compiled code. Automatically opens the compiled file (this can be disabled in the vscode-settings). The chip-type the script is compiled for is taken from the vscode settings.
 
 # Auto-typing into Starbase
 One key-problem when writing yolol-code in an external editor always was how to get the code into your ship's yolol-chips. The easiest way was to copy/paste it line by line. Vscode-yolol can make this much faster, but offering the ability to auto-type your scripts directly into starbase.  

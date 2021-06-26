@@ -74,12 +74,12 @@
             "Basic"
           ],
           "default": "Auto",
-          "description": "What chip-type the used operations should be checked against",
+          "description": "What chip-type the used operations should be checked against. Also affects compilation of nolol-code.",
           "enumDescriptions": [
             "Get type from filename (e.g. script_basic.yolol). Defaults to professional.",
-            "Check against professional chips",
-            "Check against advanced chips",
-            "Check against basic chips"
+            "Use professional chips",
+            "Use advanced chips",
+            "Use basic chips"
           ]
         },
         "yolol.debug.enable": {
