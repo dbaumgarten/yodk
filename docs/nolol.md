@@ -166,7 +166,7 @@ This file:
 
 which includes this file:
 
-[included.nolol](generated/code/nolol/included.nolol ':include')
+[included.nolol](generated/code/nolol/included_basic.nolol ':include')
 
 will result in this yolol-code:
 
@@ -178,13 +178,28 @@ which will output:
 hello .......... daniel
 ```
 
-Includes can be chained. Which means you can include a files, that includes another file, that includes another file. Circular-includes are not possible.  
+Includes can be chained. Which means you can include a file, that includes another file, that includes another file. Circular-includes are not possible.  
 
 Included files are optimized with the rest of the code (variable-renaming, statement re-lining etc.) happens as if the included code had been in the file right from the start.  
 
 Constants and variables in the included file are not scoped. They remain defined for all of the code after the ```include```. In most cases, this is exactly what you want (when you include a file containing constants as a kind of config file), but can also lead to unexpected behavior if you include a file in the middle of your code and it overrides your previously defined values.
 
 Includes can NOT be placed in the middle of block like ```ìf``` and ```while```. Includes MUST always be on the top-level of the program.
+
+## Chip-specific includes
+Nolol offers the feature to include different files (see the chapter above) based on what chip-type you are compiling a script for. (The target chiptype can be chosen via cli-flag, in the vscode-settings and via the filename)
+
+If your script contains:
+```
+include "otherfile"
+```
+and you are compiling with "--chip advanced".
+
+The compiler will first try to include a file named ```otherfile.nolol```. If it can't find that file, it will look for a file named ```otherfile_advanced.nolol```. If it can't find that file, it will try ```otherfile_basic.nolol```. If that also doesn't work it will give up and throw an error.
+
+To summarize: The compiler will first try an exact match. Then it will try chip-specific files, starting from the the target-chip-type going down until basic.
+
+If you don't specify ```--chip```, the compiler will try to identify the target chip-type automatically by looking at the name of the file you are trying to compile. If you file is named ```name_advanced.nolol``` the compiler will use advanced as chiptype (and similar). If you don't specifiy the flag and your filename does not provide a type, professional will be assumed.
 
 ## Macros
 Reusability is a key-indicator of good programing style. Usually functions are really helpful here, but as yolol has no concept of a stack, real functions can just not be implemented. The next-best thing are macros. A macro is a defined snipped of code, that is inserted directly into the code, where ever it is mentioned (c programmers are familiar with the concept).  

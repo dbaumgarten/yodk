@@ -1,5 +1,6 @@
 scripts: 
   - including.nolol
+chiptype: advanced
 cases:
   - name: TestInclusion
     outputs:

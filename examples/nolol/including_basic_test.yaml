@@ -1,6 +1,7 @@
 scripts: 
   - including.nolol
+chiptype: basic
 cases:
   - name: TestInclusion
     outputs:
-      hello: "hello __________ daniel"
+      hello: "hello .......... daniel"

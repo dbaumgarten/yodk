@@ -61,9 +61,9 @@ var testfs = nolol.MemoryFileSystem{
 
 func TestNolol(t *testing.T) {
 	conv := nolol.NewConverter()
-	prog, err := conv.LoadFileEx("testProg", testfs).Convert()
+	prog, err := conv.LoadFileEx("testProg.nolol", testfs).Convert()
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 
 	gen := parser.Printer{}
@@ -91,8 +91,8 @@ func TestNolol(t *testing.T) {
 
 func TestInclude(t *testing.T) {
 	conv := nolol.NewConverter()
-	prog, _ := conv.LoadFileEx("testProg", testfs).Convert()
-	prog2, _ := conv.LoadFileEx("testProg3", testfs).Convert()
+	prog, _ := conv.LoadFileEx("testProg.nolol", testfs).Convert()
+	prog2, _ := conv.LoadFileEx("testProg3.nolol", testfs).Convert()
 	printer := &parser.Printer{}
 	printed, _ := printer.Print(prog)
 	printed2, _ := printer.Print(prog2)
@@ -106,7 +106,7 @@ func TestInclude(t *testing.T) {
 
 func TestLineHandling(t *testing.T) {
 	conv := nolol.NewConverter()
-	prog, err := conv.LoadFileEx("testProg2", testfs).Convert()
+	prog, err := conv.LoadFileEx("testProg2.nolol", testfs).Convert()
 	if err != nil {
 		t.Error(err)
 	}

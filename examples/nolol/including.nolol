@@ -3,7 +3,7 @@ define name="daniel"
 // other nolol files can be included into nolol files
 // the content of the included file will be pasted right where the include instruction was placed in the code
 // this happens during compilation. Therefore the included path can not be dynamically created
-include "included.nolol"
+include "included"
 :hello+=" "+name
 
 :done=1

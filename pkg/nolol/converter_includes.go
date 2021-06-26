@@ -2,15 +2,17 @@ package nolol
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/dbaumgarten/yodk/pkg/nolol/nast"
 	"github.com/dbaumgarten/yodk/pkg/parser"
 	"github.com/dbaumgarten/yodk/pkg/parser/ast"
+	"github.com/dbaumgarten/yodk/pkg/validators"
+	"github.com/dbaumgarten/yodk/stdlib"
 )
 
 // resolveIncludes searches for include-directives and inserts the lines of the included files
 func (c *Converter) convertInclude(include *nast.IncludeDirective) error {
-	p := NewParser().(*Parser)
 
 	c.includecount++
 	if c.includecount > 20 {
@@ -21,14 +23,15 @@ func (c *Converter) convertInclude(include *nast.IncludeDirective) error {
 		}
 	}
 
-	file, err := c.files.Get(include.File)
+	filesnames := make([]string, 1)
+	filesnames[0] = include.File
+
+	file, err := c.getIncludedFile(include, c.files)
 	if err != nil {
-		return &parser.Error{
-			Message:       fmt.Sprintf("Error when opening included file '%s': %s", include.File, err.Error()),
-			StartPosition: include.Start(),
-			EndPosition:   include.End(),
-		}
+		return err
 	}
+
+	p := NewParser().(*Parser)
 	p.SetFilename(include.File)
 	parsed, err := p.Parse(file)
 	if err != nil {
@@ -51,4 +54,56 @@ func (c *Converter) convertInclude(include *nast.IncludeDirective) error {
 		replacements[i] = parsed.Elements[i]
 	}
 	return ast.NewNodeReplacement(replacements...)
+}
+
+func (c *Converter) getIncludedFile(include *nast.IncludeDirective, fs FileSystem) (string, error) {
+
+	importname := include.File
+
+	if stdlib.Is(importname) {
+		file, err := stdlib.Get(importname + ".nolol")
+		if err != nil {
+			return "", err
+		}
+		return file, nil
+	}
+
+	filename := importname
+
+	if !strings.HasSuffix(importname, ".nolol") {
+		filename = importname + ".nolol"
+	}
+
+	// first try to import exact file
+	file, origerr := c.files.Get(filename)
+	if origerr == nil {
+		return file, nil
+	}
+
+	// next try all available chip-specific imports
+	switch c.targetChipType {
+	case validators.ChipTypeProfessional:
+		file, err := c.files.Get(importname + "_" + validators.ChipTypeProfessional + ".nolol")
+		if err == nil {
+			return file, nil
+		}
+		fallthrough
+	case validators.ChipTypeAdvanced:
+		file, err := c.files.Get(importname + "_" + validators.ChipTypeAdvanced + ".nolol")
+		if err == nil {
+			return file, nil
+		}
+		fallthrough
+	case validators.ChipTypeBasic:
+		file, err := c.files.Get(importname + "_" + validators.ChipTypeBasic + ".nolol")
+		if err == nil {
+			return file, nil
+		}
+	}
+
+	return "", &parser.Error{
+		Message:       fmt.Sprintf("Error when opening included file '%s': %s", importname, origerr.Error()),
+		StartPosition: include.Start(),
+		EndPosition:   include.End(),
+	}
 }
