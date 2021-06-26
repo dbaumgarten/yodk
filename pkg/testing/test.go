@@ -10,6 +10,7 @@ import (
 	yaml "gopkg.in/yaml.v2"
 
 	"github.com/dbaumgarten/yodk/pkg/nolol"
+	"github.com/dbaumgarten/yodk/pkg/validators"
 	"github.com/dbaumgarten/yodk/pkg/vm"
 )
 
@@ -30,6 +31,8 @@ type Test struct {
 	StopWhen map[string]interface{}
 	// When true, ignore runtime errors during testing
 	IgnoreErrs bool
+	// The chip-type to use for execution
+	ChipType string
 }
 
 // Case defines inputs and expected outputs for a run
@@ -73,6 +76,9 @@ func Parse(file []byte, path string) (Test, error) {
 	// set a default for MaxLines
 	if test.MaxLines == 0 {
 		test.MaxLines = 2000
+	}
+	if test.ChipType == "" {
+		test.ChipType = validators.ChipTypeAuto
 	}
 	// If there are no stop-conditions, set a default
 	if len(test.StopWhen) == 0 {
@@ -181,7 +187,9 @@ func (t Test) createVMs(coord *vm.Coordinator) ([]*vm.VM, []map[string]string, e
 
 		if strings.HasSuffix(script, ".nolol") {
 			file := filepath.Join(filepath.Dir(t.Path), script)
-			conv := nolol.NewConverter().LoadFile(file).RunConversion()
+			converter := nolol.NewConverter()
+			converter.SetChipType(t.ChipType)
+			conv := converter.LoadFile(file).RunConversion()
 			translationTables[i] = conv.GetVariableTranslations()
 			prog, err := conv.Get()
 			if err != nil {

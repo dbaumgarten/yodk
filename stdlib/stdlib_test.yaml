@@ -1,6 +1,5 @@
 scripts: 
   - testcases.nolol
-
 ignoreerrs: true
 cases:
   - name: TestStdlib
