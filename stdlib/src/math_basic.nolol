@@ -21,3 +21,8 @@ end
 macro math_floor(x) expr
 	x/1000*1000
 end
+
+// Returns x%m (even on basic chips)
+macro math_mod(x,m) expr
+    x-x/m/1000*1000*m
+end

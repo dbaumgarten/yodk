@@ -14,6 +14,9 @@ cases:
       sign3: 1
       floor1: 1
       floor2: 1
+      mod1: 1
+      mod2: 1
+      mod3: 1
       pop1: 1
       pop2: 1
       cont1: 1

@@ -12,3 +12,8 @@ end
 macro math_abs(x) expr
 	abs(x)
 end
+
+// Returns x%m (even on basic chips)
+macro math_mod(x,m) expr
+    x%m 
+end
