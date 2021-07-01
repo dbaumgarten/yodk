@@ -26,7 +26,7 @@ func (c *Converter) convertInclude(include *nast.IncludeDirective) error {
 	filesnames := make([]string, 1)
 	filesnames[0] = include.File
 
-	file, err := c.getIncludedFile(include, c.files)
+	file, err := c.getIncludedFile(include)
 	if err != nil {
 		return err
 	}
@@ -56,16 +56,13 @@ func (c *Converter) convertInclude(include *nast.IncludeDirective) error {
 	return ast.NewNodeReplacement(replacements...)
 }
 
-func (c *Converter) getIncludedFile(include *nast.IncludeDirective, fs FileSystem) (string, error) {
+func (c *Converter) getIncludedFile(include *nast.IncludeDirective) (string, error) {
 
 	importname := include.File
+	getfunc := c.files.Get
 
 	if stdlib.Is(importname) {
-		file, err := stdlib.Get(importname + ".nolol")
-		if err != nil {
-			return "", err
-		}
-		return file, nil
+		getfunc = stdlib.Get
 	}
 
 	filename := importname
@@ -75,7 +72,7 @@ func (c *Converter) getIncludedFile(include *nast.IncludeDirective, fs FileSyste
 	}
 
 	// first try to import exact file
-	file, origerr := c.files.Get(filename)
+	file, origerr := getfunc(filename)
 	if origerr == nil {
 		return file, nil
 	}
@@ -83,19 +80,19 @@ func (c *Converter) getIncludedFile(include *nast.IncludeDirective, fs FileSyste
 	// next try all available chip-specific imports
 	switch c.targetChipType {
 	case validators.ChipTypeProfessional:
-		file, err := c.files.Get(importname + "_" + validators.ChipTypeProfessional + ".nolol")
+		file, err := getfunc(importname + "_" + validators.ChipTypeProfessional + ".nolol")
 		if err == nil {
 			return file, nil
 		}
 		fallthrough
 	case validators.ChipTypeAdvanced:
-		file, err := c.files.Get(importname + "_" + validators.ChipTypeAdvanced + ".nolol")
+		file, err := getfunc(importname + "_" + validators.ChipTypeAdvanced + ".nolol")
 		if err == nil {
 			return file, nil
 		}
 		fallthrough
 	case validators.ChipTypeBasic:
-		file, err := c.files.Get(importname + "_" + validators.ChipTypeBasic + ".nolol")
+		file, err := getfunc(importname + "_" + validators.ChipTypeBasic + ".nolol")
 		if err == nil {
 			return file, nil
 		}

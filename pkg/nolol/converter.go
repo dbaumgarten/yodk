@@ -115,7 +115,11 @@ func (c *Converter) LoadFileEx(mainfile string, files FileSystem) ConverterInclu
 		return c
 	}
 
-	c.targetChipType, _ = validators.AutoChooseChipType(c.targetChipType, mainfile)
+	c.targetChipType, err = validators.AutoChooseChipType(c.targetChipType, mainfile)
+	if err != nil {
+		c.err = err
+		return c
+	}
 
 	p := NewParser()
 	p.Debug(c.debug)

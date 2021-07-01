@@ -11,6 +11,7 @@ import (
 
 	"github.com/dbaumgarten/yodk/pkg/nolol"
 	"github.com/dbaumgarten/yodk/pkg/nolol/nast"
+	"github.com/dbaumgarten/yodk/pkg/validators"
 
 	"github.com/spf13/cobra"
 )
@@ -76,19 +77,30 @@ var defaultTemplate = template.Must(template.New("templ").Funcs(template.FuncMap
 
 `))
 
-func generateDocstring(fpath string) string {
+func generateDocstring(fpath string) {
 	if !strings.HasSuffix(fpath, ".nolol") {
 		fmt.Println("This command only works for .nolol files")
 		os.Exit(1)
 	}
-	file := loadInputFile(fpath)
-	//outfile := strings.Replace(fpath, path.Ext(fpath), ".md", -1)
 
-	parser := nolol.NewParser()
-	parsed, err := parser.Parse(file)
-	exitOnError(err, "parsing nolol-code")
+	if chipType != validators.ChipTypeAuto {
+		autotype, err := validators.AutoChooseChipType(validators.ChipTypeAuto, fpath)
+		if err == nil && autotype != chipType {
+			// The user specified a chip-type, but the auto-detected type of the current file does not match it
+			// ignore the file
+			return
+		}
+	}
 
-	report, err := nolol.Analyse(parsed)
+	chip, err := validators.AutoChooseChipType(chipType, fpath)
+	exitOnError(err, "choosing chip-type")
+
+	converter := nolol.NewConverter()
+	converter.SetChipType(chip)
+	converteri := converter.LoadFile(fpath).ProcessIncludes()
+	exitOnError(converteri.Error(), "parsing file")
+
+	report, err := nolol.Analyse(converteri.GetIntermediateProgram())
 	exitOnError(err, "analyzing file")
 
 	var submatches []string
@@ -122,7 +134,6 @@ func generateDocstring(fpath string) string {
 		Name:   filename,
 		Report: report,
 	})
-	return ""
 }
 
 func init() {
@@ -130,4 +141,5 @@ func init() {
 	docsCmd.Flags().StringVarP(&docsOutputFile, "out", "o", "", "The output file. Defaults to stdout.")
 	docsCmd.Flags().StringVarP(&name, "name", "n", "", "Use this as filename in generated doc")
 	docsCmd.Flags().StringVarP(&regex, "regex", "r", "", "A regex to extract submatches from the input-filename to be used in -n")
+	docsCmd.Flags().StringVarP(&chipType, "chip", "c", "auto", "Chip-type to validate for. (auto|professional|advanced|basic)")
 }

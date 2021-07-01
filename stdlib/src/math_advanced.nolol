@@ -1,0 +1,14 @@
+// This file contains basic definitions and macros for math
+// Import using ' include "std/math" '
+
+include "std/math_basic"
+
+// Returns the next lower integer to x
+macro math_floor(x) expr
+	x-x%1
+end
+
+// Returns the absolute value of x.
+macro math_abs(x) expr
+	abs(x)
+end

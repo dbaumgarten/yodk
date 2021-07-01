@@ -26,7 +26,7 @@ sed -i 's/https:\/\/dbaumgarten.github.io\/yodk\/#//g' docs/README.md
 echo "help" | ./yodk debug examples/yolol/fizzbuzz.yolol | grep -v EOF > docs/generated/cli/debug-help.txt
 
 cat docs/nolol-stdlib-header.md > docs/nolol-stdlib.md
-./yodk docs stdlib/src/*.nolol -n 'std/$1' -r 'stdlib/src/(.*).nolol' >> docs/nolol-stdlib.md
+./yodk docs stdlib/src/*.nolol -n 'std/$1' -r 'stdlib/src/([^_]*)(_.*)?.nolol' -c professional >> docs/nolol-stdlib.md
 
 echo Generating sitemap
 ROOTURL="https://dbaumgarten.github.io/yodk/#/"

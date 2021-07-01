@@ -7,9 +7,9 @@ include "std/logic"
 :pi=math_pi==3.141
 :e=math_e==2.718
 
-:abs1=math_abs_basic(10)==10
-:abs2=math_abs_basic(-10)==10
-:abs3=math_abs_basic(0)==0
+:abs1=math_abs(10)==10
+:abs2=math_abs(-10)==10
+:abs3=math_abs(0)==0
 
 :sign1=math_sign(10)==1
 :sign2=math_sign(-10)==-1
@@ -17,14 +17,6 @@ include "std/logic"
 
 :floor1=math_floor(5.5)==5
 :floor2=math_floor(5)==5
-
-:floor3=math_floor_basic(5.5)==5
-:floor4=math_floor_basic(5)==5
-
-a=5
-b=3
-math_xor(a,b,out)
-:mxor=out==6
 
 string="abc"
 string_pop(string,popout); :pop1=popout=="c"

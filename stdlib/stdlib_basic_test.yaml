@@ -1,6 +1,7 @@
 scripts: 
   - testcases.nolol
 ignoreerrs: true
+chiptype: basic
 cases:
   - name: TestStdlib
     outputs:
