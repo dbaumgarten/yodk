@@ -18,6 +18,7 @@ func TestTokenizer(t *testing.T) {
 	// comment 2
 	:var = "another\"test"
 	:foo = (1+2.75)*3
+	:_=1
 	`
 
 	expected := `Line: 1, Coloumn: 1, Type: Newline
@@ -116,6 +117,11 @@ func TestTokenizer(t *testing.T) {
 	Line: 10, Coloumn: 18, Type: Number, Value: '3'
 	Line: 10, Coloumn: 19, Type: Newline
 	Line: 11, Coloumn: 1, Type: Whitespace, Value: '	'
+	Line: 11, Coloumn: 2, Type: ID, Value: ':_'
+	Line: 11, Coloumn: 4, Type: Symbol, Value: '='
+	Line: 11, Coloumn: 5, Type: Number, Value: '1'
+	Line: 11, Coloumn: 6, Type: Newline
+	Line: 12, Coloumn: 1, Type: Whitespace, Value: '	'
 	`
 
 	tk := ast.NewTokenizer()
