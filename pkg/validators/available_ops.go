@@ -23,7 +23,7 @@ var unavailableBinaryOps = map[string][]string{
 }
 
 var unavailableUnaryOps = map[string][]string{
-	ChipTypeBasic:        {"!", "sqrt", "sin", "cos", "tan", "asin", "acos", "atan"},
+	ChipTypeBasic:        {"!", "sqrt", "sin", "cos", "tan", "asin", "acos", "atan", "abs"},
 	ChipTypeAdvanced:     {"sin", "cos", "tan", "asin", "acos", "atan"},
 	ChipTypeProfessional: {},
 }

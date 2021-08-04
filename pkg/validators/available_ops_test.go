@@ -126,6 +126,15 @@ func TestAvailableOps(t *testing.T) {
 			prog:     "x=sin(13)",
 			chiptype: validators.ChipTypeProfessional,
 		},
+		{
+			prog:      "x=abs(13)",
+			chiptype:  validators.ChipTypeBasic,
+			expectErr: true,
+		},
+		{
+			prog:     "x=abs(13)",
+			chiptype: validators.ChipTypeAdvanced,
+		},
 	}
 	for i, entry := range testdata {
 		parsed, err := parser.NewParser().Parse(entry.prog)
