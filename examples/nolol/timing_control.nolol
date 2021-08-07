@@ -19,7 +19,7 @@ jumplbl> :f=123 // lines that have jump labels (that are in-use) can not be merg
 
 
 // auto-merging of lines can be prohibited with the $ sign
-// a line starting with $ will not be appended o previous lines
+// a line starting with $ will not be appended to previous lines
 :foo="a"
 $ :bar="b"
 // following lines however will be merged
