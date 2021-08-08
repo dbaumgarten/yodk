@@ -29,7 +29,12 @@ var optimizeCmd = &cobra.Command{
 }
 
 func optimize(filepath string) {
-	outfile := strings.Replace(filepath, path.Ext(filepath), "", -1) + ".opt" + path.Ext(filepath)
+	var outfile string
+	if outputFile != "" {
+		outfile = outputFile
+	} else {
+		outfile = strings.Replace(filepath, path.Ext(filepath), "", -1) + ".opt" + path.Ext(filepath)
+	}
 	p := parser.NewParser()
 	file := loadInputFile(filepath)
 	parsed, errs := p.Parse(file)
@@ -47,5 +52,5 @@ func optimize(filepath string) {
 
 func init() {
 	rootCmd.AddCommand(optimizeCmd)
-	optimizeCmd.Flags().StringVarP(&outputFile, "out", "o", "<inputfile>.out", "The output file")
+	optimizeCmd.Flags().StringVarP(&outputFile, "out", "o", "", "The output file")
 }

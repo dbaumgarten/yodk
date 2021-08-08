@@ -27,7 +27,12 @@ var compileCmd = &cobra.Command{
 }
 
 func compileFile(fpath string) {
-	outfile := strings.Replace(fpath, path.Ext(fpath), ".yolol", -1)
+	var outfile string
+	if outputFile != "" {
+		outfile = outputFile
+	} else {
+		outfile = strings.Replace(fpath, path.Ext(fpath), ".yolol", -1)
+	}
 	converter := nolol.NewConverter()
 	converter.SetDebug(debugLog)
 	converter.SetChipType(chipType)
@@ -54,7 +59,7 @@ func compileFile(fpath string) {
 
 func init() {
 	rootCmd.AddCommand(compileCmd)
-	compileCmd.Flags().StringVarP(&outputFile, "out", "o", "<inputfile>.out", "The output file")
+	compileCmd.Flags().StringVarP(&outputFile, "out", "o", "", "The output file")
 	compileCmd.Flags().BoolVarP(&debugLog, "debug", "d", false, "Print debug logs while parsing")
 	compileCmd.Flags().StringVarP(&chipType, "chip", "c", "auto", "Chip-type to validate for. (auto|professional|advanced|basic)")
 }
