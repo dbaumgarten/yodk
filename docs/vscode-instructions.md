@@ -64,7 +64,7 @@ This extension enables you to interactively run and debug yolol-code. To learn h
 
 
 ## Quickstart
-The easiest way to get started is to just open a .yolol or .nolol file and press f5 (or Run->Start Debugging). You now need to select "YODK Debugger".  
+The easiest way to get started is to just open a .yolol or .nolol file and press f5 (or Run->Start Debugging). (In older versions of vscode you may now be shown a dialog to select a debugger from a list. If so, select "YODK Debugger".)
 
 After this, your script is running. But as you probably have not set a breakpoint, you won't see anything.  
 
