@@ -223,6 +223,11 @@ func (c *Converter) ProcessNodes() ConverterLines {
 		c.err = err
 		return c
 	}
+	blacklist := make([]string, 0, len(c.lineLabels))
+	for el := range c.lineLabels {
+		blacklist = append(blacklist, el)
+	}
+	c.varnameOptimizer.SetBlacklist(blacklist)
 
 	// convert the remaining nodes to yolol
 	f := func(node ast.Node, visitType int) error {

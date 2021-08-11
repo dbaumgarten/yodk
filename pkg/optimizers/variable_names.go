@@ -13,6 +13,7 @@ import (
 type VariableNameOptimizer struct {
 	variableMappings map[string]string
 	invertedMappings map[string]string
+	blacklist        map[string]bool
 	varNumber        int
 }
 
@@ -21,7 +22,16 @@ func NewVariableNameOptimizer() *VariableNameOptimizer {
 	return &VariableNameOptimizer{
 		variableMappings: make(map[string]string),
 		invertedMappings: make(map[string]string),
+		blacklist:        make(map[string]bool),
 		varNumber:        1,
+	}
+}
+
+// SetBlacklist sets a list of output variable-names that shall never be produced by the optimizer
+func (o *VariableNameOptimizer) SetBlacklist(bl []string) {
+	o.blacklist = make(map[string]bool)
+	for _, el := range bl {
+		o.blacklist[el] = true
 	}
 }
 
@@ -41,6 +51,11 @@ func (o *VariableNameOptimizer) OptimizeVarName(in string) string {
 	newName, exists := o.variableMappings[lin]
 	if !exists {
 		newName = o.getNextVarName()
+		_, isBlacklisted := o.blacklist[newName]
+		for isBlacklisted {
+			newName = o.getNextVarName()
+			_, isBlacklisted = o.blacklist[newName]
+		}
 		o.variableMappings[lin] = newName
 		o.invertedMappings[newName] = in
 	}

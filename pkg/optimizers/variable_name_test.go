@@ -45,6 +45,8 @@ func TestGetNextVarName(t *testing.T) {
 func TestOptName(t *testing.T) {
 	vno := NewVariableNameOptimizer()
 
+	vno.SetBlacklist([]string{"c"})
+
 	if vno.OptimizeVarName(":extvar") != ":extvar" {
 		t.Fatal("Replaced external var")
 	}
@@ -63,6 +65,10 @@ func TestOptName(t *testing.T) {
 
 	if vno.OptimizeVarName("abc") != "a" {
 		t.Fatal("Did not remember first variable")
+	}
+
+	if vno.OptimizeVarName("abcde") != "d" {
+		t.Fatal("Did not honor blacklisting")
 	}
 }
 
