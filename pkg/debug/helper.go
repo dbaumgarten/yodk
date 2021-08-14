@@ -43,6 +43,10 @@ type Helper struct {
 	CompiledCode map[int]string
 	// If set to true, runtime-errors should not interrupt script execution
 	IgnoreErrs bool
+	// Contains a local variables used in a specific script
+	LocalVars [][]string
+	// Contains all global variables used in a specific script
+	GlobalVars []string
 }
 
 // JoinPath wraps filepath.Join, but returns only the second part if the second part is an absolute path
@@ -108,6 +112,8 @@ func FromScripts(workspace string, scripts []string, prepareVM VMPrepareFunc) (*
 		FinishedVMs:          make(map[int]bool),
 		ValidBreakpoints:     make(map[int]map[int]bool),
 		CompiledCode:         make(map[int]string),
+		LocalVars:            make([][]string, len(scripts)),
+		GlobalVars:           make([]string, 0, 10),
 	}
 
 	for i, inputFileName := range h.ScriptNames {
@@ -145,9 +151,11 @@ func FromScripts(workspace string, scripts []string, prepareVM VMPrepareFunc) (*
 
 		h.Vms[i] = thisVM
 		thisVM.SetCoordinator(h.Coordinator)
+
 		prepareVM(thisVM, inputFileName)
 		thisVM.Resume()
 	}
+	h.findReferencedVariables()
 	return h, nil
 }
 
@@ -176,6 +184,8 @@ func FromTest(workspace string, testfile string, casenr int, prepareVM VMPrepare
 		ValidBreakpoints:     make(map[int]map[int]bool),
 		CompiledCode:         make(map[int]string),
 		IgnoreErrs:           t.IgnoreErrs,
+		LocalVars:            make([][]string, len(t.Scripts)),
+		GlobalVars:           make([]string, 0, 10),
 	}
 
 	for i, script := range t.Scripts {
@@ -210,6 +220,7 @@ func FromTest(workspace string, testfile string, casenr int, prepareVM VMPrepare
 			h.CompiledCode[i] = yololcodestr
 		}
 	}
+	h.findReferencedVariables()
 	return h, nil
 }
 
@@ -241,4 +252,47 @@ func findValidBreakpoints(prog *ast.Program) map[int]bool {
 		return nil
 	}))
 	return valid
+}
+
+// finds all referenced variables of all scripts and stores them
+func (h *Helper) findReferencedVariables() {
+
+	globals := make(map[string]bool)
+
+	for idx := range h.Vms {
+		prog := h.Vms[idx].GetProgram()
+		locals := make(map[string]bool)
+
+		add := func(varname string) {
+			if strings.HasPrefix(varname, ":") {
+				globals[varname] = true
+			} else {
+				locals[varname] = true
+			}
+		}
+
+		f := func(node ast.Node, visitType int) error {
+			if visitType == ast.PreVisit || visitType == ast.SingleVisit {
+				switch n := node.(type) {
+				case *ast.Dereference:
+					add(n.Variable)
+				case *ast.Assignment:
+					add(n.Variable)
+				}
+			}
+			return nil
+		}
+
+		prog.Accept(ast.VisitorFunc(f))
+
+		h.LocalVars[idx] = make([]string, 0, len(locals))
+		for varname := range locals {
+			h.LocalVars[idx] = append(h.LocalVars[idx], varname)
+		}
+	}
+
+	h.GlobalVars = make([]string, 0, len(globals))
+	for varname := range globals {
+		h.GlobalVars = append(h.GlobalVars, varname)
+	}
 }

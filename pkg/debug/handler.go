@@ -451,37 +451,46 @@ func (h *YODKHandler) OnScopesRequest(arguments *dap.ScopesArguments) (*dap.Scop
 
 // OnVariablesRequest implements the Handler interface
 func (h *YODKHandler) OnVariablesRequest(arguments *dap.VariablesArguments) (*dap.VariablesResponseBody, error) {
-	i := 0
 	var vars map[string]vm.Variable
+	var definedVars []string
+
+	// find the variables to list
 	if arguments.VariablesReference == globalVarsReference {
+		definedVars = h.helper.GlobalVars
 		vars = h.helper.Coordinator.GetVariables()
 	} else {
+		definedVars = h.helper.LocalVars[arguments.VariablesReference-1]
 		vars = h.helper.Vms[arguments.VariablesReference-1].GetVariables()
 	}
 
 	resp := &dap.VariablesResponseBody{
-		Variables: make([]dap.Variable, len(vars)),
+		Variables: make([]dap.Variable, len(definedVars)),
 	}
-	for k, v := range vars {
-		// only include globals if we are listing globals
-		if arguments.VariablesReference != globalVarsReference && strings.HasPrefix(k, ":") {
-			continue
+
+	// fill the response with all defined variables
+	for i, varname := range definedVars {
+		outvar := dap.Variable{
+			Name:  varname,
+			Type:  "number",
+			Value: "0",
 		}
+
 		// if there are translations for local variables available, use them to retrieve the original var name
 		if arguments.VariablesReference != globalVarsReference && h.helper.VariableTranslations[arguments.VariablesReference-1] != nil {
-			k = h.helper.VariableTranslations[arguments.VariablesReference-1][k]
+			outvar.Name = h.helper.VariableTranslations[arguments.VariablesReference-1][outvar.Name]
 		}
-		resp.Variables[i] = dap.Variable{
-			Name: k,
+
+		if v, exists := vars[strings.ToLower(varname)]; exists {
+			if v.IsNumber() {
+				outvar.Type = "number"
+				outvar.Value = v.Itoa()
+			} else {
+				outvar.Type = "string"
+				outvar.Value = strings.ReplaceAll(v.String(), "\n", "\\n")
+			}
 		}
-		if v.IsNumber() {
-			resp.Variables[i].Type = "number"
-			resp.Variables[i].Value = v.Itoa()
-		} else {
-			resp.Variables[i].Type = "string"
-			resp.Variables[i].Value = strings.ReplaceAll(v.String(), "\n", "\\n")
-		}
-		i++
+
+		resp.Variables[i] = outvar
 	}
 
 	sortVariableList(resp.Variables)
