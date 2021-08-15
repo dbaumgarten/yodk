@@ -378,7 +378,7 @@ func (p *Parser) ParseGoto() ast.Statement {
 // ParseAssignment parses an assignment-node
 func (p *Parser) ParseAssignment() ast.Statement {
 	p.Log()
-	assignmentOperators := []string{"=", "+=", "-=", "*=", "/=", "%="}
+	assignmentOperators := []string{"=", "+=", "-=", "*=", "/=", "%=", "^="}
 	ret := ast.Assignment{
 		Position: p.CurrentToken.Position,
 	}

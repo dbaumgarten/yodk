@@ -11,4 +11,7 @@ i="abc" j=i-- k=--i :testd=i=="a" and j=="ab" and k=="a"
 :testra=2*3^4==162 and (2*3)^4==1296
 :testfact=2!==2 and 3!==6 and 3!!=5 and 4!/4==3! and sqrt 3!==2.449
 :testfact=:testfact and -2!==-2 and -2!==-2 and 2.5!==6
+foo=2
+foo^=10
+:textexpass=foo==1024
 :done=1

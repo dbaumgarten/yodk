@@ -66,7 +66,7 @@ func (p Position) Before(other Position) bool {
 }
 
 // !!= is a hack, meaning "factorial followed by equal"
-var symbols = []string{"!==", "++", "--", ">=", "<=", "!=", "==", "==", "+=", "-=", "*=", "/=", "%=",
+var symbols = []string{"!==", "++", "--", ">=", "<=", "!=", "==", "==", "+=", "-=", "*=", "/=", "%=", "^=",
 	"=", ">", "<", "+", "-", "*", "/", "^", "%", ",", "(", ")", "!"}
 
 var keywordRegex1 = regexp.MustCompile(`(?i)^(and|or|not|abs|sqrt|sin|cos|tan|asin|acos|atan)(?:[^a-zA-Z0-9_:]|$)`)

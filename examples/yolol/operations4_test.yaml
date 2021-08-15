@@ -15,5 +15,6 @@ cases:
       testlte: 1
       testra: 1
       testfact: 1
+      textexpass: 1
 
       
