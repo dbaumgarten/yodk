@@ -14,4 +14,6 @@ i="abc" j=i-- k=--i :testd=i=="a" and j=="ab" and k=="a"
 foo=2
 foo^=10
 :textexpass=foo==1024
+:::boo:::=123
+:testbullshit=:::boo:::==123
 :done=1

@@ -73,7 +73,7 @@ var keywordRegex1 = regexp.MustCompile(`(?i)^(and|or|not|abs|sqrt|sin|cos|tan|as
 var keywordRegex2 = regexp.MustCompile(`(?i)^(if|then|else|end|goto)`)
 var keywordRegexes = []*regexp.Regexp{keywordRegex1, keywordRegex2}
 
-var identifierRegex = regexp.MustCompile("^:[a-zA-Z0-9_]+|^[a-zA-Z]+[a-zA-Z0-9_]*")
+var identifierRegex = regexp.MustCompile("^:[a-zA-Z0-9_:]+|^[a-zA-Z]+[a-zA-Z0-9_]*")
 
 var numberRegex = regexp.MustCompile("^[0-9]+(\\.[0-9]+)?")
 
