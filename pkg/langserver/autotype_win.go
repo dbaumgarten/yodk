@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/atotto/clipboard"
 	"github.com/dbaumgarten/yodk/pkg/langserver/win32"
 )
 
@@ -50,6 +51,18 @@ var (
 		Modifiers: win32.ModCtrl | win32.ModAlt,
 		KeyCode:   'O',
 	}
+	// AutocopyHotkey is the hotkey to copy the selected chip into the clipboard
+	AutocopyHotkey = &win32.Hotkey{
+		ID:        7,
+		Modifiers: win32.ModCtrl,
+		KeyCode:   'J',
+	}
+	// SSCAutocopyHotkey is the hotkey to copy the selected chip into the clipboard (in SSC-Mode)
+	SSCAutocopyHotkey = &win32.Hotkey{
+		ID:        8,
+		Modifiers: win32.ModCtrl | win32.ModAlt,
+		KeyCode:   'J',
+	}
 )
 
 const typeDelay = 40 * time.Millisecond
@@ -69,7 +82,8 @@ func (ls *LangServer) ListenForHotkeys() {
 				go func() {
 					wg.Add(1)
 					err := win32.ListenForHotkeys(ctx, ls.hotkeyHandler, AutotypeHotkey, AutodeleteHotkey, AutooverwriteHotkey,
-						SSCAutotypeHotkey, SSCAutodeleteHotkey, SSCAutooverwriteHotkey)
+						SSCAutotypeHotkey, SSCAutodeleteHotkey, SSCAutooverwriteHotkey,
+						AutocopyHotkey, SSCAutocopyHotkey)
 					if err != nil {
 						fmt.Fprintf(os.Stderr, "Error when registering hotkeys: %s", err)
 					}
@@ -103,6 +117,8 @@ func (ls *LangServer) hotkeyHandler(hk win32.Hotkey) {
 		if code := ls.getLastOpenedCode(); code == code {
 			overwriteYololCode(code)
 		}
+	case AutocopyHotkey.ID:
+		copyChipToClipboard()
 
 	// same as above, but now for the SSC
 	case SSCAutotypeHotkey.ID:
@@ -118,6 +134,8 @@ func (ls *LangServer) hotkeyHandler(hk win32.Hotkey) {
 		if code := ls.getLastOpenedCode(); code == code {
 			overwriteYololCodeSSC(code)
 		}
+	case SSCAutocopyHotkey.ID:
+		copyChipToClipboardSSC()
 	}
 }
 
@@ -185,6 +203,26 @@ func deleteAllLinesSSC() {
 	}
 }
 
+func copyChipToClipboard() {
+	text := ""
+	for i := 0; i < 20; i++ {
+		text += copyLine() + "\n"
+		win32.SendInput(win32.KeyDownInput(win32.KeycodeDown), win32.KeyUpInput(win32.KeycodeDown))
+	}
+	text = strings.TrimSuffix(text, "\n")
+	clipboard.WriteAll(text)
+}
+
+func copyChipToClipboardSSC() {
+	text := ""
+	for i := 0; i < 20; i++ {
+		text += copyLine() + "\n"
+		nextLineSSC()
+	}
+	text = strings.TrimSuffix(text, "\n")
+	clipboard.WriteAll(text)
+}
+
 func nextLineSSC() {
 	time.Sleep(typeDelay)
 	win32.SendInput(win32.KeyDownInputArrowDownSSC(), win32.KeyUpInputArrowDownSSC())
@@ -199,4 +237,17 @@ func deleteLine() {
 	win32.SendInput(win32.KeyUpInput('A'), win32.KeyUpInput(win32.KeycodeCtrl))
 	win32.SendInput(win32.KeyDownInput(win32.KeycodeBackspace), win32.KeyUpInput(win32.KeycodeBackspace))
 	time.Sleep(typeDelay)
+}
+
+func copyLine() string {
+	win32.SendInput(win32.KeyDownInput(win32.KeycodeCtrl), win32.KeyDownInput('A'))
+	time.Sleep(typeDelay)
+	win32.SendInput(win32.KeyUpInput('A'), win32.KeyUpInput(win32.KeycodeCtrl))
+	time.Sleep(typeDelay)
+	win32.SendInput(win32.KeyDownInput(win32.KeycodeCtrl), win32.KeyDownInput('C'))
+	time.Sleep(typeDelay)
+	win32.SendInput(win32.KeyUpInput('C'), win32.KeyUpInput(win32.KeycodeCtrl))
+	time.Sleep(typeDelay)
+	line, _ := clipboard.ReadAll()
+	return line
 }

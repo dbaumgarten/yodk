@@ -60,6 +60,9 @@ The auto-typing only works properly when the lines of the chip are empty before 
 ## Overwriting code
 By pressing ```Ctrl+O``` vscode will overwrite the code on the chip, starting from the current, line with the yolol-code of the currently open script in vscode. (This is effectively a faster variant of ```Ctrl+P```+Select line+```Ctrl+I```)
 
+## Copy chip to clipboard
+Open a chip in starbase and place the cursor in the first line. By pressing ```Ctrl+J``` the complete content of the script is copied into your clipboard. Unfortunately there is no way to detect where the script ends, so it will ALWAYS copy all 20 lines, even if most of them are empty. That makes it a little slower than necessary, but is's still faster the copying everything by hand. (It may be necessary that you have some yolol-file open in vscode. Otherwise vscdoe might not activate the yolol-extension and the hotkeys won't work.)
+
 # Debugging
 This extension enables you to interactively run and debug yolol-code. To learn how to debug using vscode see here: https://code.visualstudio.com/Docs/editor/debugging .  
 (Or read the next few paragraphs)
