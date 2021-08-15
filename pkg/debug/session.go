@@ -123,8 +123,8 @@ func (ds *Session) SendEvent(event dap.EventMessage) {
 	case *dap.CapabilitiesEvent:
 		e.Event.Event = "capabilities"
 	}
-	event.GetProtocolMessage().Seq = 0
-	event.GetProtocolMessage().Type = "event"
+	event.GetEvent().ProtocolMessage.Seq = 0
+	event.GetEvent().ProtocolMessage.Type = "event"
 	ds.send(event)
 }
 
