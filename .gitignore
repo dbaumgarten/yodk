@@ -4,6 +4,7 @@ yodk
 yodk.exe
 yodk.exe~
 yodk-darwin
+yodk-*
 lslog
 dalog
 *.vsix

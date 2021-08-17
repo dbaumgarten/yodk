@@ -8,13 +8,12 @@ env:
 before_install:
   - nvm install $NODE_VERSION
 install:
-  - ./ci/ci.sh install
+  - make setup
 before_script:
   - export DISPLAY=:99.0;
 script:
-  - ./ci/ci.sh build ${TRAVIS_BRANCH}
-  - ./ci/ci.sh test
-  - ./ci/ci.sh prepublish ${TRAVIS_BRANCH}
+  - make all VERSION=${TRAVIS_BRANCH}
+  - ls -al
 deploy:
   - provider: releases
     api-key: $GH_TOKEN
@@ -29,7 +28,7 @@ deploy:
     on:
       tags: true
   - provider: script
-    script: ./ci/ci.sh publish ${VSCODE_MARKETPLACE_TOKEN}
+    script: make publish-vsix VERSION=${TRAVIS_TAG} TOKEN=${VSCODE_MARKETPLACE_TOKEN}
     skip_cleanup: true
     on:
       tags: true
