@@ -21,6 +21,10 @@ func (c *Converter) convertIf(mlif *nast.MultilineIf, visitType int) error {
 	simple, err := c.convertIfTrivial(mlif)
 	if err == nil {
 		return ast.NewNodeReplacementSkip(simple)
+	} else {
+		if err != errInlineIfImpossible {
+			return err
+		}
 	}
 
 	// the simplest if is not possible. Fall back to more complicated versions
@@ -64,14 +68,20 @@ func (c *Converter) convertIfTrivial(mlif *nast.MultilineIf) (ast.Node, error) {
 		return nil, errInlineIfImpossible
 	}
 
-	mergedIfElements, _ := c.mergeNololNestableElements(mlif.Blocks[0].Elements)
+	mergedIfElements, err := c.mergeNololNestableElements(mlif.Blocks[0].Elements)
+	if err != nil {
+		return nil, err
+	}
 	if len(mergedIfElements) > 1 || (len(mergedIfElements) > 0 && mergedIfElements[0].(*nast.StatementLine).Label != "") {
 		return nil, errInlineIfImpossible
 	}
 
 	var elseStatements []ast.Statement
 	if mlif.ElseBlock != nil {
-		mergedElseElements, _ := c.mergeNololNestableElements(mlif.ElseBlock.Elements)
+		mergedElseElements, err := c.mergeNololNestableElements(mlif.ElseBlock.Elements)
+		if err != nil {
+			return nil, err
+		}
 		if len(mergedElseElements) > 1 || (len(mergedElseElements) > 0 && mergedElseElements[0].(*nast.StatementLine).Label != "") {
 			return nil, errInlineIfImpossible
 		}
