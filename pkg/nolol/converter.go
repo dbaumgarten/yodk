@@ -220,8 +220,11 @@ func (c *Converter) ProcessNodes() ConverterLines {
 	}
 
 	c.usesTimeTracking = usesTimeTracking(c.prog)
-	// reserve a name for use in time-tracking
-	c.varnameOptimizer.OptimizeVarName(reservedTimeVariable)
+
+	if c.usesTimeTracking {
+		// reserve a name for use in time-tracking
+		c.varnameOptimizer.OptimizeVarName(reservedTimeVariable)
+	}
 
 	// find all user-defined line-labels
 	err = c.findLineLabels(c.prog, false)
