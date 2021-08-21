@@ -12,7 +12,7 @@ import (
 )
 
 // MaxExpandedMacros is the maximum number of macros to expand, before aborting due to a loop
-const MaxExpandedMacros = 50
+const MaxExpandedMacros = 100
 
 // getMacro is a case-insensitive getter for c.macros
 func (c *Converter) getMacro(name string) (*nast.MacroDefinition, bool) {
