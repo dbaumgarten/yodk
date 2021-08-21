@@ -30,4 +30,14 @@ cases:
       xor1: 1
       xor2: 1
       xor3: 1
+      min1: 1
+      min2: 1
+      min3: 1
+      max1: 1
+      max2: 1
+      max3: 1
+      clamp1: 1
+      clamp2: 1
+      clamp3: 1
+      clamp4: 1
   

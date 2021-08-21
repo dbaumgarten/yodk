@@ -26,3 +26,18 @@ end
 macro math_mod(x,m) expr
     x-x/m/1000*1000*m
 end
+
+// Returns the smaller number of x and y
+macro math_min(x, y) expr
+    x + (y-x)*(x>y)
+end
+
+// Returns the larger number of x and y
+macro math_max(x, y) expr
+    x + (y-x)*(x<y)
+end
+
+// Clamps x to the range of min and max
+macro math_clamp(x,min,max) expr
+    math_min(math_max(x, min), max)
+end
