@@ -213,6 +213,12 @@ func (c *Converter) ProcessNodes() ConverterLines {
 		return c
 	}
 
+	err = c.eliminateDeadCode(c.prog)
+	if err != nil {
+		c.err = err
+		return c
+	}
+
 	c.usesTimeTracking = usesTimeTracking(c.prog)
 	// reserve a name for use in time-tracking
 	c.varnameOptimizer.OptimizeVarName(reservedTimeVariable)

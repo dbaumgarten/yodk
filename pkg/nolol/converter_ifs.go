@@ -4,7 +4,9 @@ import (
 	"fmt"
 
 	"github.com/dbaumgarten/yodk/pkg/nolol/nast"
+	"github.com/dbaumgarten/yodk/pkg/number"
 	"github.com/dbaumgarten/yodk/pkg/parser/ast"
+	"github.com/dbaumgarten/yodk/pkg/vm"
 )
 
 // special error that is emitted if a nolol if can not be converted to an inline yolol-if
@@ -205,4 +207,82 @@ func (c *Converter) convertConditionMultiline(mlif *nast.MultilineIf, index int,
 	})
 
 	return repl
+}
+
+func (c *Converter) eliminateDeadCode(n ast.Node) error {
+	f := func(node ast.Node, visitType int) error {
+		if visitType == ast.PostVisit {
+			if mlif, is := node.(*nast.MultilineIf); is {
+				return c.removeDeadBranches(mlif)
+			}
+		}
+		return nil
+	}
+	return n.Accept(ast.VisitorFunc(f))
+}
+
+// Returns true if the given expression is a static value (and returns that value)
+func (c Converter) isStaticValue(e ast.Expression) (bool, *vm.Variable) {
+	condition := c.sexpOptimizer.OptimizeExpression(e)
+	if numberconst, is := condition.(*ast.NumberConstant); is {
+		return true, vm.VariableFromString(numberconst.Value)
+	}
+	return false, nil
+}
+
+func (c *Converter) removeDeadBranches(mlif *nast.MultilineIf) error {
+	replacement := &nast.MultilineIf{
+		Positions:  make([]ast.Position, 0, len(mlif.Positions)),
+		Conditions: make([]ast.Expression, 0, len(mlif.Conditions)),
+		Blocks:     make([]*nast.Block, 0, len(mlif.Blocks)),
+		ElseBlock:  mlif.ElseBlock,
+	}
+	foundAlwaysTrue := false
+	for i, cond := range mlif.Conditions {
+		isstatic, value := c.isStaticValue(cond)
+		if isstatic && value.IsNumber() {
+			if value.Number() == number.Zero {
+				// condition is always false. Do not copy this to replacement
+			} else {
+				// always true condition.
+				foundAlwaysTrue = true
+				if len(replacement.Conditions) == 0 {
+					// this is the first (and now only) condition.
+					replacement.Positions = append(replacement.Positions, mlif.Positions[i])
+					replacement.Conditions = append(replacement.Conditions, mlif.Conditions[i])
+					replacement.Blocks = append(replacement.Blocks, mlif.Blocks[i])
+					replacement.ElseBlock = nil
+				} else {
+					// there is a condition before this
+					replacement.ElseBlock = mlif.Blocks[i]
+				}
+				break
+			}
+		} else {
+			// not a static condition. Copy over to replacement and continue
+			replacement.Positions = append(replacement.Positions, mlif.Positions[i])
+			replacement.Conditions = append(replacement.Conditions, mlif.Conditions[i])
+			replacement.Blocks = append(replacement.Blocks, mlif.Blocks[i])
+		}
+	}
+
+	if len(replacement.Conditions) == 0 {
+		if replacement.ElseBlock == nil {
+			return ast.NewNodeReplacementSkip()
+		} else {
+			return ast.NewNodeReplacementSkip(blockToNodelist(replacement.ElseBlock)...)
+		}
+	} else if len(replacement.Conditions) == 1 && foundAlwaysTrue && replacement.ElseBlock == nil {
+		return ast.NewNodeReplacementSkip(blockToNodelist(replacement.Blocks[0])...)
+	}
+
+	return ast.NewNodeReplacementSkip(replacement)
+}
+
+func blockToNodelist(block *nast.Block) []ast.Node {
+	nodes := make([]ast.Node, len(block.Elements))
+	for i, el := range block.Elements {
+		nodes[i] = el
+	}
+	return nodes
 }

@@ -27,5 +27,15 @@ end
 // However, if you ABSOLUTELY need an inline if (or an error if thats not possible), it can still be usefull.
 a=1; if 1==1 then :foo=1; lala=123 else :foo=2 end; b=2
 
+// If the condition of a branch can be evaluated at compile time (because it consists only of constants)
+// then the compiler will automatically remove any unreachable code (and if possible completely replace the if-statement with one of the cases
+define ENABLE_BONUS = 1
+if ENABLE_BONUS == 1 then
+	:yeah=1
+else
+	// this is unreachable and will not be included in the generated yolol
+	:yeah=0
+end
+
 :other="done"
 :done=1

@@ -1,0 +1,74 @@
+:err=0
+define foo=1
+if foo==1 then
+	:o1=1
+else if foo==2 then
+	:o1=2
+	:err++
+else if foo==3 then
+    :o1=3
+	:err++
+else
+	:o1=4
+	:err++
+end
+$
+define foo=5
+if foo==1 then
+	:o2=1
+	:err++
+else if foo==2 then
+	:o2=2
+	:err++
+else if foo==3 then
+    :o2=3
+	:err++
+else
+	:o2=4
+end
+$
+define foo=5
+bar=4
+if foo==1 then
+	:o3=1
+	:err++
+else if foo==2 then
+	:o3=2
+	:err++
+else if bar==4 then
+    :o3=3
+else
+	:o3=4
+	:err++
+end
+$
+define foo=5
+bar=2
+if bar==1 then
+	:o4=1
+	:err++
+else if bar==2 then
+	:o4=2
+else if bar==4 then
+    :o4=3
+	:err++
+else
+	:o4=4
+	:err++
+end
+$
+define foo=5
+if bar==1 then
+	:o5=1
+	:err++
+else if foo==2 then
+	:o5=2
+	:err++
+else if foo==5 then
+    :o5=3
+else
+	:o5=4
+	:err++
+end
+
+:done=1

@@ -14,7 +14,7 @@ d> // or on an own line. code automatically falls through empty lines
 :text="d is at line: "+d
 :out+="d"; goto e
 
-if 1==0 then
+if :a==1 then
 	// you can even jump into ifs
 	e> :out+="e"
 	// and out again

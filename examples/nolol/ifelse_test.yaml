@@ -37,3 +37,6 @@ cases:
     outputs:
       msg: "Weekend!!! is over :("
       foo: 1
+  - name: yeah
+    outputs:
+      yeah: 1

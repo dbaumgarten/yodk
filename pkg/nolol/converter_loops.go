@@ -4,10 +4,8 @@ import (
 	"fmt"
 
 	"github.com/dbaumgarten/yodk/pkg/nolol/nast"
-	"github.com/dbaumgarten/yodk/pkg/number"
 	"github.com/dbaumgarten/yodk/pkg/parser"
 	"github.com/dbaumgarten/yodk/pkg/parser/ast"
-	"github.com/dbaumgarten/yodk/pkg/vm"
 )
 
 type loopinfo struct {
@@ -49,13 +47,11 @@ func (c *Converter) convertWhileLoop(loop *nast.WhileLoop, visitType int) error 
 
 	currentloop := c.getCurrentLoop()
 
-	condition := c.sexpOptimizer.OptimizeExpression(loop.Condition)
 	conditionIsAlwaysTrue := false
-	if numberconst, is := condition.(*ast.NumberConstant); is {
-		variable := vm.VariableFromString(numberconst.Value)
-		if variable.Number() != number.Zero {
-			conditionIsAlwaysTrue = true
-		}
+	condition := loop.Condition
+	isstatic, value := c.isStaticValue(condition)
+	if isstatic && value.IsNumber() && value.Number() != 0 {
+		conditionIsAlwaysTrue = true
 	}
 
 	if !conditionIsAlwaysTrue {
