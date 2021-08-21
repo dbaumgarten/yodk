@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-for FILE in acid-tests/*.yolol; do
+for FILE in acid-tests/conformance/*.yolol; do
 
 echo Testing $FILE
 cat << EOF > acid_test.yaml
