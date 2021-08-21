@@ -16,6 +16,9 @@ const Zero = Number(0)
 // One as constant
 const One = Number(1000)
 
+// MinusOne as constant
+const MinusOne = Number(-1000)
+
 // MaxValue is the largest possible value
 const MaxValue = Number(math.MaxInt64)
 
@@ -159,6 +162,9 @@ func (n Number) Sqrt() Number {
 func (n Number) Mod(m Number) (Number, error) {
 	if m == Zero {
 		return Zero, fmt.Errorf("Division by 0")
+	}
+	if m < One && m > MinusOne {
+		return Zero, fmt.Errorf("The ingame-implementation thinks this is a division by 0")
 	}
 	return n % m, nil
 }
