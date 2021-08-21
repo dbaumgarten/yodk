@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"unicode/utf8"
 
 	"github.com/dbaumgarten/yodk/pkg/number"
 	"github.com/dbaumgarten/yodk/pkg/parser"
@@ -708,13 +709,20 @@ func (v *VM) runDeref(d *ast.Dereference) (*Variable, error) {
 		case "":
 			return oldval, nil
 		case "++":
-			newval.Value = oldval.String() + " "
+			if len(oldval.String()) < MaxStringLenght {
+				newval.Value = oldval.String() + " "
+			}
 			break
 		case "--":
-			if len(oldval.String()) == 0 {
+			str := oldval.String()
+			if len(str) == 0 {
 				return nil, RuntimeError{fmt.Errorf("String in variable '%s' is already empty", d.Variable), d}
 			}
-			newval.Value = string([]rune(oldval.String())[:len(oldval.String())-1])
+			r, size := utf8.DecodeLastRuneInString(str)
+			if r == utf8.RuneError && (size == 0 || size == 1) {
+				size = 0
+			}
+			newval.Value = str[:len(str)-size]
 			break
 		default:
 			return nil, RuntimeError{fmt.Errorf("Unknown operator '%s'", d.Operator), d}

@@ -3,9 +3,12 @@ package vm
 import (
 	"fmt"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/dbaumgarten/yodk/pkg/number"
 )
+
+const MaxStringLenght = 1024
 
 // RunUnaryOperation executes the given operation with the given argument and returns the result
 func RunUnaryOperation(arg *Variable, operator string) (*Variable, error) {
@@ -178,7 +181,13 @@ func RunBinaryOperation(arg1 *Variable, arg2 *Variable, operator string) (*Varia
 	if arg1.IsString() {
 		switch operator {
 		case "+":
-			endResult.Value = arg1.String() + arg2.String()
+			value := arg1.String() + arg2.String()
+			size := utf8.RuneCountInString(value)
+			if size > MaxStringLenght {
+				runes := []rune(value)
+				value = string(runes[:1024])
+			}
+			endResult.Value = value
 			break
 		case "-":
 			lastIndex := strings.LastIndex(arg1.String(), arg2.String())
