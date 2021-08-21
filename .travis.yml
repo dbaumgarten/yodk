@@ -1,4 +1,7 @@
 language: go
+branches:
+  except:
+  - latest
 go: 1.14
 dist: bionic
 services:
@@ -14,7 +17,34 @@ before_script:
 script:
   - make all VERSION=${TRAVIS_BRANCH}
   - ls -al
+before_deploy: |
+  if [ "${TRAVIS_BRANCH}" == "develop" ] && [ "${TRAVIS_TAG}" == "" ]; then
+    git tag -f latest
+    git remote add gh https://${TRAVIS_REPO_SLUG%/*}:${GH_TOKEN}@github.com/${TRAVIS_REPO_SLUG}.git
+    git push -f gh latest
+    git remote remove gh
+  else
+    echo Not updating latest tag
+  fi
 deploy:
+  - provider: releases
+    name: Automated build of develop-branch
+    api-key: $GH_TOKEN
+    file: 
+      - yodk-win.zip
+      - yodk-linux.zip
+      - yodk-darwin.zip
+      - vscode-yolol.vsix
+    skip_cleanup: true
+    edge: true
+    overwrite: true
+    prerelease: true
+    target_commitish: $TRAVIS_COMMIT
+    tag_name: latest
+    body: "Use this release ONLY to test not-yet-released changes from the develop-branch. Use a versioned release (see below) for anything else!!!"
+    on:
+      tags: false
+      branch: develop
   - provider: releases
     api-key: $GH_TOKEN
     file: 
