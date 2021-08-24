@@ -18,5 +18,6 @@ cases:
       textexpass: 1
       testbullshit: 1
       testnegsqrt: 1
+      testdec: 1
 
       

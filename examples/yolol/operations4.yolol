@@ -16,4 +16,5 @@ foo=2 foo^=10
 :::boo:::=123
 :testbullshit=:::boo:::==123
 :testnegsqrt=-sqrt 4==-2
+:testdec=.5==0.5 and -.5==-0.5 and abs .2==0.2
 :done=1

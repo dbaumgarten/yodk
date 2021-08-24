@@ -75,7 +75,7 @@ var keywordRegexes = []*regexp.Regexp{keywordRegex1, keywordRegex2}
 
 var identifierRegex = regexp.MustCompile("^:[a-zA-Z0-9_:.]+|^[a-zA-Z]+[a-zA-Z0-9_.]*")
 
-var numberRegex = regexp.MustCompile("^[0-9]+(\\.[0-9]+)?")
+var numberRegex = regexp.MustCompile("^[0-9]+(\\.[0-9]+)?|^\\.[0-9]+")
 
 var commentRegex = regexp.MustCompile("^\\/\\/([^\n]*)")
 

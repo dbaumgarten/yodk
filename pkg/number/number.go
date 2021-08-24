@@ -91,6 +91,9 @@ func (n Number) String() string {
 	str := strconv.Itoa(prefix)
 	remainder := (n % scale).Abs()
 	if remainder != 0 {
+		if prefix == 0 {
+			str = ""
+		}
 		deci := strconv.Itoa(int(remainder))
 		str += "." + strings.Repeat("0", 3-len(deci)) + deci
 		str = strings.TrimRight(str, "0")
@@ -98,6 +101,7 @@ func (n Number) String() string {
 			str = "-" + str
 		}
 	}
+
 	return str
 }
 

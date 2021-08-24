@@ -247,8 +247,23 @@ func TestNumber_String(t *testing.T) {
 		},
 		{
 			"test7",
+			MustFromString("-.085"),
+			"-.085",
+		},
+		{
+			"test8",
 			MustFromString("-0.085"),
-			"-0.085",
+			"-.085",
+		},
+		{
+			"test9",
+			MustFromString(".085"),
+			".085",
+		},
+		{
+			"test10",
+			MustFromString("0.085"),
+			".085",
 		},
 	}
 	for _, tt := range tests {
