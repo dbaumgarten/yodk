@@ -40,6 +40,8 @@ type Converter struct {
 	macroInsertionCount       int
 	macroCurrentStatementLine *nast.StatementLine
 	macroCurrentStatement     int
+	// a count of total insertions to detect loops
+	definitionInsertionCount int
 	// if true, enable debug-logging
 	debug          bool
 	targetChipType string

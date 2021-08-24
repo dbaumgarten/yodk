@@ -8,6 +8,8 @@ import (
 	"github.com/dbaumgarten/yodk/pkg/parser/ast"
 )
 
+const maxDefinitionInsertions = 1000
+
 // getDefinition is a case-insensitive getter for c.definitions
 func (c *Converter) getDefinition(name string) (*nast.Definition, bool) {
 	name = strings.ToLower(name)
@@ -43,6 +45,14 @@ func (c *Converter) convertDefinitionAssignment(ass *ast.Assignment, visitType i
 					EndPosition:   ass.End(),
 				}
 			}
+			c.definitionInsertionCount++
+			if c.definitionInsertionCount > maxDefinitionInsertions {
+				return &parser.Error{
+					Message:       "Detected a definition-loop. Definitions can not be recursive!",
+					StartPosition: replacement.Start(),
+					EndPosition:   replacement.End(),
+				}
+			}
 		}
 	}
 	return nil
@@ -70,6 +80,14 @@ func (c *Converter) convertDefinitionDereference(deref *ast.Dereference) error {
 				Message:       "Can not use pre/port-operators on expressions",
 				StartPosition: deref.Start(),
 				EndPosition:   deref.End(),
+			}
+		}
+		c.definitionInsertionCount++
+		if c.definitionInsertionCount > maxDefinitionInsertions {
+			return &parser.Error{
+				Message:       "Detected a definition-loop. Definitions can not be recursive!",
+				StartPosition: replacement.Start(),
+				EndPosition:   replacement.End(),
 			}
 		}
 		return ast.NewNodeReplacement(replacement)
