@@ -69,11 +69,11 @@ func (p Position) Before(other Position) bool {
 var symbols = []string{"!==", "++", "--", ">=", "<=", "!=", "==", "==", "+=", "-=", "*=", "/=", "%=", "^=",
 	"=", ">", "<", "+", "-", "*", "/", "^", "%", ",", "(", ")", "!"}
 
-var keywordRegex1 = regexp.MustCompile(`(?i)^(and|or|not|abs|sqrt|sin|cos|tan|asin|acos|atan)(?:[^a-zA-Z0-9_:]|$)`)
+var keywordRegex1 = regexp.MustCompile(`(?i)^(and|or|not|abs|sqrt|sin|cos|tan|asin|acos|atan)(?:[^a-zA-Z0-9_:.]|$)`)
 var keywordRegex2 = regexp.MustCompile(`(?i)^(if|then|else|end|goto)`)
 var keywordRegexes = []*regexp.Regexp{keywordRegex1, keywordRegex2}
 
-var identifierRegex = regexp.MustCompile("^:[a-zA-Z0-9_:]+|^[a-zA-Z]+[a-zA-Z0-9_]*")
+var identifierRegex = regexp.MustCompile("^:[a-zA-Z0-9_:.]+|^[a-zA-Z]+[a-zA-Z0-9_.]*")
 
 var numberRegex = regexp.MustCompile("^[0-9]+(\\.[0-9]+)?")
 

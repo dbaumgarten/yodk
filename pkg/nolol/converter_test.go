@@ -72,7 +72,10 @@ func TestNolol(t *testing.T) {
 		t.Error(err)
 	}
 
-	v, _ := vm.CreateFromSource(code)
+	v, err := vm.CreateFromSource(code)
+	if err != nil {
+		t.Error(err)
+	}
 	v.SetLineExecutedHandler(vm.TerminateOnDoneVar)
 	v.Resume()
 	v.WaitForTermination()

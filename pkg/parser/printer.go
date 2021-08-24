@@ -76,7 +76,7 @@ func isIdentifierChar(b byte) bool {
 	if unicode.IsDigit(s) {
 		return true
 	}
-	if s == '_' || s == ':' {
+	if s == '_' || s == ':' || s == '.' {
 		return true
 	}
 	return false
