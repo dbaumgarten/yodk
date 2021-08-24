@@ -611,7 +611,7 @@ func (p *Parser) ParseNegationExpression() ast.Expression {
 			Position: p.CurrentToken.Position,
 		}
 		p.Advance()
-		subexp := p.This.ParseNegationExpression()
+		subexp := p.This.ParseUnaryExpression()
 		if subexp == nil {
 			p.ErrorExpectedExpression(fmt.Sprintf("on right side of %s", unaryExp.Operator))
 		}

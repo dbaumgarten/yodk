@@ -17,5 +17,6 @@ cases:
       testfact: 1
       textexpass: 1
       testbullshit: 1
+      testnegsqrt: 1
 
       

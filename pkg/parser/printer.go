@@ -64,8 +64,8 @@ var unaryOperatorPriority = map[string]int{
 	"asin": 7,
 	"acos": 7,
 	"atan": 7,
-	"-":    8,
-	"!":    9,
+	"-":    7,
+	"!":    8,
 }
 
 func isIdentifierChar(b byte) bool {
