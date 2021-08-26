@@ -40,3 +40,11 @@ cases:
       clamp2: 1
       clamp3: 1
       clamp4: 1
+      lerp1: 1
+      lerp2: 1
+      lerp3: 1
+      lerp4: 1
+      invlerp1: 1
+      invlerp2: 1
+      invlerp3: 1
+      invlerp4: 1
