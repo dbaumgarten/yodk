@@ -22,6 +22,17 @@ macro math_floor(x) expr
 	x/1000*1000
 end
 
+// Linearly interpolates between a and b based on f (100% of a when f=0 and 100% of b when f=1)
+macro math_lerp(a, b, f) expr
+    (a * (1 - f)) + (b * f)
+end
+
+// Inverse linear interpolation
+// Returns a number between 0 and 1 based on f (0.0 when f=a and 1.0 when f=b)
+macro math_invlerp(a, b, f) expr
+    (f - a) / (b - a)
+end
+
 // Returns x%m (even on basic chips)
 macro math_mod(x,m) expr
     x-x/m/1000*1000*m
@@ -40,15 +51,4 @@ end
 // Clamps x to the range of min and max
 macro math_clamp(x,min,max) expr
     math_min(math_max(x, min), max)
-end
-
-// Linearly interpolates between a and b based on f (100% of a when f=0 and 100% of b when f=1)
-macro math_lerp(a, b, f) expr
-    (a * (1 - f)) + (b * f)
-end
-
-// Inverse linear interpolation
-// Returns a number between 0 and 1 based on f (0.0 when f=a and 1.0 when f=b)
-macro math_invlerp(a, b, f) expr
-    (f - a) / (b - a)
 end

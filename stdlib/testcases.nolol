@@ -40,7 +40,7 @@ include "std/logic"
 :lerp3=math_lerp(0,10,1.0)==10
 :lerp4=math_lerp(0,10,2.0)==20
 
-:invlerp1=math_invlerp(0,10,0.0)==0
+:invlerp1=math_invlerp(0,10,0)==0
 :invlerp2=math_invlerp(0,10,5)==0.5
 :invlerp3=math_invlerp(0,10,10)==1
 :invlerp4=math_invlerp(0,10,20)==2
