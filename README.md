@@ -77,4 +77,6 @@ Yodk (and therefore also vscode-yolol) supports the following Systems:
 # Contributing
 Found bugs, suggestions, want to add features? Just [open an issue](https://github.com/dbaumgarten/yodk/issues/new).  
 
+Check out the [contribution-guidelines](https://github.com/dbaumgarten/yodk/blob/master/CONTRIBUTING.md) for information on how to contribute and/or how to set up a dev-environment.
+
 You can, of course, fork this repo and create your own version of the yodk, but please consider working on this together. This way we will achieve more.
