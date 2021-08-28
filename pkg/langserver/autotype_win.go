@@ -153,9 +153,18 @@ func (ls *LangServer) getLastOpenedCode() string {
 	return ""
 }
 
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
 func typeYololCode(code string) {
 	lines := strings.Split(code, "\n")
-	for _, line := range lines {
+	count := min(20, len(lines))
+	for i := 0; i < count; i++ {
+		line := lines[i]
 		win32.SendString(line)
 		time.Sleep(typeDelay)
 		win32.SendInput(win32.KeyDownInput(win32.KeycodeDown), win32.KeyUpInput(win32.KeycodeDown))
@@ -164,7 +173,9 @@ func typeYololCode(code string) {
 
 func typeYololCodeSSC(code string) {
 	lines := strings.Split(code, "\n")
-	for _, line := range lines {
+	count := min(20, len(lines))
+	for i := 0; i < count; i++ {
+		line := lines[i]
 		win32.SendString(line)
 		nextLineSSC()
 	}
@@ -172,7 +183,9 @@ func typeYololCodeSSC(code string) {
 
 func overwriteYololCode(code string) {
 	lines := strings.Split(code, "\n")
-	for _, line := range lines {
+	count := min(20, len(lines))
+	for i := 0; i < count; i++ {
+		line := lines[i]
 		deleteLine()
 		win32.SendString(line)
 		time.Sleep(typeDelay)
