@@ -3,8 +3,10 @@ TOKEN=none
 
 ifeq (, $(shell which go.exe))
 go=go
+go-bindata=go-bindata-assetfs
 else
 go=go.exe
+go-bindata=go-bindata-assetfs.exe
 endif
 
 ifeq ($(filter v%,${VERSION}),${VERSION}) 
@@ -17,11 +19,22 @@ endif
 all: build test package docs CHANGELOG.md
 
 .PHONY: setup
-setup:
+setup: setup-submodule setup-go setup-npm
+
+.PHONY: setup-go
+setup-go:
 	${go} mod download
+	${go} get github.com/go-bindata/go-bindata/...
+	${go} get github.com/elazarl/go-bindata-assetfs/...
+
+.PHONY: setup-npm
+setup-npm:
 	cd vscode-yolol && \
 	npm install && \
-	npm install -g vsce && \
+	npm install -g vsce
+	
+.PHONY: setup-submodule
+setup-submodule:
 	git submodule init
 	git submodule update
 
@@ -56,18 +69,24 @@ binaries: yodk yodk.exe yodk-darwin
 
 yodk: yodk-${VERSION}
 	cp yodk-${VERSION} yodk
-yodk-${VERSION}: $(shell find pkg) $(shell find cmd) $(shell find stdlib)
+yodk-${VERSION}: $(shell find pkg) $(shell find cmd) stdlib/bindata.go stdlib/generate.go
 	GOOS=linux ${go} build -o yodk-${VERSION} -ldflags "-X github.com/dbaumgarten/yodk/cmd.YodkVersion=${VERSION}"
 
 yodk.exe: yodk-${VERSION}.exe
 	-cp yodk-${VERSION}.exe yodk.exe
-yodk-${VERSION}.exe: $(shell find pkg) $(shell find cmd) $(shell find stdlib)
+yodk-${VERSION}.exe: $(shell find pkg) $(shell find cmd) stdlib/bindata.go stdlib/generate.go
 	GOOS=windows ${go} build -o yodk-${VERSION}.exe -ldflags "-X github.com/dbaumgarten/yodk/cmd.YodkVersion=${VERSION}"
 	
 yodk-darwin: yodk-darwin-${VERSION}
 	cp yodk-darwin-${VERSION} yodk-darwin
-yodk-darwin-${VERSION}: $(shell find pkg) $(shell find cmd) $(shell find stdlib)
+yodk-darwin-${VERSION}: $(shell find pkg) $(shell find cmd) stdlib/bindata.go stdlib/generate.go
 	GOOS=darwin ${go} build -o yodk-darwin-${VERSION} -ldflags "-X github.com/dbaumgarten/yodk/cmd.YodkVersion=${VERSION}"
+
+
+
+.PHONY: stdlib
+stdlib:
+	cd stdlib && ${go-bindata} -pkg stdlib -prefix src/ ./src
 
 
 

@@ -97,7 +97,7 @@ func logicNolol() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "logic.nolol", size: 780, mode: os.FileMode(438), modTime: time.Unix(1630146109, 0)}
+	info := bindataFileInfo{name: "logic.nolol", size: 780, mode: os.FileMode(438), modTime: time.Unix(1623961616, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -117,7 +117,7 @@ func math_advancedNolol() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "math_advanced.nolol", size: 349, mode: os.FileMode(438), modTime: time.Unix(1630146109, 0)}
+	info := bindataFileInfo{name: "math_advanced.nolol", size: 349, mode: os.FileMode(438), modTime: time.Unix(1626619120, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -137,7 +137,7 @@ func math_basicNolol() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "math_basic.nolol", size: 1191, mode: os.FileMode(438), modTime: time.Unix(1630146129, 0)}
+	info := bindataFileInfo{name: "math_basic.nolol", size: 1191, mode: os.FileMode(438), modTime: time.Unix(1630147359, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -157,7 +157,7 @@ func math_professionalNolol() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "math_professional.nolol", size: 128, mode: os.FileMode(438), modTime: time.Unix(1630146109, 0)}
+	info := bindataFileInfo{name: "math_professional.nolol", size: 128, mode: os.FileMode(438), modTime: time.Unix(1626619120, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -177,7 +177,7 @@ func stringNolol() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "string.nolol", size: 687, mode: os.FileMode(438), modTime: time.Unix(1630146109, 0)}
+	info := bindataFileInfo{name: "string.nolol", size: 687, mode: os.FileMode(438), modTime: time.Unix(1623961616, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }

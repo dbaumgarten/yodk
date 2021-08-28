@@ -1,7 +1,5 @@
 package stdlib
 
-//go:generate go-bindata-assetfs.exe -pkg stdlib -prefix src/ ./src
-
 import "strings"
 
 // Prefix is how all files of the standard library start
