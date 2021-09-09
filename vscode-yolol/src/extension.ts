@@ -94,8 +94,8 @@ export function startLangServer(){
 		args = args.concat(["--debug", "--logfile", getLogfilePath("language-server-log.txt")])
 	}
 
-	if (!areHotkeysEnabled()){
-		args = args.concat(["--hotkeys=false"])
+	if (areHotkeysEnabled()){
+		args = args.concat(["--hotkeys=true"])
 	}
 
 	let serverOptions: ServerOptions = {

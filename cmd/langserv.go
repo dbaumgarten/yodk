@@ -31,5 +31,5 @@ func init() {
 	rootCmd.AddCommand(langservCmd)
 	langservCmd.Flags().StringVar(&logfile, "logfile", "", "Name of the file to log into. Defaults to stderr")
 	langservCmd.Flags().BoolVarP(&debugLog, "debug", "d", false, "Enable verbose debug-logging")
-	langservCmd.Flags().BoolVar(&hotkeys, "hotkeys", true, "Enable system-wide hotkeys for auto-typing")
+	langservCmd.Flags().BoolVar(&hotkeys, "hotkeys", false, "Enable system-wide hotkeys for auto-typing")
 }
