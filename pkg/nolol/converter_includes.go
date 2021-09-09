@@ -2,6 +2,8 @@ package nolol
 
 import (
 	"fmt"
+	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/dbaumgarten/yodk/pkg/nolol/nast"
@@ -63,6 +65,17 @@ func (c *Converter) getIncludedFile(include *nast.IncludeDirective) (string, err
 
 	if stdlib.Is(importname) {
 		getfunc = stdlib.Get
+	} else {
+		// this include is inside an included file
+		if include.Position.File != "" {
+			// the included file is inside another directory
+			dir := path.Dir(include.Position.File)
+			if dir != "." {
+				dir = filepath.ToSlash(dir)
+				// fix the import-path
+				importname = path.Join(dir, importname)
+			}
+		}
 	}
 
 	filename := importname

@@ -184,7 +184,11 @@ Included files are optimized with the rest of the code (variable-renaming, state
 
 Constants and variables in the included file are not scoped. They remain defined for all of the code after the ```include```. In most cases, this is exactly what you want (when you include a file containing constants as a kind of config file), but can also lead to unexpected behavior if you include a file in the middle of your code and it overrides your previously defined values.
 
-Includes can NOT be placed in the middle of block like ```ìf``` and ```while```. Includes MUST always be on the top-level of the program.
+Includes can NOT be placed in the middle of block like ```ìf``` and ```while```. Includes MUST always be on the top-level of the program.  
+
+The path-separator is always "/" for includes, even on Windows.  
+
+All includes are relative to the including file, even if that file itself has been included in another file.
 
 ## Chip-specific includes
 Nolol offers the feature to include different files (see the chapter above) based on what chip-type you are compiling a script for. (The target chiptype can be chosen via cli-flag, in the vscode-settings and via the filename)
