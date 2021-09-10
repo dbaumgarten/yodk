@@ -474,9 +474,17 @@ func (v *VM) run() {
 			v.currentSourceLine = v.currentAstLine
 			v.currentSourceColoumn = 0
 			v.sourceLineChanged()
+			v.executedLines++
+			if v.lineExecutedHandler != nil {
+				v.lock.Unlock()
+				cont := v.lineExecutedHandler(v)
+				v.lock.Lock()
+				if !cont {
+					v.pause()
+				}
+			}
 		}
 
-		v.executedLines++
 		if v.maxExecutedLines > 0 && v.executedLines > v.maxExecutedLines {
 			panic(errKillVM)
 		}
@@ -568,6 +576,7 @@ func (v *VM) runLine(line *ast.Line) error {
 		}
 	}
 
+	v.executedLines++
 	if v.lineExecutedHandler != nil {
 		v.lock.Unlock()
 		cont := v.lineExecutedHandler(v)

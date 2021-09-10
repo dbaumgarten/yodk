@@ -1,7 +1,6 @@
 package vm_test
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/dbaumgarten/yodk/pkg/vm"
@@ -31,10 +30,8 @@ func TestCoordinatedExecution(t *testing.T) {
 	vm1.SetMaxExecutedLines(10)
 	vm2.SetMaxExecutedLines(10)
 
-	fmt.Println("resume")
 	vm1.Resume()
 	vm2.Resume()
-	fmt.Println("resumed")
 
 	coord.Run()
 	coord.WaitForTermination()

@@ -33,6 +33,10 @@ type Test struct {
 	IgnoreErrs bool
 	// The chip-type to use for execution
 	ChipType string
+	// Run tests on after another and keep the state between cases
+	Sequential bool
+
+	previousRunner *CaseRunner
 }
 
 // Case defines inputs and expected outputs for a run
@@ -45,6 +49,8 @@ type Case struct {
 	Outputs map[string]interface{}
 	// The same as Script.StopWhen. Both are merged together so this can be used to override/extend the script stop-conditions
 	StopWhen map[string]interface{}
+	// Maximum amount of lines to run for this case
+	MaxLines int
 }
 
 // CaseRunner represents a prepared test-case that is ready to run
@@ -55,6 +61,10 @@ type CaseRunner struct {
 	Test            *Test
 	Case            *Case
 	StopConditions  map[string]*vm.Variable
+	// If true, the VMs are already running, but currently paused
+	Paused bool
+	// This channel will be closed once the test-case has been executed
+	Done chan struct{}
 }
 
 func prefixVarname(inp string) string {
@@ -121,34 +131,79 @@ func (t Test) Run(callback func(Case)) []error {
 }
 
 // GetRunner creates an executable TestRunner for the given testcase
-func (t Test) GetRunner(casenr int) (runner *CaseRunner, err error) {
+func (t *Test) GetRunner(casenr int) (runner *CaseRunner, err error) {
 	c := t.Cases[casenr]
 
-	runner = &CaseRunner{
-		Coordinator:    vm.NewCoordinator(),
-		Case:           &c,
-		Test:           &t,
-		StopConditions: make(map[string]*vm.Variable, len(t.Scripts)),
-		VMs:            make([]*vm.VM, len(t.Scripts)),
+	if t.Sequential && t.previousRunner != nil {
+		runner = &CaseRunner{
+			Coordinator:    t.previousRunner.Coordinator,
+			Case:           &c,
+			Test:           t,
+			StopConditions: make(map[string]*vm.Variable, len(t.Scripts)),
+			VMs:            t.previousRunner.VMs,
+			Done:           make(chan struct{}),
+			Paused:         true,
+		}
+	} else {
+		runner = &CaseRunner{
+			Coordinator:    vm.NewCoordinator(),
+			Case:           &c,
+			Test:           t,
+			StopConditions: make(map[string]*vm.Variable, len(t.Scripts)),
+			VMs:            make([]*vm.VM, len(t.Scripts)),
+			Done:           make(chan struct{}),
+		}
+		runner.VMs, runner.VarTranslations, err = t.createVMs(runner.Coordinator)
+		if err != nil {
+			return nil, err
+		}
 	}
+
+	t.previousRunner = runner
 
 	c.initializeVariables(runner.Coordinator)
-	runner.VMs, runner.VarTranslations, err = t.createVMs(runner.Coordinator)
-	if err != nil {
-		return nil, err
+
+	runner.StopConditions = mergeStopConditions(t, &c)
+
+	casemaxlines := -1
+	if c.MaxLines > 0 {
+		casemaxlines = c.MaxLines + runner.VMs[0].GetExecutedLines()
 	}
 
-	runner.StopConditions = mergeStopConditions(&t, &c)
+	vmsReachedMaxlines := 0
 
 	lineExecutedHandler := func(vm *vm.VM) bool {
+
+		if (t.MaxLines > 0 && vm.GetExecutedLines() >= t.MaxLines) || (casemaxlines > 0 && vm.GetExecutedLines() >= casemaxlines) {
+			vmsReachedMaxlines++
+		}
+
+		stopConditionReached := vmsReachedMaxlines >= len(runner.VMs)
 
 		for name, want := range runner.StopConditions {
 			current, exists := vm.GetVariable(name)
 			if exists && current.Equals(want) {
-				// stop condition reached. Terminate all VMs
-				go runner.Coordinator.Terminate()
-				return false
+				// found a condition-variable
+				stopConditionReached = true
 			}
+		}
+
+		if stopConditionReached {
+			select {
+			case <-runner.Done:
+				// channel is already closed
+			default:
+				close(runner.Done)
+				if !t.Sequential || casenr == len(t.Cases)-1 {
+					// terminate all VMs
+					go runner.Coordinator.Terminate()
+				} else {
+					// pause all VMs
+					go runner.Coordinator.Pause()
+				}
+			}
+
+			return false
 		}
 
 		return true
@@ -207,7 +262,6 @@ func (t Test) createVMs(coord *vm.Coordinator) ([]*vm.VM, []map[string]string, e
 			}
 		}
 
-		v.SetMaxExecutedLines(t.MaxLines)
 		v.SetCoordinator(coord)
 		vms[i] = v
 		v.Resume()
@@ -240,6 +294,7 @@ func (cr CaseRunner) Run() []error {
 			defer flock.Unlock()
 			fails = append(fails, err)
 			go cr.Coordinator.Terminate()
+			close(cr.Done)
 			return false
 		}
 		return true
@@ -249,8 +304,13 @@ func (cr CaseRunner) Run() []error {
 		vm.SetErrorHandler(errHandler)
 	}
 
-	cr.Coordinator.Run()
-	cr.Coordinator.WaitForTermination()
+	if cr.Paused {
+		cr.Coordinator.Resume()
+	} else {
+		cr.Coordinator.Run()
+	}
+
+	<-cr.Done
 
 	caseFails := cr.Case.checkResults(cr.Coordinator)
 	fails = append(fails, caseFails...)

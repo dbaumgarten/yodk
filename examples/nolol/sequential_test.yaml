@@ -1,0 +1,22 @@
+scripts: 
+  - sequential.nolol
+sequential: true
+maxlines: 100
+cases:
+  - name: Test1
+    stopwhen:
+      out: 2
+    outputs:
+      out: 2
+  - name: Test2
+    maxlines: 10
+    outputs:
+      out: 2
+      foo: 10
+  - name: Test3
+    maxlines: 2
+    inputs:
+      in: 1
+    outputs:
+      out: 3
+      foo: 10

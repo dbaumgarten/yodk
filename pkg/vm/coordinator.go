@@ -40,6 +40,20 @@ func (c *Coordinator) Terminate() {
 	}
 }
 
+// Pause all coordinated vms
+func (c *Coordinator) Pause() {
+	for _, v := range c.vms {
+		v.Pause()
+	}
+}
+
+// Resume all coordinated vms
+func (c *Coordinator) Resume() {
+	for _, v := range c.vms {
+		v.Resume()
+	}
+}
+
 // WaitForTermination blocks until all coordinated vms terminate
 func (c *Coordinator) WaitForTermination() {
 	for _, v := range c.vms {
