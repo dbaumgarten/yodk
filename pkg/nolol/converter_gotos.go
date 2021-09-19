@@ -242,7 +242,7 @@ func (c *Converter) removeFinalGotoIfNeeded(prog *ast.Program) error {
 				if number, isnumber := stmt.Line.(*ast.NumberConstant); isnumber {
 					if number.Value == "1" {
 						// remove the line
-						prog.Lines = prog.Lines[:len(prog.Lines)-2]
+						prog.Lines = prog.Lines[:len(prog.Lines)-1]
 					}
 				}
 			}
