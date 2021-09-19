@@ -164,25 +164,14 @@ func (c *Converter) getLengthOfLine(line ast.Node) int {
 	ygen := parser.Printer{}
 	ygen.Mode = parser.PrintermodeCompact
 
-	silenceGotoExpression := false
 	ygen.PrinterExtensionFunc = func(node ast.Node, visitType int, p *parser.Printer) (bool, error) {
-		if gotostmt, is := node.(*ast.GoToStatement); is {
-			if c.getGotoDestinationLabel(gotostmt) != "" {
-				if visitType == ast.PreVisit {
-					silenceGotoExpression = true
-					p.Write("gotoXX")
+		if visitType == ast.PreVisit || visitType == ast.SingleVisit {
+			if deref, is := node.(*ast.Dereference); is {
+				if _, exists := c.getLineLabel(deref.Variable); exists {
+					// This is a dereference for a jump-label.
+					p.Write("XX")
+					return true, nil
 				}
-				if visitType == ast.PostVisit {
-					silenceGotoExpression = false
-				}
-				return true, nil
-			}
-		}
-		if silenceGotoExpression {
-			if _, is := node.(ast.Expression); is {
-				// The current expression is inside a goto.
-				// DO NOT PRINT IT
-				return true, nil
 			}
 		}
 		return false, nil
