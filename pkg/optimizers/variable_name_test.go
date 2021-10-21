@@ -70,6 +70,10 @@ func TestOptName(t *testing.T) {
 	if vno.OptimizeVarName("abcde") != "d" {
 		t.Fatal("Did not honor blacklisting")
 	}
+
+	if vno.OptimizeVarName("@abcde") != "abcde" {
+		t.Fatal("Did not honor my variable name choice")
+	}
 }
 
 func TestVarOpt(t *testing.T) {

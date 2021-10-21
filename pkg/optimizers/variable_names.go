@@ -47,6 +47,10 @@ func (o *VariableNameOptimizer) OptimizeVarName(in string) string {
 	if strings.HasPrefix(in, ":") {
 		return in
 	}
+
+	if strings.HasPrefix(in, "@") {
+		return strings.TrimLeft(in, "@")
+	}
 	lin := strings.ToLower(in)
 	newName, exists := o.variableMappings[lin]
 	if !exists {

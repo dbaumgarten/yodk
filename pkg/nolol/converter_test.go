@@ -53,10 +53,18 @@ var testProg3 = `
 include "testProg"
 `
 
+var testProg4 = `
+define ev = :mm
+define cv = @cc
+cv++
+ev=cv
+`
+
 var testfs = nolol.MemoryFileSystem{
 	"testProg.nolol":  testProg,
 	"testProg2.nolol": testProg2,
 	"testProg3.nolol": testProg3,
+	"testProg4.nolol": testProg4,
 }
 
 func TestNolol(t *testing.T) {
@@ -118,5 +126,22 @@ func TestLineHandling(t *testing.T) {
 
 	if lines != 8 {
 		t.Fatal("Wrong amount of lines after merging. Expected 8, but got: ", lines)
+	}
+}
+
+func TestVariableNames(t *testing.T) {
+	conv := nolol.NewConverter()
+	file := conv.LoadFileEx("testProg4.nolol", testfs)
+	prog, err := file.Convert()
+
+	printer := &parser.Printer{}
+	actual, _ := printer.Print(prog)
+
+	var expected = "cc++ :mm=cc goto1"
+	if actual != expected {
+		t.Fatal("Output is wrong:", actual)
+	}
+	if err != nil {
+		t.Error(err)
 	}
 }
