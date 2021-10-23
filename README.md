@@ -46,6 +46,8 @@ For an overview over the features of nolol, visit the [documentation](https://db
 You can find pre-build versions of the binaries [here](https://github.com/dbaumgarten/yodk/releases).
 Just download them, unpack the zip file and place the binary somewhere in your PATH.
 
+(For help with adding things to PATH, see here: [Windows](https://www.architectryan.com/2018/03/17/add-to-the-path-on-windows-10/), [Linux](https://www.howtogeek.com/658904/how-to-add-a-directory-to-your-path-in-linux/), [Mac](https://code2care.org/howto/add-path-to-in-macos-big-sur))
+
 ## CLI - From source
 You will need to have the go-toolchain (>=v1.14) installed.  
 Run: ```go get -v github.com/dbaumgarten/yodk```  
