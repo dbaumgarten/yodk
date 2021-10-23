@@ -16,10 +16,11 @@ type ExpressionOptimizer interface {
 
 // CompoundOptimizer wraps all other optimizers and executes them
 type CompoundOptimizer struct {
-	seopt  *StaticExpressionOptimizer
-	varopt *VariableNameOptimizer
-	comopt *CommentOptimizer
-	expinv *ExpressionInversionOptimizer
+	seopt              *StaticExpressionOptimizer
+	varopt             *VariableNameOptimizer
+	comopt             *CommentOptimizer
+	expinv             *ExpressionInversionOptimizer
+	hasBeenInitialized bool
 }
 
 // NewCompoundOptimizer creates a new compound optimizer
@@ -34,6 +35,12 @@ func NewCompoundOptimizer() *CompoundOptimizer {
 
 // Optimize is required to implement Optimizer
 func (co *CompoundOptimizer) Optimize(prog *ast.Program) error {
+
+	if !co.hasBeenInitialized {
+		co.varopt.InitializeByFrequency(prog, nil)
+		co.hasBeenInitialized = true
+	}
+
 	err := co.seopt.Optimize(prog)
 	if err != nil {
 		return err

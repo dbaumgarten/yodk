@@ -99,3 +99,43 @@ func TestVarOpt(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestInitializeByFrequency(t *testing.T) {
+	testprog := `
+foo=123
+bar=456
+bar=555
+baz=aaa+aaa+aaa
+ignoreme=1
+other=2
+	`
+	p := parser.NewParser()
+	parsed, err := p.Parse(testprog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	opt := NewVariableNameOptimizer()
+
+	opt.InitializeByFrequency(parsed, []string{"ignoreme"})
+
+	if opt.OptimizeVarName("aaa") != "a" {
+		t.Fatal("Wrong replacement for aaa variable")
+	}
+
+	if opt.OptimizeVarName("bar") != "b" {
+		t.Fatal("Wrong replacement for bar variable")
+	}
+
+	if opt.OptimizeVarName("foo") != "c" {
+		t.Fatal("Wrong replacement for foo variable")
+	}
+
+	if opt.OptimizeVarName("baz") != "d" {
+		t.Fatal("Wrong replacement for baz variable")
+	}
+
+	if opt.OptimizeVarName("other") != "e" {
+		t.Fatal("Wrong replacement for baz variable")
+	}
+
+}

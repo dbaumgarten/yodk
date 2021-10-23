@@ -2,6 +2,7 @@ package optimizers
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/dbaumgarten/yodk/pkg/parser/ast"
@@ -103,4 +104,74 @@ func (o *VariableNameOptimizer) getNextVarName() string {
 		o.varNumber++
 		return varname
 	}
+}
+
+// InitializeByFrequency will initialize the replacement-table based on the frequency of each variable in the input ast
+// The most frequent variable will get the replacement a, the second most frequent gets b and so on.
+// If two variables are equally frequent, the variable defined earlier wins.
+// This way the most frequent variables will get the shortest replacements
+// variables listed in ignore (can be nil) are ignored
+func (o *VariableNameOptimizer) InitializeByFrequency(node ast.Node, ignore []string) {
+	type Entry struct {
+		Variable string
+		Count    int
+		Index    int
+	}
+	occurences := make(map[string]*Entry)
+
+	ignoredict := make(map[string]bool)
+	for _, varname := range ignore {
+		ignoredict[varname] = true
+	}
+
+	f := func(node ast.Node, visitType int) error {
+		if visitType == ast.SingleVisit || visitType == ast.PreVisit {
+			var name string
+			switch n := node.(type) {
+			case *ast.Assignment:
+				name = n.Variable
+			case *ast.Dereference:
+				name = n.Variable
+			default:
+				return nil
+			}
+
+			if _, shouldBeIgnored := ignoredict[name]; shouldBeIgnored {
+				return nil
+			}
+
+			prev, exist := occurences[name]
+			if exist {
+				prev.Count++
+				occurences[name] = prev
+			} else {
+				occurences[name] = &Entry{
+					Variable: name,
+					Count:    0,
+					Index:    len(occurences),
+				}
+			}
+		}
+		return nil
+	}
+
+	node.Accept(ast.VisitorFunc(f))
+
+	li := make([]*Entry, len(occurences))
+	i := 0
+	for _, entry := range occurences {
+		li[i] = entry
+		i++
+	}
+
+	sort.Slice(li, func(i, j int) bool {
+		first := li[i]
+		second := li[j]
+		return first.Count > second.Count || (first.Count == second.Count && first.Index < second.Index)
+	})
+
+	for _, entry := range li {
+		o.OptimizeVarName(entry.Variable)
+	}
+
 }

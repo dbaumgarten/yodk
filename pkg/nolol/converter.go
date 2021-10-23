@@ -240,6 +240,8 @@ func (c *Converter) ProcessNodes() ConverterLines {
 	}
 	c.varnameOptimizer.SetBlacklist(blacklist)
 
+	c.varnameOptimizer.InitializeByFrequency(c.prog, blacklist)
+
 	// convert the remaining nodes to yolol
 	f := func(node ast.Node, visitType int) error {
 		switch n := node.(type) {
