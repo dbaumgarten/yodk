@@ -11,17 +11,17 @@ describe('Interact with binary', async () => {
 
   it('Find on linux', async () => {
     let path = getExePath("linux")
-    assert.equal(path,getContext().asAbsolutePath("./bin/yodk"))
+    assert.equal(path,getContext().asAbsolutePath("./bin/linux/yodk"))
   })
 
   it('Find on mac', async () => {
     let path = getExePath("darwin")
-    assert.equal(path,getContext().asAbsolutePath("./bin/yodk-darwin"))
+    assert.equal(path,getContext().asAbsolutePath("./bin/darwin/yodk"))
   })
 
   it('Find on Windows', async () => {
     let path = getExePath("win32")
-    assert.equal(path,getContext().asAbsolutePath("./bin/yodk.exe"))
+    assert.equal(path,getContext().asAbsolutePath("./bin/win32/yodk.exe"))
   })
 
   it('Find with env var', async () => {

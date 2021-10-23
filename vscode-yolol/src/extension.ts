@@ -29,12 +29,9 @@ export function getExePath(platform?){
 		return process.env.YODK_EXECUTABLE
 	}
 
-	let executable = path.join(".","bin","yodk")
+	let executable = path.join(".","bin",platform,"yodk")
 	if (platform == "win32") {
 		executable += ".exe"
-	}
-	if (platform == "darwin"){
-		executable = path.join(".","bin","yodk-darwin")
 	}
 	return context.asAbsolutePath(executable);
 }
@@ -181,6 +178,12 @@ function replaceLast(input, search, replacement) {
 	return input.substring(0, index) + replacement + input.substring(index + search.length);
  }
 
+ function addBinToPath(collection: vscode.EnvironmentVariableCollection) {
+	const separator = process.platform === 'win32' ? ';' : ':';
+	let bindir = path.join(".","bin",process.platform)
+	collection.append('PATH', separator+context.asAbsolutePath(bindir));
+ }
+
 export function activate(lcontext: ExtensionContext) {
 	context = lcontext
 
@@ -244,6 +247,8 @@ export function activate(lcontext: ExtensionContext) {
 
 	context.subscriptions.push(vscode.debug.registerDebugAdapterDescriptorFactory('yodk', new DebugAdapterExecutableFactory()));
 	context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('yodk', new YodkDebugConfigurationProvider()));
+
+	addBinToPath(context.environmentVariableCollection)
 
 	startLangServer()
 }

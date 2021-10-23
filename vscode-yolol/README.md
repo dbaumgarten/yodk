@@ -26,7 +26,9 @@ There are detailed instructions about the features of this extension and how to 
 This extension is available from the [vscode marketplace](https://marketplace.visualstudio.com/items?itemName=dbaumgarten.vscode-yolol).  
 
 ## Dependencies
-This extension comes bundled with the yodk executable. You can however set the environment variable YODK_EXECUTABLE to a path to your own yodk binary. This is helpfull for development.
+This extension comes bundled with the yodk executable. If you open a terminal in vscode, the bundled yodk-binary will already be inside the PATH.  
+
+You can however set the environment variable YODK_EXECUTABLE to a path to your own yodk binary. This is helpfull for development.
 
 ## Manual install
 You can find all versions of the extension for manual install [here](https://github.com/dbaumgarten/yodk/releases).

@@ -137,5 +137,5 @@ publish-vsix: vscode-yolol.vsix
 
 .PHONY: clean
 clean:
-	-rm -rf yodk* *.zip *.vsix CHANGELOG.md vscode-yolol/*.vsix vscode-yolol/CHANGELOG.md vscode-yolol/bin/yo* acid_test.yaml
+	-rm -rf yodk* *.zip *.vsix CHANGELOG.md vscode-yolol/*.vsix vscode-yolol/CHANGELOG.md vscode-yolol/bin/win32/yo* vscode-yolol/bin/linux/yo* vscode-yolol/bin/darwin/yo* acid_test.yaml
 	-rm -rf docs/sitemap.xml docs/generated/* docs/vscode-yolol.md docs/README.md docs/nolol-stdlib.md

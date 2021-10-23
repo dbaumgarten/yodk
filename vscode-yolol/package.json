@@ -219,7 +219,7 @@
   },
   "publisher": "dbaumgarten",
   "engines": {
-    "vscode": "^1.37.0"
+    "vscode": "^1.46.0"
   },
   "dependencies": {
     "vscode-languageclient": "^5.2.1"
@@ -236,7 +236,7 @@
     "vscode-debugprotocol": "^1.41.0-pre.0"
   },
   "scripts": {
-    "vscode:prepublish": "npm run update-vscode && npm run compile && cp ../yodk ../yodk.exe ../yodk-darwin bin/",
+    "vscode:prepublish": "npm run update-vscode && npm run compile && cp ../yodk bin/linux/ && cp ../yodk.exe bin/win32/ && cp ../yodk-darwin bin/darwin/yodk",
     "compile": "tsc -b",
     "watch": "tsc -b -w",
     "update-vscode": "vscode-install",
