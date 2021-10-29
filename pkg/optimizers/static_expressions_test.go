@@ -13,6 +13,18 @@ var staticCases = map[string]string{
 	"a=123+100+a":             "a=223+a",
 	"a=a+(123+100)+b":         "a=a+223+b",
 	"a=a+(123+100)+b*(10*10)": "a=a+223+b*100",
+	"a=0+b":                   "a=b",
+	"a=b+0":                   "a=b",
+	"a=b-0":                   "a=b",
+	"a=0-b":                   "a=-b",
+	"a=0*b":                   "a=0",
+	"a=b*0":                   "a=0",
+	"a=1*b":                   "a=b",
+	"a=b*1":                   "a=b",
+	"a=b/1":                   "a=b",
+	"a=b^0":                   "a=1",
+	"a=b^1":                   "a=b",
+	"a=\"a\"*1":               "a=\"a\"*1",
 }
 
 func TestStaticExpressions(t *testing.T) {

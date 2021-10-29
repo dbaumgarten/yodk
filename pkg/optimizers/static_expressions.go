@@ -81,6 +81,11 @@ func (o *StaticExpressionOptimizer) OptimizeExpressionNonRecursive(exp ast.Expre
 
 		return varToConst(res, n.Exp1.Start())
 	}
+
+	if binop, is := exp.(*ast.BinaryOperation); is {
+		return simplifyIdentities(binop)
+	}
+
 	return nil
 }
 
@@ -129,4 +134,73 @@ func varToConst(v *vm.Variable, pos ast.Position) ast.Expression {
 		Value:    v.String(),
 		Position: pos,
 	}
+}
+
+func simplifyIdentities(binop *ast.BinaryOperation) ast.Expression {
+
+	if _, is := binop.Exp1.(*ast.StringConstant); is {
+		return binop
+	}
+	if _, is := binop.Exp2.(*ast.StringConstant); is {
+		return binop
+	}
+
+	switch binop.Operator {
+	case "+":
+		if isNumConstWithValue(binop.Exp1, "0") {
+			return binop.Exp2
+		}
+		if isNumConstWithValue(binop.Exp2, "0") {
+			return binop.Exp1
+		}
+	case "-":
+		if isNumConstWithValue(binop.Exp1, "0") {
+			return &ast.UnaryOperation{
+				Position: binop.Start(),
+				Operator: "-",
+				Exp:      binop.Exp2,
+			}
+		}
+		if isNumConstWithValue(binop.Exp2, "0") {
+			return binop.Exp1
+		}
+	case "*":
+		if isNumConstWithValue(binop.Exp1, "1") {
+			return binop.Exp2
+		}
+		if isNumConstWithValue(binop.Exp2, "1") {
+			return binop.Exp1
+		}
+		if isNumConstWithValue(binop.Exp1, "0") {
+			return &ast.NumberConstant{Position: binop.Start(), Value: "0"}
+		}
+		if isNumConstWithValue(binop.Exp2, "0") {
+			return &ast.NumberConstant{Position: binop.Start(), Value: "0"}
+		}
+	case "/":
+		if isNumConstWithValue(binop.Exp2, "1") {
+			return binop.Exp1
+		}
+	case "^":
+		if isNumConstWithValue(binop.Exp2, "0") {
+			return &ast.NumberConstant{Position: binop.Start(), Value: "1"}
+		}
+		if isNumConstWithValue(binop.Exp2, "1") {
+			return binop.Exp1
+		}
+	}
+
+	return binop
+}
+
+// checkis if check is a NumberConstant and if it's value matches expected
+func isNumConstWithValue(check ast.Expression, expected string) bool {
+
+	if num, is := check.(*ast.NumberConstant); is {
+		if num.Value == expected {
+			return true
+		}
+	}
+
+	return false
 }
