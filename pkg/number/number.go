@@ -167,9 +167,6 @@ func (n Number) Mod(m Number) (Number, error) {
 	if m == Zero {
 		return Zero, fmt.Errorf("Division by 0")
 	}
-	if m < One && m > MinusOne {
-		return Zero, fmt.Errorf("The ingame-implementation thinks this is a division by 0")
-	}
 	return n % m, nil
 }
 
