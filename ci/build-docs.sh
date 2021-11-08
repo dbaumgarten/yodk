@@ -33,7 +33,7 @@ ROOTURL="https://dbaumgarten.github.io/yodk/#/"
 IGNORE_IN_SITEMAP="README.md,nolol-stdlib-header.md,_sidebar.md"
 
 cd docs
-cat << EOF > sitemap.xml
+cat << EOF > sitemap_new.xml
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 <url>
@@ -45,7 +45,7 @@ EOF
 for FILE in *.md; do
 if ! echo ${IGNORE_IN_SITEMAP} | grep -q ${FILE}; then
 CHANGEDATE=$(date -r ${FILE} "+%Y-%m-%dT%H:%M:%S%:z")
-cat << EOF >> sitemap.xml
+cat << EOF >> sitemap_new.xml
 <url>
       <loc>${ROOTURL}${FILE}</loc>
       <lastmod>${CHANGEDATE}</lastmod>
@@ -54,7 +54,7 @@ EOF
 fi
 done
 
-cat << EOF >> sitemap.xml
+cat << EOF >> sitemap_new.xml
 </urlset> 
 EOF
 
