@@ -313,30 +313,9 @@ func (t *Tokenizer) getStringConstant() (*Token, int) {
 	if len(t.remaining) < 2 || t.remaining[0] != '"' {
 		return nil, 0
 	}
-	escaped := false
+
 	str := ""
 	for i, b := range t.remaining[1:] {
-		if b == '\\' {
-			escaped = true
-			continue
-		}
-		if escaped {
-			switch b {
-			case 'n':
-				str += "\n"
-				escaped = false
-				continue
-			case 't':
-				str += "\t"
-				escaped = false
-				continue
-			case '"':
-				str += "\""
-				escaped = false
-				continue
-			}
-		}
-
 		if b == '"' {
 			return t.newToken(TypeString, str), i + 2
 		}

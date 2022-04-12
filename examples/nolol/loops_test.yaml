@@ -3,11 +3,5 @@ scripts:
 cases:
   - name: draw
     outputs:
-      out: |
-        XXXXXX
-        X0000X
-        X0000X
-        X0000X
-        X0000X
-        XXXXXX
+      out: "XXXXXX\\nX0000X\\nX0000X\\nX0000X\\nX0000X\\nXXXXXX\\n"
       out2: 5
