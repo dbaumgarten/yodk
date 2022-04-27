@@ -220,10 +220,10 @@ func (p *Parser) ParseMacroDefinition() *nast.MacroDefinition {
 			if p.IsCurrentType(ast.TypeComment) {
 				mdef.PreComments = append(mdef.PreComments, p.CurrentToken.Value)
 				p.Advance()
-				if p.IsCurrentType(ast.TypeNewline) {
+				if p.IsCurrentType(ast.TypeNewline) || p.IsCurrentType(ast.TypeComment) {
 					p.Advance()
 				}
-			} else if p.IsCurrentType(ast.TypeNewline) {
+			} else if p.IsCurrentType(ast.TypeNewline) || p.IsCurrentType(ast.TypeComment) {
 				mdef.PreComments = append(mdef.PreComments, "")
 				p.Advance()
 			} else {
@@ -255,10 +255,10 @@ func (p *Parser) ParseMacroDefinition() *nast.MacroDefinition {
 			if p.IsCurrentType(ast.TypeComment) {
 				mdef.PostComments = append(mdef.PostComments, p.CurrentToken.Value)
 				p.Advance()
-				if p.IsCurrentType(ast.TypeNewline) {
+				if p.IsCurrentType(ast.TypeNewline) || p.IsCurrentType(ast.TypeComment) {
 					p.Advance()
 				}
-			} else if p.IsCurrentType(ast.TypeNewline) {
+			} else if p.IsCurrentType(ast.TypeNewline) || p.IsCurrentType(ast.TypeComment) {
 				mdef.PostComments = append(mdef.PostComments, "")
 				p.Advance()
 			} else {
@@ -408,7 +408,7 @@ func (p *Parser) ParseMultilineIf() nast.NestableElement {
 
 		p.Expect(ast.TypeKeyword, "then")
 
-		if p.IsCurrentType(ast.TypeNewline) {
+		if p.IsCurrentType(ast.TypeNewline) || p.IsCurrentType(ast.TypeComment) {
 			p.Advance()
 		} else {
 			// We fucked up, this is not a multiline if. Restore saved state and return
