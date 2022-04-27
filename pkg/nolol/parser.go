@@ -147,6 +147,9 @@ func (p *Parser) ParseInclude() *nast.IncludeDirective {
 	incl.File = p.CurrentToken.Value
 	p.Advance()
 	if !p.IsCurrentType(ast.TypeEOF) {
+		if p.IsCurrentType(ast.TypeComment) {
+			p.Advance()
+		}
 		p.Expect(ast.TypeNewline, "")
 	}
 	return incl
@@ -212,6 +215,9 @@ func (p *Parser) ParseMacroDefinition() *nast.MacroDefinition {
 	mdef.Type = p.CurrentToken.Value
 	p.Advance()
 
+	if p.IsCurrentType(ast.TypeComment) {
+		p.Advance()
+	}
 	p.Expect(ast.TypeNewline, "")
 
 	if mdef.Type != nast.MacroTypeBlock {
@@ -245,6 +251,9 @@ func (p *Parser) ParseMacroDefinition() *nast.MacroDefinition {
 		mdef.Code = p.ParseExpression()
 		if mdef.Code == nil {
 			p.ErrorExpectedExpression("inside macro of type expr")
+		}
+		if p.IsCurrentType(ast.TypeComment) {
+			p.Advance()
 		}
 		p.Expect(ast.TypeNewline, "")
 	}
@@ -344,6 +353,9 @@ func (p *Parser) ParseStatementLine() *nast.StatementLine {
 	}
 
 	if !p.IsCurrentType(ast.TypeEOF) {
+		if p.IsCurrentType(ast.TypeComment) {
+			p.Advance()
+		}
 		p.Expect(ast.TypeNewline, "")
 	}
 
@@ -374,6 +386,9 @@ func (p *Parser) ParseDefinition() *nast.Definition {
 	}
 	decl.Value = value
 	if !p.IsCurrentType(ast.TypeEOF) {
+		if p.IsCurrentType(ast.TypeComment) {
+			p.Advance()
+		}
 		p.Expect(ast.TypeNewline, "")
 	}
 	return decl
@@ -436,6 +451,9 @@ func (p *Parser) ParseMultilineIf() nast.NestableElement {
 			p.Advance()
 			continue
 		} else {
+			if p.IsCurrentType(ast.TypeComment) {
+				p.Advance()
+			}
 			p.Expect(ast.TypeNewline, "")
 			mlif.ElseBlock = p.ParseBlock(func() bool {
 				return p.IsCurrent(ast.TypeKeyword, "end")
@@ -447,6 +465,9 @@ func (p *Parser) ParseMultilineIf() nast.NestableElement {
 	p.Expect(ast.TypeKeyword, "end")
 
 	if !p.IsCurrentType(ast.TypeEOF) {
+		if p.IsCurrentType(ast.TypeComment) {
+			p.Advance()
+		}
 		p.Expect(ast.TypeNewline, "")
 	}
 
@@ -470,6 +491,9 @@ func (p *Parser) ParseWhile() nast.NestableElement {
 	}
 
 	p.Expect(ast.TypeKeyword, "do")
+	if p.IsCurrentType(ast.TypeComment) {
+		p.Advance()
+	}
 	p.Expect(ast.TypeNewline, "")
 
 	loop.Block = p.ParseBlock(func() bool {
@@ -479,6 +503,9 @@ func (p *Parser) ParseWhile() nast.NestableElement {
 	p.Expect(ast.TypeKeyword, "end")
 
 	if !p.IsCurrentType(ast.TypeEOF) {
+		if p.IsCurrentType(ast.TypeComment) {
+			p.Advance()
+		}
 		p.Expect(ast.TypeNewline, "")
 	}
 
