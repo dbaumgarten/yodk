@@ -172,7 +172,7 @@ func (p *Parser) ErrorString(message string, code string) {
 func (p *Parser) Expect(tokenType string, tokenValue string) ast.Position {
 	if !p.IsCurrent(tokenType, tokenValue) {
 		var msg string
-		if tokenType == ast.TypeNewline || tokenType == ast.TypeComment {
+		if tokenType == ast.TypeNewline {
 			msg = "Expected newline"
 		} else {
 			msg = fmt.Sprintf("Expected token '%s'(%s)", tokenValue, tokenType)
