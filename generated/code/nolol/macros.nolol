@@ -1,0 +1,92 @@
+define separator="."
+
+//macros are defined using the macro-keyword, followed by a list of arguments, a optional list of external variables and a macro-type
+//macros must be defined at the top-level of the program (can not be nested)
+
+// There are three types of macros
+
+// Macros of type expr define a SINGLE expression
+// These macros can be used as expressions like regular functions
+macro addByte(a, b) expr
+	// comments are allowed here
+	(a+b)%2^8
+	// but the only non-comment thing in a macro of type expr, is a single expression
+end
+
+a=123
+b=55
+:sum=addByte(a,100)+addByte(b,100)
+
+
+// Macros of type line define a SINGLE line of statements (and optional label and BOL/EOL marker)
+// the line inside the macro will be merged with the line it is inserted into
+// if the line of the macro and the line where it is inserted are incompatible, the compiler will complain
+macro block_while(condition) line
+	//comments are also allowed here
+	here> if condition then goto here end; :foo=1
+end
+
+block_while(:timer++<=10); :go=1
+
+
+// macros of type block can contain (almost) anything, like for example multi-line constructs
+// the can only be used, if they are the only thing on that line (and can not be used as expressions)
+macro greet(output, name) block
+	output="Hello"
+	while i++<=5 do
+		output+=separator
+	end
+	output+=name
+end
+
+greet(:out1,"world")
+
+
+// arguments work, by replacing every instance of the name, by the value that is provided when using the macro
+// this feels a lot like if the arguments were passed by reference. This is way arguments can also be used to transport outputs of the function
+macro goodbye(output, name) block
+	// "output" is replaced by the first argument provided when using the macro
+	output="Goodbye"
+	// i is a macro-local variable. Changes to i are local to macro-insertions
+	// if you insert greet() multipe time, all insertions will have their own version of i
+	while i++<=5 do
+		output+=separator
+	end
+	// "name" is replaced by the second argument provided when using the macro
+	output+=name
+end
+
+// definitions are resolved when using a macro (and not when defining it) 
+// Also, new definitions override old ones
+// Therefore definitions can be used to configure the behavior of macros
+define separator="_"
+
+greet(:out2,"you")
+
+
+// all non-global vars (=vars that start not with ':') are (by default) private to a usage of a macro
+// for example, the following DOES NOT WORK: the code inside the macro does not have access to the external variable avar
+avar="foo"
+macro doesntwork() line
+	:out3=avar
+end
+doesntwork()
+
+// to give the code inside the macro access to an outside var, you either need to pass the var as an argument,
+// or mark the variable as an external variable. You can do this as shown below.#
+// This is done, so that different uses of a macro do not interfere with each other
+macro works()<avar> line
+	:out4=avar
+end
+works()
+// you can use more than one external variable by using <var1,var2,var3>
+
+
+// macros can contain other macros. BUT macros can not contain themselves (=recursion DOES NOT WORK)
+macro addByteOffset(a, b, offset) expr
+	addByte(a,b)+offset
+end
+
+:sum2=addByteOffset(a,b,100)
+
+:done=1

@@ -1,0 +1,20 @@
+i=0 j=i++ k=++i :testi=i==2 and j==1 and k==2
+hw="hello" hw++
+hw+="world"
+:testhw=hw=="hello world" //comment2
+abc="abc"
+:testssub=(hw-"world")=="hello " and abc=="a" and abc--=="a" and --abc=="ab"
+:testsin=abs(sin 90-1)<0.01
+:testcos=abs cos(90-0)<0.01
+:testtan=abs tan(0-0)<0.01
+:testasin=abs asin sin(90-90)<0.111
+:testacos=abs acos cos(90-90)<0.1
+:testatan=abs atan tan(0-0)<0.1
+:testsq=sqrt 16==4
+:testab=abs-5==5 and abs 5==5 and abs 5==abs 5
+:testz=((not 1) and not 10 and not(not 0))==0
+:testor=20 or 0
+:testfi=0
+pi=3.141
+ifpi>3then:testfi=1else:testfi=0end
+:done=1

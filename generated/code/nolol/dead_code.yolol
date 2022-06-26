@@ -1,0 +1,10 @@
+:err=0 :o1=1
+
+:o2=4
+
+a=4 ifa==4then:o3=3else:o3=4 :err++end
+
+a=2 ifa==1then:o4=1 :err++ goto9end ifa==2then:o4=2 goto9end
+ifa==4then:o4=3 :err++ goto9end :o4=4 :err++
+
+ifa==1then:o5=1 :err++else:o5=3end :done=1 goto1

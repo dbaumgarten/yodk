@@ -1,0 +1,26 @@
+// The keywords continue/break can be used to jump to the start/end of the current loop
+if :out==0 then
+	:out=""
+end
+while j++<=2 do
+	i=0
+	:out+="|"
+	while 1==1 do
+		i++
+		if i==10 then
+			// break immediately leaves the current (innermost) loop
+			break 
+		end
+		if i%2==0 then
+			// continue jumps to the start of the current (innermost) loop
+			// the loop will continue with the next iteration (if the condition is still true)
+			continue 
+		end
+		:out+=i+"."
+	end
+end
+
+// This will programm will count from 0 to 10 twice, skip every even number and
+// append the remaining numbers to a string, which ends up beeing: "|1.3.5.7.9.|1.3.5.7.9."
+
+:done=1

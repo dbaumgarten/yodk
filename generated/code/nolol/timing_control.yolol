@@ -1,0 +1,9 @@
+:a=123 :b=456 :c=789
+:d="this is too long, so it will start a new line" :e=0 goto3
+:f=123 :g="xyz" :x=0 :y=1 :z=2 :q=666 :foo="a"
+:bar="b" :baz="c" :foo="d"
+:bar="e" :foo="a"
+:a=0 a=1 b=2
+:bar="b" :a=123
+
+:b=456 :done=1 goto1

@@ -1,0 +1,8 @@
+:out="a" goto3
+:out+="c" goto4
+:out+="b" goto2
+:text="d is at line: 4" :out+="d" goto5 if:a!=1thengoto6end
+:out+="e" goto6
+:out+="f" goto8
+:out="skip this"
+:done=1 goto1

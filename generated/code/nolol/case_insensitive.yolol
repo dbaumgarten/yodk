@@ -1,0 +1,4 @@
+a=123 a=456 :assignok=a==456 b="test" :derefok=b==b :funcOK=1
+ifb==b then:fiok=1end :defineOK=1 c=1
+ifc++<4then:loopok=c==c goto3end :macroOK=1 :x=-1 :y=++d :done=1
+goto1

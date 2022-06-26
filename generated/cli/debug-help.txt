@@ -1,0 +1,21 @@
+Loaded and paused programs. Enter 'c' to start execution.
+
+Commands:
+  break         add breakpoint at line
+  choose        change currently viewed script
+  clear         clear the screen
+  continue      continue paused execution
+  delete        delete breakpoint at line
+  disas         show yolol code for nolol source
+  exit          exit the program
+  help          display help
+  info          show vm-state
+  list          show programm source code
+  pause         pause execution
+  reset         reset debugger
+  scripts       list scripts
+  set           set a variable
+  step          execute the next line and pause again
+  vars          print all current variables
+
+

@@ -1,0 +1,2 @@
+:hello="hello "
+ifa++<=10then:hello+="_" goto2end :hello+=" daniel" :done=1 goto1

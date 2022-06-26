@@ -1,0 +1,9 @@
+include "state_common.nolol"
+
+SMBEGIN(STATE_PONG)
+
+:OUTPUT+="pong "
+
+SMEND(STATE_PING)
+
+:done=1

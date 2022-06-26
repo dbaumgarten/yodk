@@ -1,0 +1,17 @@
+// define greeting to be hello
+define greeting="Hello"
+
+:name="Peter"
+
+// definitions can be any expression you like and even contain other definitions, variables or functions
+define message=greeting+" "+"world and "+:name
+
+// you can define a new name for a variable
+// if the defined value is a variable name (and nothing else), you can assign to it
+// this is practically aliasing :out to :output
+define :output=:out
+
+// :output is replaced by ":out" and message is replaced by the expression declared in it's definition
+:output=message
+
+:done=1

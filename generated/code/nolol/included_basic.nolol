@@ -1,0 +1,5 @@
+define stop=10
+
+while i++<=stop do
+	:hello+="."
+end

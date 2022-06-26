@@ -1,0 +1,4 @@
+if:out==0then:out=""end
+ifb++>2thengoto4end a=0 :out+="|"
+a++ ifa==10thengoto2end ifa%2==0thengoto3end :out+=a+"." goto3
+:done=1 goto1

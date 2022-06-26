@@ -1,0 +1,3 @@
+a++ :door="open" b=a+10 c=a
+a++ ifa<b thengoto2end :door="closed" d=a-c
+a++ :out="door closed after "+d+" cycles" :done=1 goto1

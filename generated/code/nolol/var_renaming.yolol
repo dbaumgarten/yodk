@@ -1,0 +1,2 @@
+a++ c="hallo" d="welt" b=123 g=b e=a f=e+a :out=c+" "+d+b+" "+f
+a++ :done=1 goto1

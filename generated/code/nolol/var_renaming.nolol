@@ -1,0 +1,8 @@
+// non-global variable names will be shortened automatically
+peter="hallo"; dieter="welt"; foo=123
+bar=foo
+when=time()
+later=when+time()
+:out=peter+" "+dieter+foo+" "+later
+
+:done=1

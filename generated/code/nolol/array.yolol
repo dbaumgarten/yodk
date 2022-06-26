@@ -1,0 +1,8 @@
+:o="table> is at line: 2"
+goto2+:a
+if:m thena=:d else:d=a end :a=0 goto2+:a
+if:m thenb=:d else:d=b end :a=0 goto2+:a
+if:m thenc=:d else:d=c end :a=0 goto2+:a
+if:m thend=:d else:d=d end :a=0 goto2+:a
+if:m thene=:d else:d=e end :a=0 goto2+:a
+if:m thenf=:d else:d=f end :a=0 goto2+:a

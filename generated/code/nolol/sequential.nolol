@@ -1,0 +1,8 @@
+// This script demonstrates sequential testing.
+// By setting sequential: true in the test.yaml, state is preserved between test-cases
+:out=1 $
+:out=2 $
+here> if not :in then :foo++; goto here end $
+:out=3 $
+:out=4 $
+:out=5 $

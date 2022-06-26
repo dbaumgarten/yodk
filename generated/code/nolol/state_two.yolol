@@ -1,0 +1,1 @@
+if:state!=1thengoto1end :out+="pong " :state=0 :done=1 goto1

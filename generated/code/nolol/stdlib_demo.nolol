@@ -1,0 +1,5 @@
+// include the math-part of the standard-library
+include "std/math"
+// use the math_floor macro
+:number=math_floor(5.123)
+// :number now is 5

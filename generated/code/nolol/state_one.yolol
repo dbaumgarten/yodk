@@ -1,0 +1,2 @@
+if:out==0then:out=""end
+if:state!=0thengoto2end :out+="ping " :counter++ :state=1 goto1

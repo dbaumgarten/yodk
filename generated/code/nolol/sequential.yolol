@@ -1,0 +1,7 @@
+:out=1
+:out=2
+ifnot :in then:foo++ goto3end
+:out=3
+:out=4
+:out=5
+goto1

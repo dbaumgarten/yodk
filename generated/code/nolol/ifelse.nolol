@@ -1,0 +1,41 @@
+// example demonstrating the use of if-else
+// nolol ifs are multi-line
+// when compiling thei are converted to yolol inline ifs if possible
+// if the body of the if is too large for an inline if, the if will be implemented using a goto
+if :day=="monday" then
+	:msg="fuck"
+else if :day=="tuesday" then
+	:msg="still stupid"
+else if :day=="wednesday" then
+	// especially long string to force a multiline if
+	:msg="half time!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+else if :day=="thursday" then
+	:msg="almost..."
+else if :day=="friday" then
+	:msg="yay"
+else
+	:msg="Weekend!!!"
+	// ifs can be nested
+	if :day=="saturday" then
+		:msg+=" PARTY!"
+	else
+		:msg+=" is over :("
+	end
+end
+
+// You can still use the plain old yolol-inline-ifs. You usually dont need them, as the compiler will figure out if he can use an inline-ip on its own.
+// However, if you ABSOLUTELY need an inline if (or an error if thats not possible), it can still be usefull.
+a=1; if 1==1 then :foo=1; lala=123 else :foo=2 end; b=2
+
+// If the condition of a branch can be evaluated at compile time (because it consists only of constants)
+// then the compiler will automatically remove any unreachable code (and if possible completely replace the if-statement with one of the cases
+define ENABLE_BONUS=1
+if ENABLE_BONUS==1 then
+	:yeah=1
+else
+	// this is unreachable and will not be included in the generated yolol
+	:yeah=0
+end
+
+:other="done"
+:done=1
