@@ -2,7 +2,7 @@ import assert = require('assert');
 import * as Path from 'path';
 import { DebugClient } from 'vscode-debugadapter-testsupport';
 import { DebugAdapterExecutableFactory, getExePath } from '../extension'
-import { Uri, DebugAdapterExecutable } from 'vscode'
+import { Uri, DebugAdapterExecutable, Breakpoint, DebugProtocolBreakpoint } from 'vscode'
 import { activate, getDocUri } from './helper'
 
 // these test should verify that the interaction with the debugadapter is at least not completely broken
@@ -32,6 +32,10 @@ describe('Debug Adapter', function () {
 				name = ""
 				request = ""
 			}
+			getDebugProtocolBreakpoint(breakpoint: Breakpoint): Thenable<DebugProtocolBreakpoint | undefined>{
+				return null
+			}
+
 			customRequest(command: string, args?: any): Thenable<any> {
 				return null
 			}
