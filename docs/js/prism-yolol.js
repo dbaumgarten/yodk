@@ -5,5 +5,5 @@ Prism.languages.yolol = {
     'operator': /(?<=[^a-zA-Z0-9_:.])(and|or)(?=[^a-zA-Z0-9_:.])/i,
     'function': /[a-z0-9_]+(?=\()/i,
     'variable': /:[a-zA-Z0-9_:.]+|^[a-zA-Z]+[a-zA-Z0-9_.]*/,
-    'constant': /[0-9]+(\.[0-9]+)?/
+    'constant': /(([0-9]+(\.[0-9]+)?)e[0-9]+)|(0x[0-9a-fA-F]+)|(([0-9]+(\.[0-9]+)?))/
 };

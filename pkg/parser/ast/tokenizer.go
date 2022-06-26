@@ -77,6 +77,10 @@ var identifierRegex = regexp.MustCompile("^:[a-zA-Z0-9_:.]+|^[a-zA-Z]+[a-zA-Z0-9
 
 var numberRegex = regexp.MustCompile("^[0-9]+(\\.[0-9]+)?|^\\.[0-9]+")
 
+var hexNumberRegex = regexp.MustCompile("^0x([0-9a-fA-F]+)")
+
+var scientificNumberRegex = regexp.MustCompile("(^[0-9]+(\\.[0-9]+)?|^\\.[0-9]+)e(\\d+)")
+
 var commentRegex = regexp.MustCompile("^\\/\\/([^\n]*)")
 
 var whitespaceRegex = regexp.MustCompile("^[ \\t\r]+")
@@ -325,7 +329,20 @@ func (t *Tokenizer) getStringConstant() (*Token, int) {
 }
 
 func (t *Tokenizer) getNumberConstant() (*Token, int) {
-	found := t.NumberRegex.Find(t.remaining)
+	//hex-number
+	found := hexNumberRegex.Find(t.remaining)
+	if found != nil {
+		return t.newToken(TypeNumber, string(found)), len(found)
+	}
+
+	//scientific-number
+	found = scientificNumberRegex.Find(t.remaining)
+	if found != nil {
+		return t.newToken(TypeNumber, string(found)), len(found)
+	}
+
+	// normal number
+	found = t.NumberRegex.Find(t.remaining)
 	if found != nil {
 		return t.newToken(TypeNumber, string(found)), len(found)
 	}

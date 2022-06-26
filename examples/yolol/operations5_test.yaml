@@ -1,0 +1,7 @@
+scripts: 
+  - operations5.yolol
+cases:
+  - name: TestOperationSuccess
+    outputs:
+      testhex: 1
+      testsci: 1

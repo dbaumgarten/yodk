@@ -65,6 +65,26 @@ func TestFromString(t *testing.T) {
 			teststr: "649.094",
 			want:    FromFloat64(649.094),
 		},
+		{
+			teststr: "0xFF",
+			want:    FromInt(255),
+		},
+		{
+			teststr: "0x0",
+			want:    FromInt(0),
+		},
+		{
+			teststr: "0x01",
+			want:    FromInt(1),
+		},
+		{
+			teststr: "3e2",
+			want:    FromInt(300),
+		},
+		{
+			teststr: "1.2e2",
+			want:    FromInt(120),
+		},
 	}
 	for _, tt := range tests {
 		got, err := FromString(tt.teststr)
