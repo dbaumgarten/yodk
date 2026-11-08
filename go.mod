@@ -5,7 +5,6 @@ go 1.27
 require (
 	github.com/abiosoft/ishell v2.0.0+incompatible
 	github.com/atotto/clipboard v0.1.4
-	github.com/elazarl/go-bindata-assetfs v1.0.1
 	github.com/google/go-dap v0.12.0
 	github.com/jinzhu/copier v0.4.0
 	github.com/mitchellh/go-homedir v1.1.0
@@ -21,6 +20,7 @@ require (
 	github.com/fatih/color v1.19.0 // indirect
 	github.com/flynn-archive/go-shlex v0.0.0-20150515145356-3f9db97f8568 // indirect
 	github.com/fsnotify/fsnotify v1.10.1 // indirect
+	github.com/go-bindata/go-bindata v3.1.2+incompatible // indirect
 	github.com/go-viper/mapstructure/v2 v2.5.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/mattn/go-colorable v0.1.16 // indirect
@@ -36,3 +36,5 @@ require (
 	golang.org/x/text v0.43.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 )
+
+tool github.com/go-bindata/go-bindata/go-bindata

@@ -24,8 +24,6 @@ setup: setup-submodule setup-go setup-npm
 .PHONY: setup-go
 setup-go:
 	${go} mod download
-	${go} install github.com/go-bindata/go-bindata/...
-	${go} install github.com/elazarl/go-bindata-assetfs/...
 
 .PHONY: setup-npm
 setup-npm:
@@ -86,7 +84,7 @@ yodk-darwin-${VERSION}: $(shell find pkg) $(shell find cmd) stdlib/bindata.go st
 
 .PHONY: stdlib
 stdlib:
-	cd stdlib && ${go-bindata} -pkg stdlib -prefix src/ ./src
+	cd stdlib && ${go} tool go-bindata -pkg stdlib -prefix src/ ./src
 
 
 
