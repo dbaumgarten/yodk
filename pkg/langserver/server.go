@@ -2,6 +2,7 @@ package langserver
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"runtime"
 	"strings"
@@ -31,8 +32,12 @@ func Run(ctx context.Context, stream jsonrpc2.Stream, enableHotkeys bool, opts .
 	return conn.Wait(ctx)
 }
 
-func unsupported() error {
-	return jsonrpc2.NewErrorf(jsonrpc2.CodeMethodNotFound, "method %q not yet implemented", callingFunctionName())
+func unsupported(str ...string) error {
+	if len(str) > 0 {
+		return jsonrpc2.NewErrorf(jsonrpc2.CodeMethodNotFound, "method %q not yet implemented: %s", callingFunctionName(), str[0])
+	} else {
+		return jsonrpc2.NewErrorf(jsonrpc2.CodeMethodNotFound, "method %q not yet implemented", callingFunctionName())
+	}
 }
 
 // get the name of the funtion that called the function that called this function
@@ -106,9 +111,11 @@ func (ls *LangServer) ExecuteCommand(ctx context.Context, params *lsp.ExecuteCom
 				ls.storeLastOpenedScript(argstr)
 				return nil, nil
 			}
+			unsupported("activeDocument arg 0 is not a string")
 		}
+		unsupported(fmt.Sprintf("activeDocument arg count is %d", params.Arguments))
 	}
-	return nil, unsupported()
+	return nil, unsupported(params.Command)
 }
 func (ls *LangServer) DidOpen(ctx context.Context, params *lsp.DidOpenTextDocumentParams) error {
 	ls.cache.Set(params.TextDocument.URI, params.TextDocument.Text)

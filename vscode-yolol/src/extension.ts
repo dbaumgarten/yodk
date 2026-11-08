@@ -133,11 +133,13 @@ export async function startLangServer(){
 	// Start the client. This will also launch the server
 	await client.start()
 	// whenever the currently active document changes, inform the language-server
-	vscode.window.onDidChangeActiveTextEditor(function(event) { 
-		client.sendRequest( "workspace/executeCommand", {
-			command: "activeDocument",
-			arguments: [vscode.window.activeTextEditor?.document.uri.toString()]
-		})
+	vscode.window.onDidChangeActiveTextEditor(function(event) {
+		if (vscode.window.activeTextEditor != undefined){
+			client.sendRequest( "workspace/executeCommand", {
+				command: "activeDocument",
+				arguments: [vscode.window.activeTextEditor.document.uri.toString()]
+			})
+		}	
 	})
 }
 
