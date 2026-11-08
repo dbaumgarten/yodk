@@ -1,0 +1,39 @@
+name: Test & Build
+
+on:
+  push:
+    branches:
+      - develop
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+    - uses: actions/checkout@v7
+    - uses: actions/setup-go@v7
+      with:
+        go-version: '1.27'
+    - uses: actions/setup-node@v7
+      with:
+        node-version: 'v26.13.0'
+        cache: 'npm'
+        cache-dependency-path: vscode-yolol/package-lock.json
+    - name: Setup
+      run: make setup
+    - name: Build binaries
+      run: make binaries
+    - name: Go tests
+      run: make go-test acid-tests
+    - name: Build vscode extension
+      run: make vscode-yolol.vsix
+    - name: Test vscode extension
+      uses: coactions/setup-xvfb@v1
+      with:
+        run: make vsc-test
+    - name: Build docs
+      run: make docs CHANGELOG.md
+    - name: Package things
+      run: make zips
+      
