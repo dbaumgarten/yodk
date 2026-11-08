@@ -2,8 +2,8 @@ language: go
 branches:
   except:
   - latest
-go: 1.14
-dist: bionic
+go: 1.27
+dist: resolute
 services:
   - xvfb
 env:

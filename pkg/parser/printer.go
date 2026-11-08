@@ -218,7 +218,7 @@ func (p *Printer) Print(prog ast.Node) (string, error) {
 			if strings.HasPrefix(n.Value, "-") && p.text[len(p.text)-1] == byte('-') {
 				p.Space()
 			}
-			p.Write(fmt.Sprintf(n.Value))
+			p.Write(fmt.Sprint(n.Value))
 			break
 		case *ast.BinaryOperation:
 			p.printBinaryOperation(n, visitType)
