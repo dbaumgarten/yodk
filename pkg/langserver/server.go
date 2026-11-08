@@ -69,6 +69,11 @@ func (ls *LangServer) Initialize(ctx context.Context, params *lsp.InitializePara
 			CompletionProvider: &lsp.CompletionOptions{
 				TriggerCharacters: []string{" ", ":", "+", "-", "*", "/", "%", "=", "^", ">", "<"},
 			},
+			ExecuteCommandProvider: &lsp.ExecuteCommandOptions{
+				Commands: []string{
+					"activeDocument", // Only tell VS Code you listen to this exact string!
+				},
+			},
 		},
 	}, nil
 }

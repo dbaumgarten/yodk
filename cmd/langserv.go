@@ -10,6 +10,7 @@ import (
 
 var logfile string
 var hotkeys bool
+var stdio bool
 
 // langservCmd represents the langserv command
 var langservCmd = &cobra.Command{
@@ -32,4 +33,5 @@ func init() {
 	langservCmd.Flags().StringVar(&logfile, "logfile", "", "Name of the file to log into. Defaults to stderr")
 	langservCmd.Flags().BoolVarP(&debugLog, "debug", "d", false, "Enable verbose debug-logging")
 	langservCmd.Flags().BoolVar(&hotkeys, "hotkeys", false, "Enable system-wide hotkeys for auto-typing")
+	langservCmd.Flags().BoolVar(&stdio, "stdio", true, "Whether to use stdio as the communications channel. Always true, can't be disabled!")
 }

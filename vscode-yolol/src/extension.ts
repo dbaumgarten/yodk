@@ -86,7 +86,7 @@ function areHotkeysEnabled(){
 	return vscode.workspace.getConfiguration("yolol.hotkeys")["enable"]
 }
 
-export function startLangServer(){
+export async function startLangServer(){
 	let serverModule = getExePath();
 	var args = ["langserv"]
 
@@ -131,15 +131,14 @@ export function startLangServer(){
 	);
 
 	// Start the client. This will also launch the server
-	client.start().then(function(){
-		// whenever the currently active document changes, inform the language-server
-		vscode.window.onDidChangeActiveTextEditor(function(event) { 
-			client.sendRequest( "workspace/executeCommand", {
-				command: "activeDocument",
-				arguments: [vscode.window.activeTextEditor?.document.uri.toString()]
-			})
+	await client.start()
+	// whenever the currently active document changes, inform the language-server
+	vscode.window.onDidChangeActiveTextEditor(function(event) { 
+		client.sendRequest( "workspace/executeCommand", {
+			command: "activeDocument",
+			arguments: [vscode.window.activeTextEditor?.document.uri.toString()]
 		})
-	});
+	})
 }
 
 export async function restartLangServer() {
@@ -184,7 +183,7 @@ function replaceLast(input, search, replacement) {
 	collection.append('PATH', separator+context.asAbsolutePath(bindir));
  }
 
-export function activate(lcontext: ExtensionContext) {
+export async function activate(lcontext: ExtensionContext) {
 	context = lcontext
 
 	const compileCommandHandler = async () => {
