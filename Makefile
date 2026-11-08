@@ -29,7 +29,7 @@ setup-go:
 setup-npm:
 	cd vscode-yolol && \
 	npm install && \
-	npm install -g vsce
+	npm install -g @vscode/vsce
 	
 .PHONY: setup-submodule
 setup-submodule:

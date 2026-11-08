@@ -6,7 +6,7 @@ import {
 	LanguageClientOptions,
 	ServerOptions,
 	TransportKind
-} from 'vscode-languageclient';
+} from 'vscode-languageclient/node';
 
 import * as vscode from 'vscode';
 
@@ -36,7 +36,7 @@ export function getExePath(platform?){
 	return context.asAbsolutePath(executable);
 }
 
-export async function runYodkCommand(cmd,resultChannel=null): Promise<{}> {
+export async function runYodkCommand(cmd, resultChannel? : vscode.OutputChannel ): Promise<{}> {
 	const cp = require('child_process')
 
 	let binary = cp.spawn(getExePath(),cmd);
@@ -66,13 +66,16 @@ export async function runYodkCommand(cmd,resultChannel=null): Promise<{}> {
 }
 
 // given a filename, return a full-path for a logfile
-function getLogfilePath(filename:string){
+function getLogfilePath(filename:string): string{
 	var ws = vscode.workspace.workspaceFolders
 	if (ws) {
 		return path.join(ws[0].uri.fsPath,filename)
 	}
-	var activeFile = vscode.window.activeTextEditor.document.uri.fsPath
-	return path.join(path.dirname(activeFile),filename)
+	var activeFile = vscode.window.activeTextEditor?.document.uri.fsPath
+	if (activeFile){
+		return path.join(path.dirname(activeFile),filename)
+	}
+	return ""
 }
 
 function isDebuggingEnabled(){
@@ -127,19 +130,16 @@ export function startLangServer(){
 		clientOptions
 	);
 
-	// when the client is ready:
-	client.onReady().then(function(){
+	// Start the client. This will also launch the server
+	client.start().then(function(){
 		// whenever the currently active document changes, inform the language-server
 		vscode.window.onDidChangeActiveTextEditor(function(event) { 
 			client.sendRequest( "workspace/executeCommand", {
 				command: "activeDocument",
-				arguments: [vscode.window.activeTextEditor.document.uri.toString()]
+				arguments: [vscode.window.activeTextEditor?.document.uri.toString()]
 			})
 		})
-	})
-
-	// Start the client. This will also launch the server
-	client.start();
+	});
 }
 
 export async function restartLangServer() {
@@ -188,11 +188,11 @@ export function activate(lcontext: ExtensionContext) {
 	context = lcontext
 
 	const compileCommandHandler = async () => {
-		if (vscode.window.activeTextEditor.document.isDirty){
+		if (vscode.window.activeTextEditor?.document.isDirty){
 			await vscode.window.activeTextEditor.document.save()
 		}
 
-		var infile = vscode.window.activeTextEditor.document.fileName
+		var infile = vscode.window.activeTextEditor?.document.fileName
 		var chiptype = vscode.workspace.getConfiguration("yolol")["chipType"].toLowerCase()
 		await runYodkCommand(["compile", infile, "-c", chiptype])
 
@@ -201,11 +201,11 @@ export function activate(lcontext: ExtensionContext) {
 	};
 
 	const optimizeCommandHandler = async ()  => {
-		if (vscode.window.activeTextEditor.document.isDirty){
+		if (vscode.window.activeTextEditor?.document.isDirty){
 			await vscode.window.activeTextEditor.document.save()
 		}
 
-		var infile = vscode.window.activeTextEditor.document.fileName
+		var infile = vscode.window.activeTextEditor?.document.fileName
 		await runYodkCommand(["optimize", infile])
 
 		var outfile = replaceLast(infile,".yolol",".opt.yolol")
@@ -219,7 +219,7 @@ export function activate(lcontext: ExtensionContext) {
 	testResultChannel = vscode.window.createOutputChannel("Test results")
 
 	const runTestCommandHandler = () => {
-		if (!vscode.window.activeTextEditor.document.fileName.endsWith(".yaml")){
+		if (!vscode.window.activeTextEditor?.document.fileName.endsWith(".yaml")){
 			vscode.window.showErrorMessage("You need to have a .yaml file opened to use this command.")
 			return
 		}
@@ -332,12 +332,12 @@ export class YodkDebugConfigurationProvider implements vscode.DebugConfiguration
 		  ];
 	}
 
-	public resolveDebugConfiguration?( folder: vscode.WorkspaceFolder | undefined, debugConfiguration: vscode.DebugConfiguration, token?: vscode.CancellationToken): vscode.DebugConfiguration {
+	public resolveDebugConfiguration?( folder: vscode.WorkspaceFolder | undefined, debugConfiguration: vscode.DebugConfiguration, token?: vscode.CancellationToken): vscode.DebugConfiguration | null {
 		// no debug config given. Create one on the fly
 		if (!debugConfiguration.request){
 			const activeEditor = vscode.window.activeTextEditor;
 			if (!activeEditor) {
-				return;
+				return null;
 			}
 			if (activeEditor.document.languageId == "yolol" || activeEditor.document.languageId == "nolol"){
 				return {

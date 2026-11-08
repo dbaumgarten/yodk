@@ -7,7 +7,7 @@ dist: resolute
 services:
   - xvfb
 env:
-  - NODE_VERSION="16.1" GO111MODULE=on
+  - NODE_VERSION="26.13"
 before_install:
   - nvm install $NODE_VERSION
 install:

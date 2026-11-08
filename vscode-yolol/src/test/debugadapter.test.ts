@@ -1,6 +1,6 @@
 import assert = require('assert');
 import * as Path from 'path';
-import { DebugClient } from 'vscode-debugadapter-testsupport';
+import { DebugClient } from '@vscode/debugadapter-testsupport';
 import { DebugAdapterExecutableFactory, getExePath } from '../extension'
 import { Uri, DebugAdapterExecutable, Breakpoint, DebugProtocolBreakpoint } from 'vscode'
 import { activate, getDocUri } from './helper'
@@ -33,16 +33,20 @@ describe('Debug Adapter', function () {
 				request = ""
 			}
 			getDebugProtocolBreakpoint(breakpoint: Breakpoint): Thenable<DebugProtocolBreakpoint | undefined>{
-				return null
+				return new Promise((resolve, reject) => {
+					resolve(undefined)
+				});
 			}
 
 			customRequest(command: string, args?: any): Thenable<any> {
-				return null
+				return new Promise((resolve, reject) => {
+					resolve(undefined)
+				});
 			}
 		}
 
 		var fact = new DebugAdapterExecutableFactory()
-		var descriptor = fact.createDebugAdapterDescriptor(debugSession, null)
+		var descriptor = fact.createDebugAdapterDescriptor(debugSession, undefined)
 		executable = descriptor as DebugAdapterExecutable
 	})
 

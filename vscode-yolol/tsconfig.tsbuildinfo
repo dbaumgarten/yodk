@@ -1,0 +1,1 @@
+{"root":["./src/extension.ts","./src/test/debugadapter.test.ts","./src/test/diagnostics.test.ts","./src/test/helper.ts","./src/test/index.ts","./src/test/runTest.ts","./src/test/unit.test.ts"],"version":"6.0.3"}

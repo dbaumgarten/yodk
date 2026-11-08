@@ -219,23 +219,24 @@
   },
   "publisher": "dbaumgarten",
   "engines": {
-    "vscode": "^1.46.0"
+    "vscode": "^1.128.1"
   },
   "dependencies": {
-    "vscode-languageclient": "^5.2.1"
+    "vscode-languageclient": "^11.0.0"
   },
   "devDependencies": {
-    "@types/mocha": "^5.2.0",
-    "@types/node": "^8.0.0",
-    "@types/vscode": "^1.34.0",
-    "@typescript-eslint/eslint-plugin": "^4.29.1",
-    "@typescript-eslint/parser": "^4.29.1",
-    "@vscode/test-electron": "^2.1.4",
-    "mocha": "^6.1.4",
-    "eslint": "^7.32.0",
-    "typescript": "^3.5.1",
-    "vscode-debugadapter-testsupport": "^1.41.0-pre.0",
-    "vscode-debugprotocol": "^1.41.0-pre.0"
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^26.6.6",
+    "@types/vscode": "^1.128.1",
+    "@typescript-eslint/eslint-plugin": "^8.72.1",
+    "@typescript-eslint/parser": "^8.72.1",
+    "@vscode/debugadapter-testsupport": "^1.68.0",
+    "@vscode/debugprotocol": "^1.68.0",
+    "@vscode/test-electron": "^3.1.0",
+    "eslint": "^10.14.0",
+    "mocha": "^12.0.3",
+    "typescript": "^6.0.0",
+    "vscode-languageclient": "^11.0.0"
   },
   "scripts": {
     "vscode:prepublish": "npm run compile && cp ../yodk bin/linux/ && cp ../yodk.exe bin/win32/ && cp ../yodk-darwin bin/darwin/yodk",
