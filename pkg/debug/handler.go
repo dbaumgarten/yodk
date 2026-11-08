@@ -1,6 +1,7 @@
 package debug
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -23,7 +24,7 @@ var convertedCodeOffset = 10000
 type YODKHandler struct {
 	session         *Session
 	helper          *Helper
-	launchArguments map[string]interface{}
+	launchArguments json.RawMessage
 }
 
 // NewYODKHandler returns a new handler connected to the given session
@@ -85,7 +86,10 @@ func normalizePath(path string) string {
 	return path
 }
 
-func (h *YODKHandler) helperFromArguments(arguments map[string]interface{}) (*Helper, error) {
+func (h *YODKHandler) helperFromArguments(argumentsRaw json.RawMessage) (*Helper, error) {
+
+	var arguments map[string]any
+	json.Unmarshal(argumentsRaw, &arguments)
 
 	ws, _ := os.Getwd()
 	if workspacefield, exists := arguments["workspace"]; exists {
@@ -228,7 +232,7 @@ func (h *YODKHandler) SetSession(s *Session) {
 }
 
 // OnLaunchRequest implements the Handler interface
-func (h *YODKHandler) OnLaunchRequest(arguments map[string]interface{}) error {
+func (h *YODKHandler) OnLaunchRequest(arguments json.RawMessage) error {
 	h.launchArguments = arguments
 
 	var err error
@@ -243,7 +247,7 @@ func (h *YODKHandler) OnLaunchRequest(arguments map[string]interface{}) error {
 }
 
 // OnAttachRequest implements the Handler interface
-func (h *YODKHandler) OnAttachRequest(arguments *dap.AttachRequestArguments) error {
+func (h *YODKHandler) OnAttachRequest(arguments json.RawMessage) error {
 	return ErrNotImplemented
 }
 
@@ -270,7 +274,7 @@ func (h *YODKHandler) OnTerminateRequest(arguments *dap.TerminateArguments) erro
 }
 
 // OnRestartRequest implements the Handler interface
-func (h *YODKHandler) OnRestartRequest(arguments *dap.RestartArguments) error {
+func (h *YODKHandler) OnRestartRequest(arguments json.RawMessage) error {
 	go h.helper.Coordinator.Terminate()
 	var err error
 	h.helper, err = h.helperFromArguments(h.launchArguments)
@@ -309,7 +313,7 @@ func (h *YODKHandler) OnSetBreakpointsRequest(arguments *dap.SetBreakpointsArgum
 		resp.Breakpoints[i] = dap.Breakpoint{
 			Line:     bp,
 			Verified: true,
-			Source: dap.Source{
+			Source: &dap.Source{
 				Name: arguments.Source.Name,
 				Path: arguments.Source.Path,
 			},
@@ -421,7 +425,7 @@ func (h *YODKHandler) OnStackTraceRequest(arguments *dap.StackTraceArguments) (*
 				Name:   h.helper.ScriptNames[arguments.ThreadId-1],
 				Line:   h.helper.Vms[arguments.ThreadId-1].CurrentSourceLine(),
 				Column: 0,
-				Source: dap.Source{
+				Source: &dap.Source{
 					Path: JoinPath(h.helper.Worspace, h.helper.ScriptNames[arguments.ThreadId-1]),
 				},
 			},

@@ -183,16 +183,16 @@ func (ds *Session) dispatchRequest(m dap.Message) {
 		resperr = ds.handler.OnLaunchRequest(r.Arguments)
 		response = &dap.LaunchResponse{}
 	case *dap.AttachRequest:
-		resperr = ds.handler.OnAttachRequest(&r.Arguments)
+		resperr = ds.handler.OnAttachRequest(r.Arguments)
 		response = &dap.AttachResponse{}
 	case *dap.DisconnectRequest:
-		resperr = ds.handler.OnDisconnectRequest(&r.Arguments)
+		resperr = ds.handler.OnDisconnectRequest(r.Arguments)
 		response = &dap.DisconnectResponse{}
 	case *dap.TerminateRequest:
-		resperr = ds.handler.OnTerminateRequest(&r.Arguments)
+		resperr = ds.handler.OnTerminateRequest(r.Arguments)
 		response = &dap.TerminateResponse{}
 	case *dap.RestartRequest:
-		resperr = ds.handler.OnRestartRequest(&r.Arguments)
+		resperr = ds.handler.OnRestartRequest(r.Arguments)
 		response = &dap.RestartResponse{}
 	case *dap.SetBreakpointsRequest:
 		body, err := ds.handler.OnSetBreakpointsRequest(&r.Arguments)
@@ -214,7 +214,7 @@ func (ds *Session) dispatchRequest(m dap.Message) {
 		resperr = ds.handler.OnSetExceptionBreakpointsRequest(&r.Arguments)
 		response = &dap.SetExceptionBreakpointsResponse{}
 	case *dap.ConfigurationDoneRequest:
-		resperr = ds.handler.OnConfigurationDoneRequest(&r.Arguments)
+		resperr = ds.handler.OnConfigurationDoneRequest(r.Arguments)
 		response = &dap.ConfigurationDoneResponse{}
 	case *dap.ContinueRequest:
 		body, err := ds.handler.OnContinueRequest(&r.Arguments)
@@ -348,7 +348,7 @@ func (ds *Session) dispatchRequest(m dap.Message) {
 			}
 		}
 	case *dap.LoadedSourcesRequest:
-		body, err := ds.handler.OnLoadedSourcesRequest(&r.Arguments)
+		body, err := ds.handler.OnLoadedSourcesRequest(r.Arguments)
 		resperr = err
 		if body != nil {
 			response = &dap.LoadedSourcesResponse{
@@ -388,10 +388,10 @@ func (ds *Session) dispatchRequest(m dap.Message) {
 			}
 		}
 	case *dap.CancelRequest:
-		resperr = ds.handler.OnCancelRequest(&r.Arguments)
+		resperr = ds.handler.OnCancelRequest(r.Arguments)
 		response = &dap.CancelResponse{}
 	case *dap.BreakpointLocationsRequest:
-		body, err := ds.handler.OnBreakpointLocationsRequest(&r.Arguments)
+		body, err := ds.handler.OnBreakpointLocationsRequest(r.Arguments)
 		resperr = err
 		if body != nil {
 			response = &dap.BreakpointLocationsResponse{
@@ -458,7 +458,7 @@ func newErrorResponse(request dap.RequestMessage, message string) *dap.ErrorResp
 			Message:    message,
 		},
 		Body: dap.ErrorResponseBody{
-			Error: dap.ErrorMessage{
+			Error: &dap.ErrorMessage{
 				Id:     12345,
 				Format: message,
 			},
@@ -470,11 +470,11 @@ func newErrorResponse(request dap.RequestMessage, message string) *dap.ErrorResp
 type Handler interface {
 	SetSession(s *Session)
 	OnInitializeRequest(arguments *dap.InitializeRequestArguments) (*dap.Capabilities, error)
-	OnLaunchRequest(arguments map[string]interface{}) error
-	OnAttachRequest(arguments *dap.AttachRequestArguments) error
+	OnLaunchRequest(arguments json.RawMessage) error
+	OnAttachRequest(arguments json.RawMessage) error
 	OnDisconnectRequest(arguments *dap.DisconnectArguments) error
 	OnTerminateRequest(arguments *dap.TerminateArguments) error
-	OnRestartRequest(arguments *dap.RestartArguments) error
+	OnRestartRequest(arguments json.RawMessage) error
 	OnSetBreakpointsRequest(arguments *dap.SetBreakpointsArguments) (*dap.SetBreakpointsResponseBody, error)
 	OnSetFunctionBreakpointsRequest(arguments *dap.SetFunctionBreakpointsArguments) (*dap.SetFunctionBreakpointsResponseBody, error)
 	OnSetExceptionBreakpointsRequest(arguments *dap.SetExceptionBreakpointsArguments) error
