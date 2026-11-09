@@ -1,0 +1,33 @@
+name: Pages
+
+on:
+  push:
+    branches:
+      - "master"
+
+jobs:
+  pages:
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+    - uses: actions/checkout@v7
+    - uses: actions/setup-go@v7
+      with:
+        go-version: '1.27'
+    - name: Setup
+      run: make setup-go
+    - name: Build Docs
+      run: make docs
+    - name: Upload artifact
+      id: upload
+      uses: actions/upload-pages-artifact@v3 
+      with:
+        path: docs/
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4
