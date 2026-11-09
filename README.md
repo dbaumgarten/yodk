@@ -1,6 +1,11 @@
 # YODK - YOLOL Development Kit
 [![Build Status](https://github.com/dbaumgarten/yodk/actions/workflows/ci.yaml/badge.svg?branch=develop)](https://github.com/dbaumgarten/yodk/actions/workflows/ci.yaml)
 
+> Please Note:  
+> As of now, Starbase (the game this has been developed for) is pretty much dead.
+> Therefore all development on this toolkit has been halted (except for keeping dependencies updated now and then).
+> If by any miracle the development of Starbase should continue, so will the development on this.
+
 # What is YOLOL?
 [YOLOL](https://wiki.starbasegame.com/index.php/YOLOL) is the ingame programming language for the upcoming game starbase.
 
