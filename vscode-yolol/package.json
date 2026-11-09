@@ -238,6 +238,9 @@
     "typescript": "^6.0.0",
     "vscode-languageclient": "^11.0.0"
   },
+  "overrides": {
+    "minimatch": "^11.0.1"
+  },
   "scripts": {
     "vscode:prepublish": "npm run compile && cp ../yodk bin/linux/ && cp ../yodk.exe bin/win32/ && cp ../yodk-darwin bin/darwin/yodk",
     "compile": "tsc -b",
