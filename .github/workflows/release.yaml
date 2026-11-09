@@ -1,0 +1,40 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+    - uses: actions/checkout@v7
+    - uses: actions/setup-go@v7
+      with:
+        go-version: '1.27'
+    - uses: actions/setup-node@v7
+      with:
+        node-version: 'v26.13.0'
+        cache: 'npm'
+        cache-dependency-path: vscode-yolol/package-lock.json
+    - name: Setup
+      run: make setup
+    - name: Build & Test
+      uses: coactions/setup-xvfb@v1
+      with:
+        run: make all VERSION=${{ github.ref_name }}
+    - name: Release
+      uses: softprops/action-gh-release@v3
+      with:
+        body_path: CHANGELOG.md
+        files: |
+          vscode-yolol.vsix
+          yodk-linux.zip
+          yodk-darwin.zip
+          yodk-win.zip
+        fail_on_unmatched_files: true
+    - name: Release vsix
+      run: make publish-vsix VERSION=${{ github.ref_name }}

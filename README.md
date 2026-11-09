@@ -1,5 +1,5 @@
 # YODK - YOLOL Development Kit
-[![Build Status](https://app.travis-ci.com/dbaumgarten/yodk.svg?branch=master)](https://app.travis-ci.com/dbaumgarten/yodk)
+[![Build Status](https://github.com/dbaumgarten/yodk/actions/workflows/ci.yaml/badge.svg?branch=develop)](https://github.com/dbaumgarten/yodk/actions/workflows/ci.yaml)
 
 # What is YOLOL?
 [YOLOL](https://wiki.starbasegame.com/index.php/YOLOL) is the ingame programming language for the upcoming game starbase.
@@ -50,7 +50,7 @@ Just download them, unpack the zip file and place the binary somewhere in your P
 
 ## CLI - From source
 You will need to have the go-toolchain (>=v1.14) installed.  
-Run: ```go get -v github.com/dbaumgarten/yodk```  
+Run: ```go install github.com/dbaumgarten/yodk@latest```  
 This will download yodk and it's dependencies, compile it and store the binary in the bin folder of your gopath.
 - If $GOPATH is set: $GOPATH/bin/yodk
 - Default on linux: $HOME/go/yodk

@@ -3,7 +3,8 @@ name: Test & Build
 on:
   push:
     branches:
-      - develop
+      - "**"
+      - "!master"
 
 jobs:
   build:
@@ -34,6 +35,5 @@ jobs:
         run: make vsc-test
     - name: Build docs
       run: make docs CHANGELOG.md
-    - name: Package things
-      run: make zips
-      
+    - name: package
+      run: make package

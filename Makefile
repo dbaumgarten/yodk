@@ -3,10 +3,8 @@ TOKEN=none
 
 ifeq (, $(shell which go.exe))
 go=go
-go-bindata=go-bindata-assetfs
 else
 go=go.exe
-go-bindata=go-bindata-assetfs.exe
 endif
 
 ifeq ($(filter v%,${VERSION}),${VERSION}) 
@@ -51,7 +49,7 @@ acid-tests: yodk
 
 .PHONY: vsc-test
 vsc-test: vscode-yolol.vsix
-ifdef WSLENV
+ifdef SKIP_VSC_TESTS
 	echo Skipping extension-tests on wsl
 else
 	cd vscode-yolol && npm test --silent
@@ -106,7 +104,7 @@ yodk-darwin.zip: yodk-darwin
 vscode-yolol.vsix: vscode-yolol/vscode-yolol-${NPMVERSION}.vsix
 	cp vscode-yolol/vscode-yolol-${NPMVERSION}.vsix vscode-yolol.vsix
 
-vscode-yolol/vscode-yolol-${NPMVERSION}.vsix: yodk yodk.exe yodk-darwin CHANGELOG.md $(shell find vscode-yolol/src) $(shell find vscode-yolol/syntaxes/) vscode-yolol/package.json
+vscode-yolol/vscode-yolol-${NPMVERSION}.vsix: yodk yodk.exe yodk-darwin vscode-yolol/CHANGELOG.md $(shell find vscode-yolol/src) $(shell find vscode-yolol/syntaxes/) vscode-yolol/package.json
 	cd vscode-yolol && \
 	origtime=`stat -c %Y package.json` && \
 	npm version --no-git-tag-version ${NPMVERSION} --allow-same-version && \
@@ -116,9 +114,11 @@ vscode-yolol/vscode-yolol-${NPMVERSION}.vsix: yodk yodk.exe yodk-darwin CHANGELO
 
 
 
-CHANGELOG.md: .git/
-	./ci/build-changelog.sh
-	cp CHANGELOG.md vscode-yolol/
+vscode-yolol/CHANGELOG.md: .git/ ci/build-changelog.sh 
+	./ci/build-changelog.sh 10 vscode-yolol/CHANGELOG.md
+
+CHANGELOG.md: .git/ ci/build-changelog.sh 
+	./ci/build-changelog.sh 1 CHANGELOG.md
 
 
 
@@ -129,7 +129,7 @@ docs: yodk yodk.exe
 
 
 publish-vsix: vscode-yolol.vsix
-	vsce publish --packagePath vscode-yolol.vsix -p ${TOKEN}
+	vsce publish --packagePath vscode-yolol.vsix --oidc
 
 
 
